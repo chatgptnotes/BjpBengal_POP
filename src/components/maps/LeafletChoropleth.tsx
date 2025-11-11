@@ -3,7 +3,7 @@
  * Interactive map with sentiment-based coloring for Tamil Nadu regions
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { SentimentScore } from '../../types/geography';
@@ -27,7 +27,7 @@ interface LeafletChoroplethProps {
   className?: string;
 }
 
-export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
+export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = React.memo(({
   geoJsonData,
   center,
   zoom,
@@ -40,6 +40,24 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
+
+  // Use refs to store callbacks to avoid layer re-creation
+  const onFeatureClickRef = useRef(onFeatureClick);
+  const onFeatureHoverRef = useRef(onFeatureHover);
+  const getSentimentRef = useRef(getSentiment);
+
+  // Update refs when callbacks change (without re-creating layers)
+  useEffect(() => {
+    onFeatureClickRef.current = onFeatureClick;
+  }, [onFeatureClick]);
+
+  useEffect(() => {
+    onFeatureHoverRef.current = onFeatureHover;
+  }, [onFeatureHover]);
+
+  useEffect(() => {
+    getSentimentRef.current = getSentiment;
+  }, [getSentiment]);
 
   // Get color based on sentiment
   const getSentimentColor = (sentiment: SentimentScore | undefined): string => {
@@ -65,14 +83,14 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
     return '#eab308'; // yellow-500
   };
 
-  // Style function for GeoJSON features
-  const style = (feature: any) => {
+  // Style function for GeoJSON features (memoized to prevent layer re-creation)
+  const style = useCallback((feature: any) => {
     // Support both DataMeet format (DISTRICT, AC_NAME) and custom format (code, name)
     const featureId = feature.properties.code ||
                       feature.properties.DISTRICT ||
                       feature.properties.AC_NAME ||
                       feature.properties.name;
-    const sentiment = getSentiment ? getSentiment(featureId) : undefined;
+    const sentiment = getSentimentRef.current ? getSentimentRef.current(featureId) : undefined;
 
     return {
       fillColor: getSentimentColor(sentiment),
@@ -82,10 +100,10 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
       dashArray: '',
       fillOpacity: 0.7
     };
-  };
+  }, []); // Empty deps - use refs for dynamic values
 
-  // Highlight feature on hover
-  const highlightFeature = (e: L.LeafletMouseEvent) => {
+  // Highlight feature on hover (memoized)
+  const highlightFeature = useCallback((e: L.LeafletMouseEvent) => {
     const layer = e.target;
 
     layer.setStyle({
@@ -97,36 +115,36 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
 
     layer.bringToFront();
 
-    if (onFeatureHover) {
+    if (onFeatureHoverRef.current) {
       const featureId = layer.feature.properties.code ||
                         layer.feature.properties.DISTRICT ||
                         layer.feature.properties.AC_NAME ||
                         layer.feature.properties.name;
-      onFeatureHover(featureId, layer.feature.properties);
+      onFeatureHoverRef.current(featureId, layer.feature.properties);
     }
-  };
+  }, []);
 
-  // Reset highlight
-  const resetHighlight = (e: L.LeafletMouseEvent) => {
+  // Reset highlight (memoized)
+  const resetHighlight = useCallback((e: L.LeafletMouseEvent) => {
     if (geoJsonLayerRef.current) {
       geoJsonLayerRef.current.resetStyle(e.target);
     }
 
-    if (onFeatureHover) {
-      onFeatureHover(null, null);
+    if (onFeatureHoverRef.current) {
+      onFeatureHoverRef.current(null, null);
     }
-  };
+  }, []);
 
-  // Handle feature click
-  const clickFeature = (e: L.LeafletMouseEvent) => {
+  // Handle feature click (memoized)
+  const clickFeature = useCallback((e: L.LeafletMouseEvent) => {
     const layer = e.target;
     const featureId = layer.feature.properties.code ||
                       layer.feature.properties.DISTRICT ||
                       layer.feature.properties.AC_NAME ||
                       layer.feature.properties.name;
 
-    if (onFeatureClick) {
-      onFeatureClick(featureId, layer.feature.properties);
+    if (onFeatureClickRef.current) {
+      onFeatureClickRef.current(featureId, layer.feature.properties);
     }
 
     // Zoom to feature
@@ -136,10 +154,10 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
         maxZoom: 10
       });
     }
-  };
+  }, []);
 
-  // Attach event handlers to each feature
-  const onEachFeature = (feature: any, layer: L.Layer) => {
+  // Attach event handlers to each feature (memoized)
+  const onEachFeature = useCallback((feature: any, layer: L.Layer) => {
     layer.on({
       mouseover: highlightFeature,
       mouseout: resetHighlight,
@@ -156,7 +174,7 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
                           feature.properties.DISTRICT ||
                           feature.properties.AC_NAME;
 
-      const sentiment = getSentiment ? getSentiment(featureId) : undefined;
+      const sentiment = getSentimentRef.current ? getSentimentRef.current(featureId) : undefined;
 
       const tooltipContent = `
         <div class="font-semibold">${featureName}</div>
@@ -175,7 +193,7 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
         className: 'bg-white shadow-lg rounded-lg p-2 border border-gray-200'
       });
     }
-  };
+  }, [highlightFeature, resetHighlight, clickFeature]);
 
   // Initialize map
   useEffect(() => {
@@ -242,7 +260,7 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
     if (bounds.isValid()) {
       mapRef.current.fitBounds(bounds, { padding: [20, 20] });
     }
-  }, [geoJsonData, getSentiment]);
+  }, [geoJsonData, style, onEachFeature]); // Now these are stable memoized functions
 
   return (
     <div
@@ -251,4 +269,4 @@ export const LeafletChoropleth: React.FC<LeafletChoroplethProps> = ({
       style={{ height }}
     />
   );
-};
+});

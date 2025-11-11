@@ -3,7 +3,7 @@
  * Displays all 234 constituencies with clickable boundaries
  */
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import tamilNaduGeoJSON from '../../assets/maps/tamilnadu-constituencies.json';
@@ -15,13 +15,21 @@ interface MapboxTamilNaduProps {
   onConstituencyClick?: (constituency: any) => void;
 }
 
-export const MapboxTamilNadu: React.FC<MapboxTamilNaduProps> = ({
+export const MapboxTamilNadu: React.FC<MapboxTamilNaduProps> = React.memo(({
   height = '700px',
   onConstituencyClick
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [selectedConstituency, setSelectedConstituency] = useState<any>(null);
+
+  // Use ref to store callback to avoid map re-initialization
+  const onConstituencyClickRef = useRef(onConstituencyClick);
+
+  // Update ref when callback changes (without re-initializing map)
+  useEffect(() => {
+    onConstituencyClickRef.current = onConstituencyClick;
+  }, [onConstituencyClick]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -174,8 +182,9 @@ export const MapboxTamilNadu: React.FC<MapboxTamilNaduProps> = ({
         const feature = e.features[0];
         setSelectedConstituency(feature.properties);
 
-        if (onConstituencyClick) {
-          onConstituencyClick(feature.properties);
+        // Use ref to call callback without triggering re-initialization
+        if (onConstituencyClickRef.current) {
+          onConstituencyClickRef.current(feature.properties);
         }
 
         // Zoom to clicked constituency
@@ -207,7 +216,7 @@ export const MapboxTamilNadu: React.FC<MapboxTamilNaduProps> = ({
         map.current.remove();
       }
     };
-  }, [onConstituencyClick]);
+  }, []); // Empty dependency array - map initializes only once
 
   return (
     <div className="relative">
@@ -242,4 +251,4 @@ export const MapboxTamilNadu: React.FC<MapboxTamilNaduProps> = ({
       </div>
     </div>
   );
-};
+});

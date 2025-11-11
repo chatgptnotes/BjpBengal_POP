@@ -11,7 +11,7 @@ import ExportManager from '../components/ExportManager'
 import AdvancedChart from '../components/AdvancedChart'
 import { MobileNavigation, ResponsiveContainer, MobileCard, ResponsiveGrid, MobileButton, MobileStats } from '../components/MobileResponsive'
 import { TrendingUp, Users, AlertTriangle, Target, Calendar, Brain, Zap, Globe, Lightbulb } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { realTimeService } from '../services/realTimeService'
 import { crisisDetection } from '../services/crisisDetection'
 import { recommendationsEngine } from '../services/recommendationsEngine'
@@ -33,6 +33,12 @@ export default function Dashboard() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Memoized callback for constituency clicks (prevents map re-initialization)
+  const handleConstituencyClick = useCallback((constituency: any) => {
+    console.log('Clicked:', constituency);
+    // Add any additional logic here (e.g., show details, update filters, etc.)
+  }, []);
 
   // Load real data from Supabase on mount
   useEffect(() => {
@@ -397,7 +403,7 @@ export default function Dashboard() {
           )}
 
           <div className="w-full">
-            <MapboxTamilNadu height="600px" onConstituencyClick={(constituency) => console.log('Clicked:', constituency)} />
+            <MapboxTamilNadu height="600px" onConstituencyClick={handleConstituencyClick} />
           </div>
 
           <ResponsiveGrid cols={{ sm: 1, lg: 2, xl: 3 }}>

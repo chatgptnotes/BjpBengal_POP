@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { djangoApi } from '../../services/djangoApi';
 import {
@@ -36,6 +36,12 @@ export default function AdminStateDashboard() {
 
   const [districts, setDistricts] = useState<any[]>([]);
   const [topIssues, setTopIssues] = useState<any[]>([]);
+
+  // Memoized callback for constituency clicks (prevents map re-initialization)
+  const handleConstituencyClick = useCallback((constituency: any) => {
+    console.log('Clicked constituency:', constituency);
+    // TODO: Navigate to constituency detail or show modal
+  }, []);
 
   useEffect(() => {
     loadStateDashboard();
@@ -182,10 +188,7 @@ export default function AdminStateDashboard() {
         </p>
         <MapboxTamilNadu
           height="600px"
-          onConstituencyClick={(constituency) => {
-            console.log('Clicked constituency:', constituency);
-            // TODO: Navigate to constituency detail or show modal
-          }}
+          onConstituencyClick={handleConstituencyClick}
         />
       </div>
 
