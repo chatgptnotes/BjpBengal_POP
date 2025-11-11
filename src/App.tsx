@@ -36,6 +36,7 @@ import SocialMediaChannels from './pages/SocialMediaChannels'
 import SocialMediaSettings from './pages/SocialMediaSettings'
 import InfluencerTracking from './pages/InfluencerTracking'
 import ConversationBot from './pages/ConversationBot'
+import VoterSentimentAnalysis from './pages/VoterSentimentAnalysis'
 import EnhancedWardHeatmap from './components/EnhancedWardHeatmap'
 import ManifestoMatch from './components/ManifestoMatch'
 import FeedbackChatbot from './components/FeedbackChatbot'
@@ -438,7 +439,14 @@ function AppRoutes() {
                   </Layout>
                 </ProtectedRoute>
               } />
-              
+              <Route path="/voter-sentiment-analysis" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <VoterSentimentAnalysis />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+
               {/* Additional Feature Pages */}
               <Route path="/dpdp-compliance" element={
                 <ProtectedRoute>

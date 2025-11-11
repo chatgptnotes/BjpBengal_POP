@@ -217,3 +217,194 @@ export interface FieldReport {
   verified_by?: string;
   sentiment_analysis?: SentimentData;
 }
+
+// Voter Call & Sentiment Analysis Types (ElevenLabs Integration)
+
+export interface CallCampaign {
+  id: string;
+  organization_id: string;
+  name: string;
+  description?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'paused' | 'cancelled';
+  total_calls: number;
+  completed_calls: number;
+  successful_calls: number;
+  failed_calls: number;
+  max_concurrent_calls: number;
+  scheduled_start?: Date;
+  started_at?: Date;
+  completed_at?: Date;
+  created_by?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface VoterCall {
+  id: string;
+  organization_id: string;
+  campaign_id?: string;
+  voter_id?: string;
+
+  // Call details
+  call_id?: string; // ElevenLabs call ID
+  phone_number: string;
+  voter_name?: string;
+
+  // Call status and metadata
+  status: 'pending' | 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | 'no_answer' | 'busy';
+  duration_seconds?: number;
+  call_started_at?: Date;
+  call_ended_at?: Date;
+
+  // Transcript
+  transcript?: string;
+  transcript_fetched_at?: Date;
+
+  // ElevenLabs metadata
+  elevenlabs_agent_id?: string;
+  elevenlabs_metadata?: Record<string, any>;
+  error_message?: string;
+
+  // Audit fields
+  created_by?: string;
+  created_at: Date;
+  updated_at: Date;
+
+  // Joined data (not in DB)
+  sentiment_analysis?: CallSentimentAnalysis;
+  campaign?: CallCampaign;
+}
+
+export interface CallSentimentAnalysis {
+  id: string;
+  call_id: string;
+  organization_id: string;
+
+  // Sentiment about previous government
+  previous_govt_sentiment?: 'positive' | 'negative' | 'neutral' | 'not_mentioned';
+  previous_govt_score?: number; // -1 to 1
+  previous_govt_keywords?: string[];
+  previous_govt_summary?: string;
+
+  // Sentiment about TVK (Vijay's party)
+  tvk_sentiment?: 'support' | 'against' | 'undecided' | 'not_mentioned';
+  tvk_score?: number; // -1 to 1
+  tvk_keywords?: string[];
+  tvk_summary?: string;
+
+  // Key issues discussed
+  key_issues?: Array<{
+    issue: string;
+    sentiment: string;
+    importance: number;
+  }>;
+  top_concerns?: string[];
+
+  // Voting intention
+  voting_intention?: string; // Party name or 'undecided'
+  voting_confidence?: 'very_confident' | 'confident' | 'unsure' | 'not_mentioned';
+
+  // Overall analysis
+  overall_sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+  overall_summary?: string;
+
+  // Analysis metadata
+  analyzed_at: Date;
+  analysis_model?: string;
+  confidence_score?: number; // 0 to 1
+
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CallCSVUpload {
+  id: string;
+  organization_id: string;
+  campaign_id?: string;
+
+  filename: string;
+  file_size?: number;
+  total_rows?: number;
+  valid_rows?: number;
+  invalid_rows?: number;
+
+  uploaded_by?: string;
+  uploaded_at: Date;
+  processed_at?: Date;
+}
+
+// ElevenLabs API Types
+
+export interface ElevenLabsCallRequest {
+  agent_id: string;
+  phone_number: string;
+  metadata?: Record<string, any>;
+}
+
+export interface ElevenLabsCallResponse {
+  call_id: string;
+  status: string;
+  message?: string;
+}
+
+export interface ElevenLabsTranscript {
+  call_id: string;
+  transcript: string;
+  duration_seconds: number;
+  status: string;
+  metadata?: Record<string, any>;
+}
+
+// UI Component Types
+
+export interface CallListFilters {
+  status?: VoterCall['status'][];
+  campaign_id?: string;
+  date_from?: Date;
+  date_to?: Date;
+  search?: string;
+  sentiment?: CallSentimentAnalysis['overall_sentiment'][];
+}
+
+export interface SentimentStats {
+  total_calls: number;
+  analyzed_calls: number;
+
+  previous_govt: {
+    positive: number;
+    negative: number;
+    neutral: number;
+    not_mentioned: number;
+  };
+
+  tvk: {
+    support: number;
+    against: number;
+    undecided: number;
+    not_mentioned: number;
+  };
+
+  voting_intention: Record<string, number>;
+
+  top_issues: Array<{
+    issue: string;
+    count: number;
+    avg_sentiment: number;
+  }>;
+}
+
+export interface CallAnalytics {
+  total_calls: number;
+  successful_calls: number;
+  failed_calls: number;
+  avg_duration: number;
+  total_duration: number;
+  sentiment_stats: SentimentStats;
+  by_date: Array<{
+    date: string;
+    calls: number;
+    successful: number;
+    failed: number;
+  }>;
+  by_constituency?: Record<string, number>;
+}

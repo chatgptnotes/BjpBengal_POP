@@ -89,6 +89,12 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       icon: InfluencerIcon
     },
     {
+      name: 'Voter Sentiment Analysis',
+      href: '/voter-sentiment-analysis',
+      icon: InfluencerIcon,
+      badge: 'AI'
+    },
+    {
       name: 'Conversation Bot',
       href: '/conversation-bot',
       icon: BotIcon
