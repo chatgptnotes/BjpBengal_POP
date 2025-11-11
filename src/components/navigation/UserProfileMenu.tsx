@@ -90,7 +90,7 @@ export default function UserProfileMenu({ isOpen, onClose, anchorEl }: UserProfi
               <img src={user.avatar} alt={user.name} className="avatar-img" />
             ) : (
               <div className="avatar-placeholder">
-                {user.name.charAt(0).toUpperCase()}
+                {(user.name || 'U').charAt(0).toUpperCase()}
               </div>
             )}
           </div>
@@ -98,7 +98,7 @@ export default function UserProfileMenu({ isOpen, onClose, anchorEl }: UserProfi
             <div className="user-name">{user.name}</div>
             <div className="user-email">{user.email}</div>
             <span className={`role-badge ${getRoleBadgeColor()}`}>
-              {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
             </span>
           </div>
         </div>

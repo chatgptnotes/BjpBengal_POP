@@ -219,10 +219,10 @@ export default function DataCaptureKit() {
 
                 {user && (
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-2">Your Role: {user.role.charAt(0).toUpperCase() + user.role.slice(1)}</h4>
+                    <h4 className="font-semibold text-gray-900 mb-2">Your Role: {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}</h4>
                     <p className="text-sm text-gray-700">
-                      As a {user.role}, you have access to {user.role === 'admin' ? 'all features and can manage data submissions' : 
-                      user.role === 'analyst' ? 'analytical tools and can verify data submissions' : 
+                      As a {user.role || 'user'}, you have access to {user.role === 'admin' ? 'all features and can manage data submissions' :
+                      user.role === 'analyst' ? 'analytical tools and can verify data submissions' :
                       'viewing capabilities and can submit data reports'}.
                     </p>
                   </div>
