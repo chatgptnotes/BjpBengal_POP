@@ -4,7 +4,7 @@
  * State → District → Constituency → Polling Booth
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LeafletChoropleth } from './LeafletChoropleth';
 import { DrillDownControls } from './DrillDownControls';
@@ -42,7 +42,7 @@ interface TamilNaduMapProps {
   className?: string;
 }
 
-export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
+export const TamilNaduMap: React.FC<TamilNaduMapProps> = React.memo(({
   height = '700px',
   initialZoom = 7.5,
   className = ''
@@ -69,8 +69,8 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
     data: any;
   } | null>(null);
 
-  // Get sentiment for a feature
-  const getSentiment = (featureId: string): SentimentScore | undefined => {
+  // Get sentiment for a feature (memoized - uses only static data)
+  const getSentiment = useCallback((featureId: string): SentimentScore | undefined => {
     // Try direct lookup by code (e.g., 'TN03', 'TN001')
     const districtByCode = allDistricts[featureId];
     if (districtByCode?.sentiment) return districtByCode.sentiment;
@@ -90,10 +90,10 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
     if (featureId === 'PY') return pondicherryState.sentiment;
 
     return undefined;
-  };
+  }, []); // Empty deps - uses only static data
 
-  // Handle feature click
-  const handleFeatureClick = (featureId: string, properties: any) => {
+  // Handle feature click (memoized to prevent map re-renders)
+  const handleFeatureClick = useCallback((featureId: string, properties: any) => {
     console.log('Feature clicked:', featureId, properties);
 
     if (drillDownLevel.level === 'state') {
@@ -142,10 +142,10 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
         drillDownToBooths(constituency.code, constituency);
       }
     }
-  };
+  }, [drillDownLevel]); // Depends on drillDownLevel
 
-  // Handle drill-down from popup
-  const handleDrillDown = () => {
+  // Handle drill-down from popup (memoized)
+  const handleDrillDown = useCallback(() => {
     if (!selectedFeature) return;
 
     if (selectedFeature.type === 'district') {
@@ -155,10 +155,10 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
     }
 
     setPopupOpen(false);
-  };
+  }, [selectedFeature]); // Depends on selectedFeature
 
-  // Drill down to districts
-  const drillDownToDistricts = () => {
+  // Drill down to districts (memoized)
+  const drillDownToDistricts = useCallback(() => {
     // For now, we'll show a simplified district view
     // In production, load actual district GeoJSON
     setDrillDownLevel({
@@ -169,10 +169,10 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
     // Load real district boundaries from GeoJSON file
     setCurrentGeoJSON(tamilNaduDistrictsGeoJSON);
     setMapZoom(8);
-  };
+  }, []); // No dependencies - uses only setters and static data
 
-  // Drill down to constituencies
-  const drillDownToConstituencies = (districtCode: string) => {
+  // Drill down to constituencies (memoized)
+  const drillDownToConstituencies = useCallback((districtCode: string) => {
     const district = allDistricts[districtCode];
     if (!district) return;
 
@@ -196,10 +196,10 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
       )
     };
     setCurrentGeoJSON(constituenciesForDistrict);
-  };
+  }, []); // No dependencies - uses only setters and static data
 
-  // Drill down to polling booths
-  const drillDownToBooths = (constituencyCode: string, constituency: AssemblyConstituency) => {
+  // Drill down to polling booths (memoized)
+  const drillDownToBooths = useCallback((constituencyCode: string, constituency: AssemblyConstituency) => {
     setDrillDownLevel({
       level: 'booth',
       selectedStateCode: 'TN',
@@ -228,10 +228,10 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
     }
 
     setPollingBooths(booths);
-  };
+  }, []); // No dependencies - uses only setters and static data
 
-  // Navigate to specific level
-  const handleLevelClick = (level: 'state' | 'district' | 'constituency' | 'booth') => {
+  // Navigate to specific level (memoized)
+  const handleLevelClick = useCallback((level: 'state' | 'district' | 'constituency' | 'booth') => {
     if (level === 'state') {
       // Reset to state view
       setDrillDownLevel({ level: 'state' });
@@ -248,7 +248,7 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
       drillDownToConstituencies(drillDownLevel.selectedDistrictCode);
       setPollingBooths([]);
     }
-  };
+  }, [drillDownLevel, initialZoom, drillDownToDistricts, drillDownToConstituencies]); // Depends on drill-down level and functions
 
   // Generate mock district GeoJSON (simplified)
   const generateMockDistrictGeoJSON = () => {
@@ -460,4 +460,4 @@ export const TamilNaduMap: React.FC<TamilNaduMapProps> = ({
       </motion.div>
     </div>
   );
-};
+});

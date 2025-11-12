@@ -1,14 +1,21 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = 'https://iwtgbseaoztjbnvworyq.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3dGdic2Vhb3p0amJudndvcnlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNjAzOTksImV4cCI6MjA3NjczNjM5OX0.xA4B0XZJE_4MdjFCkw2yVsf4vlHmHfpeV6Bk5tG2T94';
+// Use the correct Supabase credentials from .env
+const supabaseUrl = 'https://eepwbydlfecosaqdysho.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlcHdieWRsZmVjb3NhcWR5c2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4NDA3ODQsImV4cCI6MjA3ODQxNjc4NH0.Z83AOOAFPGK-xKio6fYTXwAUJEHdIlsdCxPleDtE53c';
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Test users matching the Login page credentials
 const testUsers = [
-  { email: 'admin@tvk.com', password: 'Admin@123456', name: 'TVK Super Admin', role: 'superadmin' },
-  { email: 'user@tvk.com', password: 'User@123456', name: 'Field Worker', role: 'user' },
-  { email: 'test@pulseofpeople.com', password: 'TestPassword123!', name: 'Test User', role: 'admin' },
+  { email: 'testadmin@tvk.com', password: 'Admin@2024', name: 'Test Super Admin', role: 'superadmin' },
+  { email: 'admin1@tvk.com', password: 'Admin@2024', name: 'Admin User', role: 'admin' },
+  { email: 'manager@tvk.com', password: 'Manager@2024', name: 'Manager User', role: 'manager' },
+  { email: 'analyst@tvk.com', password: 'Analyst@2024', name: 'Analyst User', role: 'analyst' },
+  { email: 'user@tvk.com', password: 'User@2024', name: 'Regular User', role: 'user' },
+  { email: 'volunteer1@tvk.com', password: 'Volunteer@2024', name: 'Volunteer Worker', role: 'volunteer' },
+  { email: 'viewer@tvk.com', password: 'Viewer@2024', name: 'Viewer User', role: 'viewer' },
+  { email: 'vijay@tvk.com', password: 'Vijay@2026', name: 'Vijay VIP Demo', role: 'admin' },
 ];
 
 async function createAuthUsers() {
