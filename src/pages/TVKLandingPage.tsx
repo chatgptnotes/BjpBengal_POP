@@ -1,470 +1,460 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import VideoModal from '../components/VideoModal';
+import DemoModal from '../components/DemoModal';
 import {
+  ArrowRight,
+  BarChart3,
+  Users,
+  Target,
+  Brain,
+  Share2,
+  Vote,
   TrendingUp,
-  Groups,
-  School,
-  HealthAndSafety,
-  Agriculture,
-  Work,
-  AccountBalance,
-  Campaign,
-  LocationCity,
-  VolunteerActivism,
-  EmojiEvents,
-  AutoAwesome,
-  Login as LoginIcon
+  Shield,
+  Zap,
+  Globe,
+  CheckCircle,
+  Star,
+  Play,
+  Award,
+  MapPin,
+  Clock,
+  Briefcase,
+  Phone,
+  Mail,
+  MessageCircle
+} from 'lucide-react';
+import {
+  Event as CalendarIcon,
+  Lock as LockIcon,
+  TrendingUp as TrendingUpIcon,
+  BarChart as BarChartIcon,
+  HowToVote as VoteIcon
 } from '@mui/icons-material';
-import { TVKLogo } from '../components/TVKLogo';
 
-const TVKLandingPage = () => {
-  // Load ElevenLabs ConvAI widget script
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
-    script.async = true;
-    script.type = 'text/javascript';
-    document.body.appendChild(script);
+export default function LandingPage() {
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
-    return () => {
-      // Cleanup script on unmount
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
+  const handleVideoClick = () => {
+    setIsVideoModalOpen(true);
+  };
+
+  const handleBookDemoClick = () => {
+    setIsDemoModalOpen(true);
+  };
+  const features = [
+    {
+      icon: BarChart3,
+      title: 'Real-Time Analytics',
+      description: 'Monitor voter sentiment and campaign performance with live data visualization and comprehensive reporting tools.'
+    },
+    {
+      icon: Users,
+      title: 'Voter Database Management',
+      description: 'Comprehensive voter registration, demographic analysis, and targeted outreach capabilities.'
+    },
+    {
+      icon: Brain,
+      title: 'AI-Powered Insights',
+      description: 'Machine learning algorithms provide predictive analytics and strategic campaign recommendations.'
+    },
+    {
+      icon: Share2,
+      title: 'Social Media Monitoring',
+      description: 'Track conversations, trends, and sentiment across all major social media platforms in real-time.'
+    },
+    {
+      icon: Target,
+      title: 'Competitor Analysis',
+      description: 'Monitor opponent campaigns, strategies, and performance metrics to stay ahead of the competition.'
+    },
+    {
+      icon: Briefcase,
+      title: 'Field Operations',
+      description: 'Manage field workers, volunteers, and ground-level campaign activities with comprehensive tools.'
+    }
+  ];
+
+  const stats = [
+    { number: '50M+', label: 'Voter Records Analyzed' },
+    { number: '99.9%', label: 'Platform Uptime' },
+    { number: '24/7', label: 'Real-Time Monitoring' },
+    { number: '500+', label: 'Successful Campaigns' }
+  ];
+
+  const testimonials = [
+    {
+      quote: "BETTROI transformed our campaign strategy with incredible insights. The AI-powered recommendations helped us increase voter engagement by 300%.",
+      author: "Sarah Johnson",
+      role: "Campaign Manager",
+      party: "Progressive Alliance",
+      avatar: <TrendingUpIcon className="w-8 h-8 text-blue-500" />
+    },
+    {
+      quote: "The real-time sentiment analysis gave us the edge we needed. We could respond to public opinion shifts within hours instead of days.",
+      author: "Rajesh Kumar",
+      role: "Political Strategist",
+      party: "Democratic Coalition",
+      avatar: <BarChartIcon className="w-8 h-8 text-green-500" />
+    },
+    {
+      quote: "Field worker management became seamless with BETTROI. Our volunteer coordination improved dramatically, leading to better ground coverage.",
+      author: "Maria Rodriguez",
+      role: "Operations Director",
+      party: "United Reform Party",
+      avatar: <VoteIcon className="w-8 h-8 text-purple-500" />
+    }
+  ];
+
+  const useCases = [
+    {
+      icon: Vote,
+      title: 'Election Campaigns',
+      description: 'Complete campaign management from voter outreach to performance tracking.'
+    },
+    {
+      icon: TrendingUp,
+      title: 'Policy Research',
+      description: 'Understand public opinion on key issues and policy proposals.'
+    },
+    {
+      icon: Globe,
+      title: 'Public Sentiment Analysis',
+      description: 'Monitor community response to political events and announcements.'
+    },
+    {
+      icon: Shield,
+      title: 'Crisis Management',
+      description: 'Early detection and response to political crises and reputation threats.'
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-yellow-50 to-red-50">
-      {/* Header Navigation */}
-      <header className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            {/* Logo and Name */}
-            <div className="flex items-center gap-3">
-              <TVKLogo size={40} />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  <span className="text-red-600">Tamilaga Vettri</span>{' '}
-                  <span className="text-yellow-600">Kazhagam</span>
-                </h1>
-                <p className="text-xs text-gray-600">தமிழக வெற்றிக் கழகம்</p>
-              </div>
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+          <div className="text-center">
+            {/* Brand Badge */}
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium mb-8">
+              <Award className="w-4 h-4 mr-2" />
+              #1 Political Intelligence Platform
             </div>
 
-            {/* Login/Signup Buttons */}
-            <div className="flex items-center gap-3">
+            {/* Hero Title */}
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent block mb-2">
+                Pulse of People
+              </span>
+              Win Elections with Data-Driven Intelligence
+            </h1>
+
+            {/* Hero Subtitle */}
+            <p className="text-xl lg:text-2xl text-gray-200 max-w-4xl mx-auto mb-10 leading-relaxed">
+              Pulse of People combines real-time voter sentiment analysis, AI-powered campaign insights,
+              and comprehensive political intelligence to help you make informed decisions and win elections.
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+              <button
+                onClick={handleBookDemoClick}
+                className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 flex items-center transform hover:scale-105"
+              >
+                <CalendarIcon className="mr-2 w-5 h-5" />
+                Book a Demo
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
               <Link
                 to="/login"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-red-600 font-semibold transition-colors"
+                className="group px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 flex items-center transform hover:scale-105"
               >
-                <LoginIcon className="w-5 h-5" />
+                <LockIcon className="mr-2 w-5 h-5" />
                 Login
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link
-                to="/login"
-                className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-2 rounded-lg font-semibold hover:from-red-700 hover:to-red-800 transition-all shadow-md"
+              <button
+                onClick={handleVideoClick}
+                className="group px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 flex items-center transform hover:scale-105"
               >
-                <VolunteerActivism className="w-5 h-5" />
-                <span className="hidden sm:inline">Join Movement</span>
-                <span className="sm:hidden">Join</span>
-              </Link>
+                <Play className="mr-2 w-5 h-5" />
+                Watch Demo
+              </button>
+            </div>
+
+            {/* Trust Indicators */}
+            <div className="flex flex-wrap justify-center items-center gap-8 text-white/70 text-sm">
+              <div className="flex items-center">
+                <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
+                SOC 2 Type II Certified
+              </div>
+              <div className="flex items-center">
+                <Shield className="w-4 h-4 mr-2 text-blue-400" />
+                GDPR Compliant
+              </div>
+              <div className="flex items-center">
+                <Clock className="w-4 h-4 mr-2 text-purple-400" />
+                24/7 Support
+              </div>
             </div>
           </div>
         </div>
-      </header>
 
-      {/* Announcement Banner */}
-      <div className="bg-gradient-to-r from-red-600 to-yellow-500 text-white py-2 px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-sm">
-          <Campaign className="w-4 h-4" />
-          <span className="font-semibold">TVK Victory Rally 2026</span>
-          <span className="hidden sm:inline">- Join the Movement for Tamil Nadu's Future</span>
+        {/* Floating Elements */}
+        <div className="absolute top-20 left-10 w-20 h-20 bg-blue-500/10 rounded-full animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-32 h-32 bg-purple-500/10 rounded-full animate-bounce"></div>
+        <div className="absolute top-1/2 right-20 w-16 h-16 bg-indigo-500/10 rounded-full animate-ping"></div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
+                  {stat.number}
+                </div>
+                <div className="text-gray-600 font-medium">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-600/10 via-yellow-500/10 to-red-600/10"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-yellow-500 blur-lg opacity-50"></div>
-                <div className="relative bg-white p-4 rounded-full shadow-2xl">
-                  <EmojiEvents className="w-16 h-16 text-red-600" />
-                </div>
-              </div>
-            </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              <span className="text-red-600">Tamilaga Vettri</span>{' '}
-              <span className="text-yellow-600">Kazhagam</span>
-            </h1>
-            <p className="text-2xl text-gray-700 mb-4 font-semibold">
-              தமிழக வெற்றிக் கழகம்
-            </p>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Building a Progressive Tamil Nadu with Youth Power, Education Excellence, and Social Justice
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/auth"
-                className="bg-gradient-to-r from-red-600 to-red-700 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
-              >
-                <VolunteerActivism />
-                Join TVK Movement
-              </Link>
-              <a
-                href="#vision"
-                className="bg-white text-red-600 border-2 border-red-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-red-50 transition-all flex items-center justify-center gap-2"
-              >
-                <AutoAwesome />
-                Our Vision 2026
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="bg-white py-16 shadow-inner">
+      {/* Features Section */}
+      <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-red-600">32</div>
-              <div className="text-gray-600">Districts</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-yellow-600">234</div>
-              <div className="text-gray-600">Constituencies</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-red-600">100K+</div>
-              <div className="text-gray-600">Volunteers</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-yellow-600">2026</div>
-              <div className="text-gray-600">Victory Target</div>
-            </div>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+              Everything you need to
+              <span className="text-blue-600 block">win your campaign</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              From voter sentiment analysis to field operations management,
+              Pulse of People provides all the tools modern political campaigns need.
+            </p>
           </div>
-        </div>
-      </section>
 
-      {/* Mission Statement */}
-      <section className="py-16 bg-gradient-to-r from-red-600 to-yellow-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Our Mission</h2>
-          <p className="text-xl text-white/90 max-w-4xl mx-auto">
-            "Pirappokkum Ella Uyirkkum" - All Lives are Equal by Birth
-          </p>
-          <p className="text-lg text-white/80 mt-4 max-w-3xl mx-auto">
-            To create a corruption-free, progressive Tamil Nadu where youth lead the change,
-            education empowers every citizen, and social justice prevails for all.
-          </p>
-        </div>
-      </section>
-
-      {/* Key Focus Areas */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-            Key Focus Areas
-          </h2>
-          <p className="text-xl text-center text-gray-600 mb-12">
-            Transforming Tamil Nadu through targeted development
-          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-t-4 border-red-600">
-              <School className="w-12 h-12 text-red-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Education Revolution</h3>
-              <p className="text-gray-600">
-                Free quality education, skill development centers in every constituency,
-                and digital literacy for all.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-t-4 border-yellow-500">
-              <Groups className="w-12 h-12 text-yellow-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Youth Empowerment</h3>
-              <p className="text-gray-600">
-                Creating 10 lakh jobs, startup ecosystem support, and youth participation
-                in governance.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-t-4 border-red-600">
-              <HealthAndSafety className="w-12 h-12 text-red-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Healthcare for All</h3>
-              <p className="text-gray-600">
-                Free healthcare services, upgraded PHCs in villages, and health insurance
-                for every family.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-t-4 border-yellow-500">
-              <Agriculture className="w-12 h-12 text-yellow-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Farmer Welfare</h3>
-              <p className="text-gray-600">
-                Direct procurement, fair MSP, organic farming support, and agricultural
-                modernization.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-t-4 border-red-600">
-              <Work className="w-12 h-12 text-red-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Industrial Growth</h3>
-              <p className="text-gray-600">
-                Attracting investments, MSME support, industrial corridors, and
-                sustainable development.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-t-4 border-yellow-500">
-              <AccountBalance className="w-12 h-12 text-yellow-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Clean Governance</h3>
-              <p className="text-gray-600">
-                Zero tolerance for corruption, transparent administration, and
-                citizen-centric services.
-              </p>
-            </div>
+            {features.map((feature, index) => (
+              <div key={index} className="group p-8 rounded-2xl bg-white border border-gray-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <feature.icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Campaign Features */}
-      <section className="py-20 bg-white">
+      {/* Use Cases Section */}
+      <div className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-            Digital Campaign Platform
-          </h2>
-          <p className="text-xl text-center text-gray-600 mb-12">
-            Advanced tools for modern political campaigning
-          </p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+              Built for every
+              <span className="text-purple-600 block">political need</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Whether you're running for office, conducting policy research, or managing public relations,
+              BETTROI adapts to your specific requirements.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-red-600" />
+            {useCases.map((useCase, index) => (
+              <div key={index} className="flex items-start space-x-6 p-8 bg-white rounded-2xl shadow-sm hover:shadow-lg transition-shadow">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <useCase.icon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    {useCase.title}
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    {useCase.description}
+                  </p>
                 </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Constituency Analytics
-                </h3>
-                <p className="text-gray-600">
-                  Real-time voter sentiment analysis and demographic insights for all 234 constituencies.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <Groups className="w-6 h-6 text-yellow-600" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Volunteer Management
-                </h3>
-                <p className="text-gray-600">
-                  Coordinate and track activities of grassroots volunteers across Tamil Nadu.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <Campaign className="w-6 h-6 text-red-600" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Social Media War Room
-                </h3>
-                <p className="text-gray-600">
-                  Monitor and manage digital campaigns across all social media platforms.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <LocationCity className="w-6 h-6 text-yellow-600" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Booth Level Management
-                </h3>
-                <p className="text-gray-600">
-                  Organize and track booth-level activities and voter outreach programs.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Vision 2026 */}
-      <section id="vision" className="py-20 bg-gradient-to-br from-red-50 via-yellow-50 to-red-50">
+      {/* Testimonials Section */}
+      <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-            Vision Tamil Nadu 2026
-          </h2>
-          <p className="text-xl text-center text-gray-600 mb-12">
-            Our roadmap to transform Tamil Nadu into India's leading state
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-bold text-red-600 mb-4">Economic Development</h3>
-              <ul className="space-y-2 text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500 mt-1">•</span>
-                  Make Tamil Nadu a $1 trillion economy by 2030
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500 mt-1">•</span>
-                  Create 10 lakh new jobs for youth
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500 mt-1">•</span>
-                  Establish TN as global manufacturing hub
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500 mt-1">•</span>
-                  Support 50,000 startups and MSMEs
-                </li>
-              </ul>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-bold text-yellow-600 mb-4">Social Justice</h3>
-              <ul className="space-y-2 text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">•</span>
-                  Equal opportunities for all communities
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">•</span>
-                  Women's safety and empowerment programs
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">•</span>
-                  Reservation in private sector jobs
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">•</span>
-                  Universal basic income for poor families
-                </li>
-              </ul>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-bold text-red-600 mb-4">Infrastructure</h3>
-              <ul className="space-y-2 text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500 mt-1">•</span>
-                  Metro rail in all major cities
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500 mt-1">•</span>
-                  24/7 electricity and water supply
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500 mt-1">•</span>
-                  World-class roads and highways
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-500 mt-1">•</span>
-                  Smart cities with digital infrastructure
-                </li>
-              </ul>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-bold text-yellow-600 mb-4">Education & Health</h3>
-              <ul className="space-y-2 text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">•</span>
-                  Free education from KG to PG
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">•</span>
-                  AIIMS-level hospitals in every district
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">•</span>
-                  Skill development centers in all blocks
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 mt-1">•</span>
-                  Free healthcare for all citizens
-                </li>
-              </ul>
-            </div>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+              Trusted by winning
+              <span className="text-green-600 block">campaigns worldwide</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              See how political leaders and campaign managers are using BETTROI
+              to gain the insights they need to win.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <div key={index} className="bg-gray-50 p-8 rounded-2xl">
+                <div className="flex items-center mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <blockquote className="text-gray-700 text-lg leading-relaxed mb-6">
+                  "{testimonial.quote}"
+                </blockquote>
+                <div className="flex items-center">
+                  <div className="mr-4 flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full">{testimonial.avatar}</div>
+                  <div>
+                    <div className="font-bold text-gray-900">{testimonial.author}</div>
+                    <div className="text-gray-600">{testimonial.role}</div>
+                    <div className="text-sm text-gray-500">{testimonial.party}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-red-600 to-yellow-500">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-white mb-4">
-            Be Part of the Victory Movement
+      {/* Final CTA Section */}
+      <div className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
+            Ready to transform your campaign?
           </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Join thousands of volunteers working towards Tamil Nadu's transformation
+          <p className="text-xl text-blue-100 mb-10">
+            Join hundreds of successful campaigns that trust BETTROI for their political intelligence needs.
           </p>
-          <Link
-            to="/auth"
-            className="inline-flex items-center gap-2 bg-white text-red-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
-          >
-            <VolunteerActivism />
-            Register as TVK Volunteer
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={handleBookDemoClick}
+              className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl hover:shadow-xl transition-all duration-300 flex items-center justify-center transform hover:scale-105"
+            >
+              <CalendarIcon className="mr-2 w-5 h-5" />
+              Book a Demo
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </button>
+            <Link
+              to="/login"
+              className="px-8 py-4 bg-white/20 backdrop-blur-sm border border-white/30 text-white font-semibold rounded-xl hover:bg-white/30 transition-all duration-300 flex items-center justify-center"
+            >
+              <LockIcon className="mr-2 w-5 h-5" />
+              Admin Login
+            </Link>
+          </div>
         </div>
-      </section>
+      </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      <div className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4 text-yellow-400">TVK Headquarters</h3>
-              <p className="text-gray-400">
-                Chennai, Tamil Nadu<br />
-                Email: contact@tvkparty.in<br />
-                Phone: 1800-TVK-2026
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center mb-4">
+                <div className="flex items-center space-x-3">
+                  <Zap className="w-8 h-8 text-purple-400" />
+                  <div>
+                    <div className="text-2xl font-bold">Pulse of People</div>
+                    {/* <div className="text-sm text-gray-400">by BETTROI</div> */}
+                  </div>
+                </div>
+              </div>
+              <p className="text-gray-400 mb-4">
+                The world's most ADVANCED political intelligence platform,
+                empowering campaigns with data-driven insights and real-time pulse monitoring.
               </p>
+              <div className="flex items-center text-gray-400">
+                <MapPin className="w-4 h-4 mr-2" />
+                Animal-i Initiative • Global Headquarters: Dubai
+              </div>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-yellow-400">Quick Links</h3>
+              <h3 className="font-bold mb-4">Platform</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-yellow-400">About TVK</a></li>
-                <li><a href="#" className="hover:text-yellow-400">Our Leader</a></li>
-                <li><a href="#" className="hover:text-yellow-400">Manifesto</a></li>
-                <li><a href="#" className="hover:text-yellow-400">Join Us</a></li>
+                <li><Link to="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
+                <li><Link to="/analytics" className="hover:text-white transition-colors">Analytics</Link></li>
+                <li><Link to="/voter-database" className="hover:text-white transition-colors">Voter Database</Link></li>
+                <li><Link to="/ai-insights" className="hover:text-white transition-colors">AI Insights</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-yellow-400">Connect With Us</h3>
-              <p className="text-gray-400 mb-4">
-                Follow us on social media for latest updates
-              </p>
-              <div className="flex gap-4">
-                <a href="#" className="text-gray-400 hover:text-yellow-400">Twitter</a>
-                <a href="#" className="text-gray-400 hover:text-yellow-400">Facebook</a>
-                <a href="#" className="text-gray-400 hover:text-yellow-400">Instagram</a>
-                <a href="#" className="text-gray-400 hover:text-yellow-400">YouTube</a>
+              <h3 className="font-bold mb-4">Contact Sales</h3>
+              <div className="space-y-3 text-gray-400">
+                <div className="flex items-center">
+                  <MapPin className="w-4 h-4 mr-2 text-purple-400" />
+                  <span className="text-sm">Dubai, UAE (HQ)</span>
+                </div>
+                <div className="flex items-center">
+                  <Phone className="w-4 h-4 mr-2 text-blue-400" />
+                  <a href="tel:+971547148580" className="text-sm hover:text-white transition-colors">
+                    +971 54 714 8580
+                  </a>
+                </div>
+                <div className="flex items-center">
+                  <Phone className="w-4 h-4 mr-2 text-green-400" />
+                  <a href="tel:+919373111709" className="text-sm hover:text-white transition-colors">
+                    +91 9373111709 (India)
+                  </a>
+                </div>
+                <div className="flex items-center">
+                  <Phone className="w-4 h-4 mr-2 text-orange-400" />
+                  <a href="tel:+971521700972" className="text-sm hover:text-white transition-colors">
+                    +971 52 170 0972
+                  </a>
+                </div>
+                <div className="flex items-center">
+                  <Mail className="w-4 h-4 mr-2 text-cyan-400" />
+                  <a href="mailto:contact@pulseofpeople.com" className="text-sm hover:text-white transition-colors">
+                    contact@pulseofpeople.com
+                  </a>
+                </div>
+                <div className="flex items-center">
+                  <MessageCircle className="w-4 h-4 mr-2 text-yellow-400" />
+                  <a href="https://wa.me/971547148580" className="text-sm hover:text-white transition-colors">
+                    WhatsApp Sales
+                  </a>
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-700">
+                  <p className="text-xs font-medium">24/7 Sales Support</p>
+                  <p className="text-xs">Tamil Nadu Project Office Available</p>
+                </div>
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center">
-            <p className="text-gray-500">
-              © 2025 Tamilaga Vettri Kazhagam. All rights reserved. | Powered by Pulse Intelligence Platform
-            </p>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 BETTROI. All rights reserved. Built with ❤️ for political change.</p>
           </div>
         </div>
-      </footer>
+      </div>
 
-      {/* ElevenLabs Voice Agent Widget */}
-      <elevenlabs-convai
-        agent-id={import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_2501k9rprn1de53rm33gjv0hx84e'}
+      {/* Video Modal */}
+      <VideoModal
+        isOpen={isVideoModalOpen}
+        onClose={() => setIsVideoModalOpen(false)}
+        title="BETTROI Platform Demo"
+      />
+
+      {/* Demo Modal */}
+      <DemoModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
       />
     </div>
   );
-};
-
-export default TVKLandingPage;
+}
