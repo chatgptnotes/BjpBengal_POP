@@ -1,0 +1,25 @@
+name = "pulse-ai4bharat-proxy"
+main = "ai4bharat-proxy.js"
+compatibility_date = "2024-01-01"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+
+# Secrets (set using: wrangler secret put HUGGINGFACE_API_KEY --config cloudflare-workers/ai4bharat-wrangler.toml)
+# HUGGINGFACE_API_KEY = "your-api-key-here" (DO NOT commit - use wrangler secret put)
+
+# Routes - uncomment and configure when you have a custom domain
+# [[routes]]
+# pattern = "api.pulseofpeople.com/ai/*"
+# zone_name = "pulseofpeople.com"
+
+# For development, this worker will be accessible at:
+# https://pulse-ai4bharat-proxy.<your-subdomain>.workers.dev
+
+# Observability
+[observability]
+enabled = true
+
+# Limits - Removed cpu_ms (not supported on Free plan)
+# Free plan still provides sufficient CPU time for AI processing
