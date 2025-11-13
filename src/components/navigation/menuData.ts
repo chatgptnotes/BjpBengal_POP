@@ -21,6 +21,7 @@ import {
   Poll as PollIcon,
   CameraAlt as DataCaptureIcon,
   Phone as PhoneIcon,
+  Psychology as PersonaIcon,
   // Maps
   Map as MapIcon,
   Public as GlobalIcon,
@@ -69,6 +70,12 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
 
   // DATA INTELLIGENCE
   'data-intelligence': [
+    {
+      name: 'Voter Personas',
+      href: '/voter-personas',
+      icon: PersonaIcon,
+      badge: 'ML'
+    },
     {
       name: 'Social Media Channels',
       href: '/social-media-channels',

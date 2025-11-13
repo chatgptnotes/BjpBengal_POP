@@ -38,6 +38,7 @@ import InfluencerTracking from './pages/InfluencerTracking'
 import ConversationBot from './pages/ConversationBot'
 import VoterSentimentAnalysis from './pages/VoterSentimentAnalysis'
 import VoiceAgentChat from './pages/VoiceAgentChat'
+import PersonaDashboard from './pages/VoterPersonas/PersonaDashboard'
 import EnhancedWardHeatmap from './components/EnhancedWardHeatmap'
 import ManifestoMatch from './components/ManifestoMatch'
 import FeedbackChatbot from './components/FeedbackChatbot'
@@ -449,6 +450,15 @@ function AppRoutes() {
                 <ProtectedRoute>
                   <Layout>
                     <VoiceAgentChat />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+
+              {/* Voter Personas - ML Module */}
+              <Route path="/voter-personas" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PersonaDashboard />
                   </Layout>
                 </ProtectedRoute>
               } />
