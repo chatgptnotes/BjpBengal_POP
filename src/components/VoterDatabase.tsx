@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Filter, 
-  Download, 
+import {
+  Users,
+  Search,
+  Plus,
+  Filter,
+  Download,
   Upload,
   Edit3,
   MapPin,
@@ -20,15 +20,358 @@ import {
   Clock,
   Target,
   FileText,
-  Camera
+  Camera,
+  XCircle
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useAuth } from '../contexts/AuthContext';
+import { votersService } from '../services/supabase/voters.service';
+import type { VoterInsert } from '../types/database';
+import { supabase } from '../lib/supabase';
 
 export default function VoterDatabase() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [showAddVoter, setShowAddVoter] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Real database stats
+  const [stats, setStats] = useState({
+    totalVoters: 0,
+    newThisMonth: 0,
+    activeVoters: 0,
+    strongSupport: 0,
+    moderateSupport: 0,
+    contactRate: 0
+  });
+  const [votersList, setVotersList] = useState<any[]>([]);
+
+  // Chart data states
+  const [demographicData, setDemographicData] = useState<any[]>([]);
+  const [supportLevelChartData, setSupportLevelChartData] = useState<any[]>([]);
+  const [boothWiseChartData, setBoothWiseChartData] = useState<any[]>([]);
+  const [voterInterests, setVoterInterests] = useState<any[]>([]);
+
+  // Fetch all real data from Supabase
+  useEffect(() => {
+    fetchDatabaseStats();
+    fetchVotersList();
+    fetchDemographicData();
+    fetchSupportLevelData();
+    fetchBoothWiseData();
+    fetchVoterInterests();
+  }, []);
+
+  const fetchDatabaseStats = async () => {
+    try {
+      // Get first day of current month for "New This Month"
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      // Total voters count
+      const { count: total } = await supabase
+        .from('voters')
+        .select('*', { count: 'exact', head: true });
+
+      // New this month
+      const { count: newThisMonth } = await supabase
+        .from('voters')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', firstDayOfMonth);
+
+      // Active voters (is_active = true)
+      const { count: active } = await supabase
+        .from('voters')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+
+      // Strong support (sentiment = 'strong_supporter')
+      const { count: strongSupport } = await supabase
+        .from('voters')
+        .select('*', { count: 'exact', head: true })
+        .eq('sentiment', 'strong_supporter');
+
+      // Moderate support (sentiment = 'supporter')
+      const { count: moderateSupport } = await supabase
+        .from('voters')
+        .select('*', { count: 'exact', head: true })
+        .eq('sentiment', 'supporter');
+
+      // Contact rate calculation (voters with interaction_count > 0)
+      const { count: contacted } = await supabase
+        .from('voters')
+        .select('*', { count: 'exact', head: true })
+        .gt('interaction_count', 0);
+
+      const contactRate = total && total > 0 ? ((contacted || 0) / total) * 100 : 0;
+
+      setStats({
+        totalVoters: total || 0,
+        newThisMonth: newThisMonth || 0,
+        activeVoters: active || 0,
+        strongSupport: strongSupport || 0,
+        moderateSupport: moderateSupport || 0,
+        contactRate: contactRate
+      });
+    } catch (error) {
+      console.error('Error fetching database stats:', error);
+    }
+  };
+
+  const fetchVotersList = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('voters')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Error fetching voters list:', error);
+        return;
+      }
+
+      setVotersList(data || []);
+    } catch (error) {
+      console.error('Error fetching voters list:', error);
+    }
+  };
+
+  const fetchDemographicData = async () => {
+    try {
+      // Fetch all voters to calculate caste distribution
+      const { data, error } = await supabase
+        .from('voters')
+        .select('caste');
+
+      if (error) {
+        console.error('Error fetching demographic data:', error);
+        return;
+      }
+
+      console.log('=== DEMOGRAPHIC DATA DEBUG ===');
+      console.log('Raw voter data:', data);
+
+      // Count by caste (normalize to uppercase to avoid duplicates)
+      const casteCounts: { [key: string]: number } = {};
+      data?.forEach((voter) => {
+        // Normalize to uppercase to handle case variations (obc, OBC, Obc)
+        const casteRaw = voter.caste?.trim() || 'NOT SPECIFIED';
+        const casteNormalized = casteRaw.toUpperCase();
+        console.log(`Voter caste: "${voter.caste}" → Normalized: "${casteNormalized}"`);
+        casteCounts[casteNormalized] = (casteCounts[casteNormalized] || 0) + 1;
+      });
+
+      console.log('Caste counts:', casteCounts);
+
+      const total = data?.length || 0;
+
+      // Color mapping using uppercase keys
+      const colors: { [key: string]: string } = {
+        'GENERAL': '#2563EB',        // Bright electric blue
+        'OBC': '#059669',            // Vibrant emerald green
+        'SC': '#F59E0B',             // Bright orange
+        'ST': '#DC2626',             // Vibrant red
+        'OTHER': '#9333EA',          // Vibrant purple
+        'NOT SPECIFIED': '#6B7280'   // Neutral gray
+      };
+
+      // Display name mapping (proper capitalization)
+      const displayNames: { [key: string]: string } = {
+        'GENERAL': 'General',
+        'OBC': 'OBC',
+        'SC': 'SC',
+        'ST': 'ST',
+        'OTHER': 'Other',
+        'NOT SPECIFIED': 'Not Specified'
+      };
+
+      const demographicArray = Object.entries(casteCounts).map(([casteKey, count]) => {
+        const color = colors[casteKey] || '#9CA3AF';
+        const category = displayNames[casteKey] || casteKey;
+        console.log(`Mapping: "${casteKey}" → Category: "${category}", Color: "${color}"`);
+        return {
+          category,
+          count,
+          percentage: total > 0 ? ((count / total) * 100).toFixed(1) : 0,
+          color
+        };
+      });
+
+      console.log('Final demographic array:', demographicArray);
+      console.log('=== END DEBUG ===');
+
+      setDemographicData(demographicArray);
+    } catch (error) {
+      console.error('Error fetching demographic data:', error);
+    }
+  };
+
+  const fetchSupportLevelData = async () => {
+    try {
+      // Fetch sentiment counts
+      const { data, error } = await supabase
+        .from('voters')
+        .select('sentiment');
+
+      if (error) {
+        console.error('Error fetching support level data:', error);
+        return;
+      }
+
+      // Count by sentiment
+      const sentimentCounts: { [key: string]: number } = {};
+      data?.forEach((voter) => {
+        const sentiment = voter.sentiment || 'neutral';
+        sentimentCounts[sentiment] = (sentimentCounts[sentiment] || 0) + 1;
+      });
+
+      // Group into Strong, Moderate, Weak as per user preference
+      const supportData = [
+        {
+          level: 'Strong Support',
+          count: sentimentCounts['strong_supporter'] || 0,
+          color: '#10B981'
+        },
+        {
+          level: 'Moderate Support',
+          count: (sentimentCounts['supporter'] || 0) + (sentimentCounts['neutral'] || 0),
+          color: '#F59E0B'
+        },
+        {
+          level: 'Weak Support',
+          count: (sentimentCounts['opposition'] || 0) + (sentimentCounts['strong_opposition'] || 0),
+          color: '#EF4444'
+        }
+      ];
+
+      setSupportLevelChartData(supportData);
+    } catch (error) {
+      console.error('Error fetching support level data:', error);
+    }
+  };
+
+  const fetchBoothWiseData = async () => {
+    try {
+      // Fetch all voters with ward and interaction data
+      const { data, error } = await supabase
+        .from('voters')
+        .select('ward, interaction_count, sentiment');
+
+      if (error) {
+        console.error('Error fetching booth-wise data:', error);
+        return;
+      }
+
+      // Group by ward
+      const wardStats: { [key: string]: { voters: number; contacted: number; supporters: number } } = {};
+      data?.forEach((voter) => {
+        const ward = voter.ward || 'Unknown';
+        if (!wardStats[ward]) {
+          wardStats[ward] = { voters: 0, contacted: 0, supporters: 0 };
+        }
+        wardStats[ward].voters += 1;
+        if (voter.interaction_count && voter.interaction_count > 0) {
+          wardStats[ward].contacted += 1;
+        }
+        if (voter.sentiment === 'strong_supporter' || voter.sentiment === 'supporter') {
+          wardStats[ward].supporters += 1;
+        }
+      });
+
+      // Convert to array and sort by voter count, limit to top 5
+      const wardArray = Object.entries(wardStats)
+        .map(([booth, stats]) => ({
+          booth,
+          voters: stats.voters,
+          contacted: stats.contacted,
+          support: stats.voters > 0 ? Math.round((stats.supporters / stats.voters) * 100) : 0
+        }))
+        .sort((a, b) => b.voters - a.voters)
+        .slice(0, 5);
+
+      setBoothWiseChartData(wardArray);
+    } catch (error) {
+      console.error('Error fetching booth-wise data:', error);
+    }
+  };
+
+  const fetchVoterInterests = async () => {
+    try {
+      // Fetch all voters' tags
+      const { data, error } = await supabase
+        .from('voters')
+        .select('tags');
+
+      if (error) {
+        console.error('Error fetching voter interests:', error);
+        return;
+      }
+
+      // Count occurrences of each tag
+      const tagCounts: { [key: string]: number } = {};
+      data?.forEach((voter) => {
+        const tags = voter.tags || [];
+        tags.forEach((tag: string) => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      });
+
+      // Convert to array, sort by count, get top 5
+      const interestsArray = Object.entries(tagCounts)
+        .map(([interest, count]) => ({
+          interest,
+          count,
+          percentage: 0 // Will calculate percentage based on max
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      // Calculate percentage for progress bar (relative to the highest count)
+      const maxCount = interestsArray[0]?.count || 1;
+      interestsArray.forEach((item) => {
+        item.percentage = Math.round((item.count / maxCount) * 100);
+      });
+
+      setVoterInterests(interestsArray);
+    } catch (error) {
+      console.error('Error fetching voter interests:', error);
+    }
+  };
+
+  // Debug: Log user state
+  useEffect(() => {
+    console.log('=== VOTER DATABASE DEBUG ===');
+    console.log('User object:', user);
+    console.log('User ID:', user?.id);
+    console.log('User Email:', user?.email);
+    console.log('Organization ID:', user?.organization_id);
+    console.log('Has organization?', !!user?.organization_id);
+    console.log('========================');
+  }, [user]);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    fullName: '',
+    age: '',
+    gender: '',
+    voterIdCard: '',
+    phoneNumber: '',
+    email: '',
+    caste: '',
+    religion: '',
+    education: '',
+    occupation: '',
+    constituency: '',
+    booth: '',
+    address: '',
+    interests: [] as string[]
+  });
 
   // Mock voter database
   const voterDatabase = [
@@ -131,36 +474,7 @@ export default function VoterDatabase() {
     }
   ];
 
-  // Mock analytics data
-  const databaseStats = {
-    totalVoters: 125420,
-    newRegistrations: 1240,
-    activeVoters: 118650,
-    strongSupport: 89320,
-    moderateSupport: 24180,
-    weakSupport: 11920
-  };
-
-  const demographicBreakdown = [
-    { category: 'General', count: 45230, percentage: 36.1, color: '#3B82F6' },
-    { category: 'OBC', count: 38140, percentage: 30.4, color: '#10B981' },
-    { category: 'SC', count: 25680, percentage: 20.5, color: '#F59E0B' },
-    { category: 'ST', count: 16370, percentage: 13.0, color: '#EF4444' }
-  ];
-
-  const supportLevelData = [
-    { level: 'Strong Support', count: 89320, color: '#10B981' },
-    { level: 'Moderate Support', count: 24180, color: '#F59E0B' },
-    { level: 'Weak Support', count: 11920, color: '#EF4444' }
-  ];
-
-  const boothWiseData = [
-    { booth: 'GR-001', voters: 1240, contacted: 980, support: 78 },
-    { booth: 'GR-002', voters: 1180, contacted: 920, support: 82 },
-    { booth: 'ND-001', voters: 1320, contacted: 1100, support: 75 },
-    { booth: 'ND-002', voters: 1150, contacted: 950, support: 85 },
-    { booth: 'CC-001', voters: 1080, contacted: 850, support: 68 }
-  ];
+  // Analytics data - using real stats from database (no hardcoded data)
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -169,19 +483,198 @@ export default function VoterDatabase() {
     { id: 'registration', label: 'Registration', icon: Plus }
   ];
 
-  const filteredVoters = voterDatabase.filter(voter => {
-    const matchesSearch = voter.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         voter.constituency.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         voter.voterIdCard.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = selectedFilter === 'all' || 
-                         voter.engagement.supportLevel.toLowerCase() === selectedFilter.toLowerCase();
-    
+  const filteredVoters = votersList.filter(voter => {
+    const fullName = `${voter.first_name} ${voter.last_name || ''}`.toLowerCase();
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
+                         (voter.ward || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (voter.voter_id || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesFilter = selectedFilter === 'all' ||
+                         (selectedFilter === 'strong' && voter.sentiment === 'strong_supporter') ||
+                         (selectedFilter === 'moderate' && (voter.sentiment === 'supporter' || voter.sentiment === 'neutral')) ||
+                         (selectedFilter === 'weak' && (voter.sentiment === 'opposition' || voter.sentiment === 'strong_opposition'));
+
     return matchesSearch && matchesFilter;
   });
 
+  // Handle interest checkbox toggle
+  const handleInterestToggle = (interest: string) => {
+    setFormData(prev => ({
+      ...prev,
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter(i => i !== interest)
+        : [...prev.interests, interest]
+    }));
+  };
+
+  // Handle form field changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      fullName: '',
+      age: '',
+      gender: '',
+      voterIdCard: '',
+      phoneNumber: '',
+      email: '',
+      caste: '',
+      religion: '',
+      education: '',
+      occupation: '',
+      constituency: '',
+      booth: '',
+      address: '',
+      interests: []
+    });
+  };
+
+  // Handle form submission
+  const handleAddVoter = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Check if user has organization_id (skip for admins who have all rights)
+    const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.is_super_admin;
+    if (!user?.organization_id && !isAdmin) {
+      setErrorMessage('Error: You must be logged in with a valid organization to add voters.');
+      setShowError(true);
+      return;
+    }
+
+    // Validate required fields
+    if (!formData.fullName || !formData.age || !formData.gender ||
+        !formData.voterIdCard || !formData.phoneNumber ||
+        !formData.constituency || !formData.booth) {
+      setErrorMessage('Please fill in all required fields (marked with *)');
+      setShowError(true);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Prepare voter data for Supabase - mapped to correct database schema
+      const nameParts = formData.fullName.trim().split(' ');
+      const voterData: any = {
+        // Split name into first_name and last_name (DB schema)
+        first_name: nameParts[0],
+        last_name: nameParts.slice(1).join(' ') || null,
+
+        // Basic info - corrected field names
+        age: parseInt(formData.age),
+        gender: formData.gender as 'male' | 'female' | 'other',
+        voter_id: formData.voterIdCard,              // Changed from voter_id_number
+
+        // Contact - corrected field names
+        phone: formData.phoneNumber,                 // Changed from phone_number
+        email: formData.email || null,
+
+        // Address - corrected field names
+        address_line1: formData.address || null,     // Changed from address
+        ward: formData.constituency,                  // Using constituency as ward for now
+
+        // Demographics - now saving to database
+        caste: formData.caste || null,
+        religion: formData.religion || null,
+        education: formData.education || null,
+        occupation: formData.occupation || null,
+
+        // Political data - corrected field names
+        tags: formData.interests || [],              // Changed from political_interests
+        sentiment: 'neutral',                        // Changed from support_level
+        party_affiliation: 'unknown',
+
+        // Status - corrected to boolean
+        is_active: true,                             // Changed from status: 'active'
+        is_verified: false,
+
+        // Engagement defaults
+        contact_frequency: 0,
+        interaction_count: 0,
+        positive_interactions: 0,
+        negative_interactions: 0,
+        voting_history: [],
+        is_opinion_leader: false,
+        influence_level: 'low'
+      };
+
+      // Save to Supabase
+      await votersService.create(voterData);
+
+      // Success! Show message and reset form
+      setShowSuccess(true);
+      resetForm();
+
+      // Refresh all data including charts
+      fetchDatabaseStats();
+      fetchVotersList();
+      fetchDemographicData();
+      fetchSupportLevelData();
+      fetchBoothWiseData();
+      fetchVoterInterests();
+
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+
+    } catch (error: any) {
+      console.error('Error adding voter:', error);
+      setErrorMessage(`Failed to add voter: ${error.message || 'Unknown error'}`);
+      setShowError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Error Dialog */}
+      {showError && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <XCircle className="w-6 h-6 text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Error</h3>
+            </div>
+            <p className="text-gray-700 mb-6">{errorMessage}</p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowError(false)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Dialog */}
+      {showSuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Success</h3>
+            </div>
+            <p className="text-gray-700 mb-6">Voter added successfully!</p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowSuccess(false)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 flex items-center">
@@ -210,7 +703,7 @@ export default function VoterDatabase() {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <div className="text-xl font-bold text-gray-900">{databaseStats.totalVoters.toLocaleString()}</div>
+              <div className="text-xl font-bold text-gray-900">{stats.totalVoters.toLocaleString()}</div>
               <div className="text-xs text-gray-600">Total Voters</div>
             </div>
           </div>
@@ -222,7 +715,7 @@ export default function VoterDatabase() {
               <Plus className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <div className="text-xl font-bold text-gray-900">+{databaseStats.newRegistrations.toLocaleString()}</div>
+              <div className="text-xl font-bold text-gray-900">+{stats.newThisMonth.toLocaleString()}</div>
               <div className="text-xs text-gray-600">New This Month</div>
             </div>
           </div>
@@ -234,7 +727,7 @@ export default function VoterDatabase() {
               <CheckCircle className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <div className="text-xl font-bold text-gray-900">{databaseStats.activeVoters.toLocaleString()}</div>
+              <div className="text-xl font-bold text-gray-900">{stats.activeVoters.toLocaleString()}</div>
               <div className="text-xs text-gray-600">Active Voters</div>
             </div>
           </div>
@@ -246,7 +739,7 @@ export default function VoterDatabase() {
               <Target className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <div className="text-xl font-bold text-gray-900">{databaseStats.strongSupport.toLocaleString()}</div>
+              <div className="text-xl font-bold text-gray-900">{stats.strongSupport.toLocaleString()}</div>
               <div className="text-xs text-gray-600">Strong Support</div>
             </div>
           </div>
@@ -258,7 +751,7 @@ export default function VoterDatabase() {
               <AlertCircle className="w-5 h-5 text-yellow-600" />
             </div>
             <div>
-              <div className="text-xl font-bold text-gray-900">{databaseStats.moderateSupport.toLocaleString()}</div>
+              <div className="text-xl font-bold text-gray-900">{stats.moderateSupport.toLocaleString()}</div>
               <div className="text-xs text-gray-600">Moderate Support</div>
             </div>
           </div>
@@ -270,7 +763,7 @@ export default function VoterDatabase() {
               <Clock className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <div className="text-xl font-bold text-gray-900">94.5%</div>
+              <div className="text-xl font-bold text-gray-900">{stats.contactRate.toFixed(1)}%</div>
               <div className="text-xs text-gray-600">Contact Rate</div>
             </div>
           </div>
@@ -304,87 +797,105 @@ export default function VoterDatabase() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Demographic Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={demographicBreakdown}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ category, percentage }) => `${category} ${percentage}%`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {demographicBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: any) => [value.toLocaleString(), 'Voters']} />
-                </PieChart>
-              </ResponsiveContainer>
+              {demographicData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={demographicData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ category, percentage }) => `${category} ${percentage}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {demographicData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: any) => [value.toLocaleString(), 'Voters']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-gray-500">
+                  No demographic data available
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Support Level Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={supportLevelData} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="level" type="category" width={100} />
-                  <Tooltip formatter={(value: any) => [value.toLocaleString(), 'Voters']} />
-                  <Bar dataKey="count" fill="#3B82F6" />
-                </BarChart>
-              </ResponsiveContainer>
+              {supportLevelChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={supportLevelChartData} layout="horizontal">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="level" type="category" width={120} />
+                    <Tooltip formatter={(value: any) => [value.toLocaleString(), 'Voters']} />
+                    <Bar dataKey="count" fill="#3B82F6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-gray-500">
+                  No support level data available
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Booth-wise Performance */}
+          {/* Ward-wise Performance */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Booth-wise Coverage Analysis</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Ward-wise Coverage Analysis (Top 5)</h3>
             <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Booth</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900">Total Voters</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900">Contacted</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900">Contact Rate</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900">Support %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {boothWiseData.map((booth) => (
-                    <tr key={booth.booth} className="border-b border-gray-100">
-                      <td className="py-3 px-4 font-medium text-gray-900">{booth.booth}</td>
-                      <td className="py-3 px-4 text-right">{booth.voters.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right">{booth.contacted.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end">
-                          <div className="w-16 h-2 bg-gray-200 rounded-full mr-2">
-                            <div 
-                              className="h-2 bg-blue-500 rounded-full"
-                              style={{ width: `${(booth.contacted / booth.voters) * 100}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-medium">
-                            {Math.round((booth.contacted / booth.voters) * 100)}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          booth.support >= 80 ? 'bg-green-100 text-green-800' :
-                          booth.support >= 70 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {booth.support}%
-                        </span>
-                      </td>
+              {boothWiseChartData.length > 0 ? (
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900">Ward</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-900">Total Voters</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-900">Contacted</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-900">Contact Rate</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-900">Support %</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {boothWiseChartData.map((booth) => (
+                      <tr key={booth.booth} className="border-b border-gray-100">
+                        <td className="py-3 px-4 font-medium text-gray-900">{booth.booth}</td>
+                        <td className="py-3 px-4 text-right">{booth.voters.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right">{booth.contacted.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end">
+                            <div className="w-16 h-2 bg-gray-200 rounded-full mr-2">
+                              <div
+                                className="h-2 bg-blue-500 rounded-full"
+                                style={{ width: `${booth.voters > 0 ? (booth.contacted / booth.voters) * 100 : 0}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium">
+                              {booth.voters > 0 ? Math.round((booth.contacted / booth.voters) * 100) : 0}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            booth.support >= 80 ? 'bg-green-100 text-green-800' :
+                            booth.support >= 70 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {booth.support}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  No ward data available
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -439,66 +950,81 @@ export default function VoterDatabase() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredVoters.map((voter) => (
-                    <tr key={voter.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4">
-                        <div>
-                          <div className="font-medium text-gray-900">{voter.name}</div>
-                          <div className="text-sm text-gray-600">{voter.voterIdCard}</div>
-                          <div className="text-sm text-gray-600">{voter.constituency} - {voter.booth}</div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm">
-                          <div>{voter.age}y, {voter.gender}</div>
-                          <div className="text-gray-600">{voter.demographics.caste}</div>
-                          <div className="text-gray-600">{voter.demographics.occupation}</div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm">
-                          <div className="flex items-center">
-                            <Phone className="w-3 h-3 mr-1 text-gray-400" />
-                            {voter.phone}
-                          </div>
-                          <div className="flex items-center mt-1">
-                            <Mail className="w-3 h-3 mr-1 text-gray-400" />
-                            {voter.email}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            voter.engagement.supportLevel === 'Strong' ? 'bg-green-100 text-green-800' :
-                            voter.engagement.supportLevel === 'Moderate' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {voter.engagement.supportLevel}
-                          </span>
-                          <div className="text-gray-600 mt-1">
-                            {voter.engagement.ralliesAttended} rallies attended
-                          </div>
-                          <div className="text-gray-600">
-                            Last: {voter.engagement.lastContact}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-green-600 transition-colors">
-                            <Phone className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-purple-600 transition-colors">
-                            <FileText className="w-4 h-4" />
-                          </button>
-                        </div>
+                  {filteredVoters.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-gray-500">
+                        {votersList.length === 0
+                          ? 'No voters found in database. Add voters using the Registration tab.'
+                          : 'No voters match your search criteria.'}
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredVoters.map((voter) => (
+                      <tr key={voter.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-4 px-4">
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {voter.first_name} {voter.last_name || ''}
+                            </div>
+                            <div className="text-sm text-gray-600">{voter.voter_id || 'N/A'}</div>
+                            <div className="text-sm text-gray-600">{voter.ward || 'N/A'}</div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="text-sm">
+                            <div>{voter.age}y, {voter.gender || 'N/A'}</div>
+                            <div className="text-gray-600">{voter.party_affiliation || 'Unknown'}</div>
+                            <div className="text-gray-600">{voter.influence_level || 'N/A'}</div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="text-sm">
+                            <div className="flex items-center">
+                              <Phone className="w-3 h-3 mr-1 text-gray-400" />
+                              {voter.phone || 'N/A'}
+                            </div>
+                            <div className="flex items-center mt-1">
+                              <Mail className="w-3 h-3 mr-1 text-gray-400" />
+                              {voter.email || 'N/A'}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="text-sm">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              voter.sentiment === 'strong_supporter' ? 'bg-green-100 text-green-800' :
+                              voter.sentiment === 'supporter' ? 'bg-green-50 text-green-700' :
+                              voter.sentiment === 'neutral' ? 'bg-gray-100 text-gray-800' :
+                              voter.sentiment === 'opposition' ? 'bg-red-50 text-red-700' :
+                              voter.sentiment === 'strong_opposition' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {voter.sentiment || 'neutral'}
+                            </span>
+                            <div className="text-gray-600 mt-1">
+                              {voter.interaction_count || 0} interactions
+                            </div>
+                            <div className="text-gray-600">
+                              {voter.is_active ? 'Active' : 'Inactive'}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 text-gray-400 hover:text-green-600 transition-colors">
+                              <Phone className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 text-gray-400 hover:text-purple-600 transition-colors">
+                              <FileText className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -513,26 +1039,26 @@ export default function VoterDatabase() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Voter Interests</h3>
               <div className="space-y-3">
-                {[
-                  { interest: 'Infrastructure', count: 45280, percentage: 78 },
-                  { interest: 'Education', count: 38940, percentage: 67 },
-                  { interest: 'Healthcare', count: 32150, percentage: 55 },
-                  { interest: 'Employment', count: 28760, percentage: 49 },
-                  { interest: 'Women Safety', count: 24830, percentage: 43 }
-                ].map((item) => (
-                  <div key={item.interest} className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">{item.interest}</span>
-                    <div className="flex items-center">
-                      <div className="w-20 h-2 bg-gray-200 rounded-full mr-2">
-                        <div 
-                          className="h-2 bg-blue-500 rounded-full"
-                          style={{ width: `${item.percentage}%` }}
-                        ></div>
+                {voterInterests.length > 0 ? (
+                  voterInterests.map((item) => (
+                    <div key={item.interest} className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">{item.interest}</span>
+                      <div className="flex items-center">
+                        <div className="w-20 h-2 bg-gray-200 rounded-full mr-2">
+                          <div
+                            className="h-2 bg-blue-500 rounded-full"
+                            style={{ width: `${item.percentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-600 w-12">{item.count.toLocaleString()}</span>
                       </div>
-                      <span className="text-xs text-gray-600 w-12">{item.count.toLocaleString()}</span>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 py-4">
+                    No voter interest data available
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -594,60 +1120,107 @@ export default function VoterDatabase() {
 
       {activeTab === 'registration' && (
         <div className="space-y-6">
+
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Add New Voter</h3>
-            
-            <form className="space-y-6">
+
+            <form onSubmit={handleAddVoter} className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Personal Information */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-gray-900 border-b pb-2">Personal Information</h4>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                    <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Age *</label>
-                      <input type="number" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <input
+                        type="number"
+                        name="age"
+                        value={formData.age}
+                        onChange={handleInputChange}
+                        required
+                        min="18"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
-                      <select className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <select
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
                         <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
                       </select>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Voter ID Card *</label>
-                    <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input
+                      type="text"
+                      name="voterIdCard"
+                      value={formData.voterIdCard}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                    <input type="tel" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input
+                      type="tel"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
                 </div>
 
                 {/* Demographics & Location */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-gray-900 border-b pb-2">Demographics & Location</h4>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Caste</label>
-                      <select className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <select
+                        name="caste"
+                        value={formData.caste}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
                         <option value="">Select Caste</option>
                         <option value="General">General</option>
                         <option value="OBC">OBC</option>
@@ -657,7 +1230,12 @@ export default function VoterDatabase() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Religion</label>
-                      <select className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <select
+                        name="religion"
+                        value={formData.religion}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
                         <option value="">Select Religion</option>
                         <option value="Hindu">Hindu</option>
                         <option value="Muslim">Muslim</option>
@@ -667,10 +1245,15 @@ export default function VoterDatabase() {
                       </select>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Education</label>
-                    <select className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select
+                      name="education"
+                      value={formData.education}
+                      onChange={handleInputChange}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
                       <option value="">Select Education</option>
                       <option value="Illiterate">Illiterate</option>
                       <option value="Primary">Primary</option>
@@ -679,16 +1262,28 @@ export default function VoterDatabase() {
                       <option value="Post Graduate">Post Graduate</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Occupation</label>
-                    <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input
+                      type="text"
+                      name="occupation"
+                      value={formData.occupation}
+                      onChange={handleInputChange}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Constituency *</label>
-                      <select className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <select
+                        name="constituency"
+                        value={formData.constituency}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
                         <option value="">Select Constituency</option>
                         <option value="Gurgaon Rural">Gurgaon Rural</option>
                         <option value="Noida">Noida</option>
@@ -697,13 +1292,26 @@ export default function VoterDatabase() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Booth *</label>
-                      <input type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <input
+                        type="text"
+                        name="booth"
+                        value={formData.booth}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                    <textarea rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    <textarea
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    ></textarea>
                   </div>
                 </div>
               </div>
@@ -714,7 +1322,12 @@ export default function VoterDatabase() {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {['Infrastructure', 'Education', 'Healthcare', 'Employment', 'Women Safety', 'Economic Policy', 'Environment', 'Technology'].map((interest) => (
                     <label key={interest} className="flex items-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                      <input
+                        type="checkbox"
+                        checked={formData.interests.includes(interest)}
+                        onChange={() => handleInterestToggle(interest)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
                       <span className="ml-2 text-sm text-gray-700">{interest}</span>
                     </label>
                   ))}
@@ -723,11 +1336,19 @@ export default function VoterDatabase() {
 
               {/* Action Buttons */}
               <div className="flex items-center justify-end space-x-4 pt-6 border-t">
-                <button type="button" className="px-6 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                  Cancel
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-6 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Clear
                 </button>
-                <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  Add Voter
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Adding...' : 'Add Voter'}
                 </button>
               </div>
             </form>

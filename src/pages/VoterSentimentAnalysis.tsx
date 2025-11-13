@@ -68,11 +68,12 @@ const VoterSentimentAnalysis: React.FC = () => {
       );
     }
 
-    // Start polling service (runs every 10 minutes to fetch completed calls)
-    if (configured) {
-      console.log('Starting call polling service...');
-      callPollingService.startPolling();
-    }
+    // DISABLED: Automatic background polling
+    // User preference: Manual polling only via "Poll Now" button
+    // if (configured) {
+    //   console.log('Starting call polling service...');
+    //   callPollingService.startPolling();
+    // }
 
     // Cleanup: stop polling when component unmounts
     return () => {

@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { supabaseService } from '../lib/supabaseService';
 import type {
   VoterCall,
   CallCampaign,
@@ -33,6 +34,32 @@ class VoterCallsService {
       return data as VoterCall;
     } catch (error) {
       console.error('Error creating call:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create a new call record from polling service
+   * Uses service-role client to bypass RLS policies
+   * ONLY use this for system/backend operations
+   */
+  async createCallFromPolling(call: Partial<VoterCall>): Promise<VoterCall | null> {
+    try {
+      const { data, error } = await supabaseService
+        .from('voter_calls')
+        .insert(call)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[VoterCallsService] Error creating call from polling:', error);
+        return null;
+      }
+
+      console.log('[VoterCallsService] Call created successfully from polling:', data.id);
+      return data as VoterCall;
+    } catch (error) {
+      console.error('[VoterCallsService] Error creating call from polling:', error);
       return null;
     }
   }
@@ -89,6 +116,7 @@ class VoterCallsService {
 
   /**
    * Get call by ElevenLabs call ID
+   * Note: Uses limit(1) to handle potential duplicates gracefully
    */
   async getCallByElevenLabsId(elevenLabsCallId: string): Promise<VoterCall | null> {
     try {
@@ -96,14 +124,25 @@ class VoterCallsService {
         .from('voter_calls')
         .select('*')
         .eq('call_id', elevenLabsCallId)
-        .single();
+        .order('created_at', { ascending: true }) // Get oldest record first
+        .limit(1);
 
       if (error) {
         console.error('Error fetching call by ElevenLabs ID:', error);
         return null;
       }
 
-      return data as VoterCall;
+      // Check if multiple records exist (indicates duplicates)
+      const { count } = await supabase
+        .from('voter_calls')
+        .select('*', { count: 'exact', head: true })
+        .eq('call_id', elevenLabsCallId);
+
+      if (count && count > 1) {
+        console.warn(`[VoterCallsService] WARNING: Found ${count} duplicate records for call_id: ${elevenLabsCallId}`);
+      }
+
+      return (data && data.length > 0) ? data[0] as VoterCall : null;
     } catch (error) {
       console.error('Error fetching call by ElevenLabs ID:', error);
       return null;

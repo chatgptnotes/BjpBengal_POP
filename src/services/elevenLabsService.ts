@@ -89,12 +89,24 @@ class ElevenLabsService {
 
       const data = await response.json();
 
-      console.log('[ElevenLabs] Call initiated successfully:', data);
+      console.log('[ElevenLabs] Call initiated successfully:', {
+        conversation_id: data.conversation_id,
+        call_id: data.call_id,
+        full_response: data
+      });
+
+      // Check for Twilio-specific errors in the response
+      const twilioError = data.twilio_error || data.error || data.error_message;
+      if (twilioError) {
+        console.warn('[ElevenLabs] Twilio error in response:', twilioError);
+      }
 
       return {
         call_id: data.conversation_id || data.call_id,
         status: data.success ? 'initiated' : 'failed',
         message: data.message || 'Call initiated',
+        twilio_error: twilioError,
+        raw_response: data, // Include full response for debugging
       };
     } catch (error) {
       console.error('[ElevenLabs] Error initiating call:', error);
@@ -127,6 +139,25 @@ class ElevenLabsService {
       }
 
       const data = await response.json();
+
+      // Log call status for debugging
+      console.log('[ElevenLabs] Call status:', {
+        call_id: callId,
+        status: data.status,
+        call_successful: data.call_successful,
+        error_message: data.error_message,
+        metadata: data.metadata
+      });
+
+      // Parse Twilio error codes if present
+      if (data.error_message || data.call_successful === false) {
+        console.warn('[ElevenLabs] Call issue detected:', {
+          error: data.error_message,
+          status: data.status,
+          twilio_status: data.metadata?.twilio_status
+        });
+      }
+
       return data;
     } catch (error) {
       console.error('Error getting call status:', error);

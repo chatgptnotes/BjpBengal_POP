@@ -97,25 +97,73 @@ class CallPollingService {
 
       console.log(`[CallPolling] Found ${conversations.length} conversations`);
 
+      // Debug: Log ALL fields from first conversation to see what ElevenLabs actually returns
+      if (conversations.length > 0) {
+        console.log('[CallPolling] === FULL OBJECT DUMP: First Conversation ===');
+        console.log('All fields:', Object.keys(conversations[0]));
+        console.log('Full object:', JSON.stringify(conversations[0], null, 2));
+        console.log('[CallPolling] === END DUMP ===');
+
+        console.log('[CallPolling] === DETAILED DEBUG: First 3 Conversations ===');
+        conversations.slice(0, 3).forEach((c: any, idx: number) => {
+          const endTime = c.end_time || c.ended_at || c.completed_at || c.end_timestamp;
+          console.log(`  Conversation ${idx + 1}:`);
+          console.log(`    ID: ${(c.conversation_id || c.id || c.call_id || '').substring(0, 30)}`);
+          console.log(`    status: "${c.status}" (type: ${typeof c.status})`);
+          console.log(`    call_successful: ${c.call_successful} (type: ${typeof c.call_successful})`);
+          console.log(`    end_time: ${endTime ? new Date(endTime).toISOString() : 'NULL'}`);
+          console.log(`    All time fields:`, {
+            end_time: c.end_time,
+            ended_at: c.ended_at,
+            completed_at: c.completed_at,
+            end_timestamp: c.end_timestamp,
+            start_time: c.start_time,
+            created_at: c.created_at,
+            updated_at: c.updated_at
+          });
+          console.log(`    lookbackTime: ${lookbackTime.toISOString()}`);
+          console.log(`    now: ${now.toISOString()}`);
+          if (endTime) {
+            const callEndTime = new Date(endTime);
+            console.log(`    Time check: ${callEndTime >= lookbackTime && callEndTime <= now ? 'PASS' : 'FAIL'}`);
+          }
+          console.log('');
+        });
+        console.log('[CallPolling] === END DEBUG ===');
+      }
+
       // Filter for completed calls since last poll
       const completedCalls = conversations.filter((conv: any) => {
         const callId = conv.conversation_id || conv.id || conv.call_id;
 
         // Skip if already processed
         if (this.processedCallIds.has(callId)) {
+          console.log(`[CallPolling] Skipping ${callId?.substring(0, 20)}: already processed`);
           return false;
         }
 
-        const endTime = conv.end_time || conv.ended_at || conv.completed_at || conv.end_timestamp;
-        if (!endTime) return false;
-
-        const callEndTime = new Date(endTime);
         const status = conv.status?.toLowerCase() || '';
-        return (
-          (status === 'completed' || status === 'ended' || status === 'finished' || status === 'done') &&
-          callEndTime >= lookbackTime &&
-          callEndTime <= now
-        );
+
+        // FIX: Check call_successful as STRING "success", not boolean true
+        // ElevenLabs returns: call_successful: "success" or call_successful: "failed"
+        const isSuccessful = conv.call_successful === 'success';
+
+        // Check status string for completion indicators
+        const hasCompletionStatus =
+          status === 'completed' ||
+          status === 'successful' ||
+          status === 'ended' ||
+          status === 'finished' ||
+          status === 'done';
+
+        // Filter by successful completion status (removed end_time requirement)
+        if (!isSuccessful && !hasCompletionStatus) {
+          console.log(`[CallPolling] Skipping ${callId?.substring(0, 20)}: status="${conv.status}", call_successful=${conv.call_successful}`);
+          return false;
+        }
+
+        console.log(`[CallPolling] ✓ ACCEPTING ${callId?.substring(0, 20)}: status="${conv.status}", call_successful=${conv.call_successful}`);
+        return true;
       });
 
       console.log(`[CallPolling] Found ${completedCalls.length} new completed calls`);
@@ -124,9 +172,26 @@ class CallPollingService {
         return;
       }
 
-      // Process each completed call
-      for (const call of completedCalls) {
-        await this.processCompletedCall(call);
+      // Process completed calls in batches to prevent database timeouts
+      const BATCH_SIZE = 3; // Process 3 calls at a time
+      console.log(`[CallPolling] Processing ${completedCalls.length} calls in batches of ${BATCH_SIZE}...`);
+
+      for (let i = 0; i < completedCalls.length; i += BATCH_SIZE) {
+        const batch = completedCalls.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(completedCalls.length / BATCH_SIZE);
+
+        console.log(`[CallPolling] Processing batch ${batchNum}/${totalBatches} (${batch.length} calls)...`);
+
+        // Process batch in parallel
+        await Promise.all(
+          batch.map(call => this.processCompletedCall(call))
+        );
+
+        // Small delay between batches to prevent overwhelming the database
+        if (i + BATCH_SIZE < completedCalls.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
 
       this.lastPollTime = now;
@@ -152,7 +217,11 @@ class CallPollingService {
         return;
       }
 
-      console.log(`[CallPolling] Processing call: ${callId}`);
+      console.log(`[CallPolling] Processing call: ${callId}`, {
+        status: call.status,
+        call_successful: call.call_successful,
+        duration: call.duration_seconds || call.duration
+      });
 
       // Check if we've already fetched this call's transcript
       const existingCall = await voterCallsService.getCallByElevenLabsId(callId);
@@ -190,8 +259,8 @@ class CallPollingService {
       const startTime = call.start_time || call.started_at || call.start_timestamp;
       const endTime = call.end_time || call.ended_at || call.completed_at || call.end_timestamp;
 
-      // Save to Supabase
-      const savedCall = await voterCallsService.createCall({
+      // Save to Supabase using service-role client (bypasses RLS)
+      const savedCall = await voterCallsService.createCallFromPolling({
         organization_id: organizationId,
         call_id: callId,
         phone_number: phoneNumber,
@@ -214,18 +283,19 @@ class CallPollingService {
 
       console.log(`[CallPolling] Call saved to database: ${savedCall.id}`);
 
-      // Analyze sentiment (handles Tamil text)
-      console.log(`[CallPolling] Analyzing sentiment for call: ${callId}`);
-      const analysis = voterSentimentService.analyzeTranscript(
+      // Analyze sentiment using AI4Bharat (handles Tamil text)
+      console.log(`[CallPolling] Analyzing sentiment with AI4Bharat for call: ${callId}`);
+      const analysis = await voterSentimentService.analyzeTranscriptWithAI(
         transcriptData.transcript,
         callId
       );
 
-      // Save sentiment analysis
-      const savedAnalysis = await voterSentimentService.saveSentimentAnalysis(
+      // Save sentiment analysis using service-role client (bypasses RLS)
+      const savedAnalysis = await voterSentimentService.saveSentimentAnalysisFromPolling(
         savedCall.id,
         organizationId,
-        analysis
+        analysis,
+        'ai4bharat-indicbert'
       );
 
       if (savedAnalysis) {

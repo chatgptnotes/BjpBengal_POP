@@ -25,6 +25,8 @@ import {
   SentimentNeutral as SentimentNeutralIcon,
   SentimentDissatisfied as SentimentDissatisfiedIcon,
   Refresh as RefreshIcon,
+  Warning as WarningIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import { elevenLabsService } from '../../services/elevenLabsService';
 import { voterSentimentService } from '../../services/voterSentimentService';
@@ -49,6 +51,7 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [voterName, setVoterName] = useState('');
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
+  const [finalCallStatus, setFinalCallStatus] = useState<'completed' | 'no_answer' | 'busy' | 'failed' | 'cancelled' | null>(null);
   const [currentCall, setCurrentCall] = useState<VoterCall | null>(null);
   const [transcript, setTranscript] = useState<string>('');
   const [sentimentAnalysis, setSentimentAnalysis] = useState<CallSentimentAnalysis | null>(null);
@@ -56,6 +59,8 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
   const [isPolling, setIsPolling] = useState(false);
   const [pollingStatus, setPollingStatus] = useState<any>(null);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const [isCallStuck, setIsCallStuck] = useState(false);
+  const [twilioCallSid, setTwilioCallSid] = useState<string | null>(null);
   const { showToast } = useToast();
 
   // Update polling status periodically
@@ -81,12 +86,19 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
       try {
         const status = await elevenLabsService.getCallStatus(currentCall.call_id);
 
-        // Update call in database
-        await voterCallsService.updateCall(currentCall.id, {
-          status: status.status || currentCall.status,
-          duration_seconds: status.duration_seconds || currentCall.duration_seconds,
-          elevenlabs_metadata: status,
-        });
+        // Extract Twilio Call SID if available
+        if (status.metadata?.callSid || status.metadata?.twilio_call_sid) {
+          const sid = status.metadata.callSid || status.metadata.twilio_call_sid;
+          setTwilioCallSid(sid);
+          console.log('[SingleCallTest] Twilio Call SID:', sid);
+        }
+
+        // Update local state only (call will be saved to database when it completes)
+        setCurrentCall(prev => prev ? {
+          ...prev,
+          status: status.status || prev.status,
+          duration_seconds: status.duration_seconds || prev.duration_seconds,
+        } : null);
 
         // Check if call is completed (handle all possible completion statuses from ElevenLabs)
         const completionStatuses = ['completed', 'ended', 'finished', 'done'];
@@ -94,10 +106,12 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
 
         if (completionStatuses.includes(status.status?.toLowerCase())) {
           setIsPolling(false);
+          setIsCallStuck(false);
           setCallStatus('fetching_transcript');
           await fetchTranscriptAndAnalyze(currentCall.call_id);
         } else if (failureStatuses.includes(status.status?.toLowerCase())) {
           setIsPolling(false);
+          setIsCallStuck(false);
           setCallStatus('failed');
           setError(status.error_message || `Call ${status.status}`);
         }
@@ -120,6 +134,40 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
     };
   }, [isPolling, currentCall]);
 
+  // Detect stuck calls (calls that stay in "initiated" status for >30 seconds)
+  useEffect(() => {
+    let stuckTimer: NodeJS.Timeout | null = null;
+
+    if (isPolling && currentCall?.status === 'initiated') {
+      console.log('[SingleCallTest] Call in "initiated" status, starting stuck detection timer...');
+
+      stuckTimer = setTimeout(async () => {
+        // Check status again after 30 seconds
+        try {
+          const status = await elevenLabsService.getCallStatus(currentCall.call_id);
+
+          if (status.status === 'initiated') {
+            console.warn('[SingleCallTest] Call stuck in "initiated" status after 30 seconds!');
+            setIsCallStuck(true);
+
+            showToast(
+              'Call appears stuck at Twilio level - likely trial account restriction',
+              'warning'
+            );
+          }
+        } catch (err) {
+          console.error('[SingleCallTest] Error checking stuck call status:', err);
+        }
+      }, 30000); // 30 seconds
+    }
+
+    return () => {
+      if (stuckTimer) {
+        clearTimeout(stuckTimer);
+      }
+    };
+  }, [isPolling, currentCall?.status, currentCall?.call_id]);
+
   const fetchTranscriptAndAnalyze = async (callId: string) => {
     try {
       // Fetch transcript from ElevenLabs
@@ -127,20 +175,70 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
       const transcriptData = await elevenLabsService.getTranscript(callId);
       setTranscript(transcriptData.transcript);
 
+      // Get final call status to determine if answered/not answered
+      const callStatusData = await elevenLabsService.getCallStatus(callId);
+
+      // Map ElevenLabs status to database status
+      let dbStatus: 'completed' | 'no_answer' | 'busy' | 'failed' | 'cancelled' = 'completed';
+      let errorMessage: string | undefined;
+
+      const statusLower = callStatusData.status?.toLowerCase() || '';
+      const twilioStatus = callStatusData.metadata?.twilio_status?.toLowerCase() || '';
+
+      // KEY INSIGHT: If we successfully fetched a transcript, the call was completed!
+      // Check known completion statuses first
+      const completionStatuses = ['done', 'completed', 'ended', 'finished', 'successful'];
+      if (completionStatuses.some(s => statusLower.includes(s)) ||
+          callStatusData.call_successful === 'success' ||
+          callStatusData.call_successful === true) {
+        dbStatus = 'completed'; // Call was answered and completed
+      } else if (callStatusData.call_successful === 'failed' ||
+                 callStatusData.call_successful === false ||
+                 statusLower.includes('fail')) {
+        // Call explicitly failed - determine why
+        if (statusLower.includes('no-answer') || statusLower.includes('no_answer') ||
+            twilioStatus.includes('no-answer') || twilioStatus === 'no_answer') {
+          dbStatus = 'no_answer';
+        } else if (statusLower.includes('busy') || twilioStatus.includes('busy')) {
+          dbStatus = 'busy';
+        } else if (statusLower.includes('cancel')) {
+          dbStatus = 'cancelled';
+        } else {
+          dbStatus = 'failed';
+        }
+        errorMessage = callStatusData.error_message || `Call ${dbStatus.replace('_', ' ')}`;
+      } else {
+        // call_successful is undefined or unknown - but we have a transcript, so it completed
+        dbStatus = 'completed';
+      }
+
+      console.log('[SingleCallTest] Final call status:', {
+        call_id: callId,
+        elevenlabs_status: callStatusData.status,
+        call_successful: callStatusData.call_successful,
+        twilio_status: twilioStatus,
+        mapped_db_status: dbStatus
+      });
+
+      // Set the final call status for UI display
+      setFinalCallStatus(dbStatus);
+
       // Now save the complete call data to Supabase (first time save)
-      const savedCall = await voterCallsService.createCall({
+      // Using createCallFromPolling to bypass RLS with service-role client
+      const savedCall = await voterCallsService.createCallFromPolling({
         organization_id: organizationId,
         call_id: callId,
         phone_number: currentCall!.phone_number,
         voter_name: currentCall!.voter_name,
-        status: 'completed',
+        status: dbStatus,
         duration_seconds: transcriptData.duration_seconds,
         call_started_at: currentCall!.call_started_at,
         call_ended_at: new Date(),
         transcript: transcriptData.transcript,
         transcript_fetched_at: new Date(),
         elevenlabs_agent_id: import.meta.env.VITE_ELEVENLABS_AGENT_ID,
-        elevenlabs_metadata: transcriptData.metadata,
+        elevenlabs_metadata: callStatusData, // Save full status metadata
+        error_message: errorMessage,
         created_by: userId,
       });
 
@@ -148,9 +246,9 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
         console.warn('Failed to save call to database, continuing with analysis...');
       }
 
-      // Analyze sentiment
+      // Analyze sentiment using AI4Bharat (Hugging Face)
       setCallStatus('analyzing');
-      const analysis = voterSentimentService.analyzeTranscript(transcriptData.transcript, callId);
+      const analysis = await voterSentimentService.analyzeTranscriptWithAI(transcriptData.transcript, callId);
 
       // Save sentiment analysis (only if call was saved)
       if (savedCall) {
@@ -199,6 +297,8 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
     setCallStatus('initiating');
     setTranscript('');
     setSentimentAnalysis(null);
+    setIsCallStuck(false);
+    setTwilioCallSid(null);
 
     try {
       // Format phone number
@@ -213,9 +313,9 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
         phone_number: formattedNumber,
       });
 
-      // Store call info locally (will be saved to Supabase by polling service)
+      // Store call info locally (will be saved to Supabase when call completes)
       const localCallData: VoterCall = {
-        id: response.call_id, // Use ElevenLabs call_id as temporary ID
+        // No id - this is a local-only object until call completes
         organization_id: organizationId,
         call_id: response.call_id,
         phone_number: formattedNumber,
@@ -229,10 +329,18 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
 
       setCurrentCall(localCallData);
 
-      showToast('Call initiated successfully! Phone will ring shortly.', 'success');
+      // Check for immediate Twilio errors in response
+      if (response.twilio_error) {
+        console.warn('[SingleCallTest] Twilio error detected:', response.twilio_error);
+        setError(`Twilio Error: ${response.twilio_error}`);
+        showToast('Call initiated, but may have issues connecting', 'warning');
+      } else {
+        showToast('Call initiated successfully! Phone should ring shortly.', 'success');
+      }
 
       // Start polling for call status
       setIsPolling(true);
+
     } catch (err: any) {
       console.error('Error initiating call:', err);
       setError(err.message || 'Failed to initiate call');
@@ -245,11 +353,14 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
     setPhoneNumber('');
     setVoterName('');
     setCallStatus('idle');
+    setFinalCallStatus(null);
     setCurrentCall(null);
     setTranscript('');
     setSentimentAnalysis(null);
     setError(null);
     setIsPolling(false);
+    setIsCallStuck(false);
+    setTwilioCallSid(null);
   };
 
   const getSentimentIcon = (sentiment?: string) => {
@@ -308,25 +419,81 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
 
   return (
     <Box>
-      {/* Polling Status Info */}
-      {pollingStatus && (
+      {/* REMOVED: Background Polling Alert - User prefers manual workflow only */}
+
+      {/* Stuck Call Warning */}
+      {isCallStuck && (
         <Alert
-          severity="info"
+          severity="warning"
+          icon={<WarningIcon />}
           sx={{ mb: 3 }}
           action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => callPollingService.triggerPoll()}
-              startIcon={<RefreshIcon />}
-            >
-              Poll Now
-            </Button>
+            twilioCallSid && (
+              <Button
+                color="inherit"
+                size="small"
+                href={`https://console.twilio.com/us1/monitor/logs/calls/${twilioCallSid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                endIcon={<OpenInNewIcon />}
+              >
+                View in Twilio
+              </Button>
+            )
           }
         >
-          <AlertTitle>Background Polling Active</AlertTitle>
-          Automatically checking for completed calls every {pollingStatus.pollingIntervalSeconds}s.
-          Last poll: {pollingStatus.lastPollTime ? formatTimeSince(new Date(pollingStatus.lastPollTime)) : 'Never'}
+          <AlertTitle>Call Stuck at Twilio Level</AlertTitle>
+          <Typography variant="body2" gutterBottom>
+            The call has been stuck in "initiated" status for over 30 seconds. This is usually caused by <strong>Twilio trial account restrictions</strong>.
+          </Typography>
+
+          <Typography variant="body2" component="div" sx={{ mt: 2 }}>
+            <strong>To fix this issue:</strong>
+            <ol style={{ margin: '8px 0', paddingLeft: '20px' }}>
+              <li>
+                <strong>Verify the phone number</strong> in Twilio console:{' '}
+                <a
+                  href="https://console.twilio.com/us1/develop/phone-numbers/manage/verified"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'inherit', textDecoration: 'underline' }}
+                >
+                  Add Verified Caller ID
+                </a>
+              </li>
+              <li>
+                <strong>Enable India calling</strong> in geo-permissions:{' '}
+                <a
+                  href="https://console.twilio.com/us1/develop/voice/settings/geo-permissions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'inherit', textDecoration: 'underline' }}
+                >
+                  Geographic Permissions
+                </a>
+              </li>
+              <li>
+                <strong>Check call logs</strong> for specific error codes:{' '}
+                <a
+                  href="https://console.twilio.com/us1/monitor/logs/calls"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'inherit', textDecoration: 'underline' }}
+                >
+                  Twilio Call Logs
+                </a>
+              </li>
+              <li>
+                Or <strong>upgrade your Twilio account</strong> to remove verification requirements
+              </li>
+            </ol>
+          </Typography>
+
+          {phoneNumber && (
+            <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+              Phone number to verify: <strong>{phoneNumber}</strong>
+            </Typography>
+          )}
         </Alert>
       )}
 
@@ -446,6 +613,55 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
                     <Chip label="Failed" color="error" icon={<ErrorIcon />} />
                   )}
                 </Box>
+
+                {/* Detailed Final Status - Shows if call was answered, not answered, busy, etc. */}
+                {finalCallStatus && (
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" gutterBottom display="block">
+                      Call Outcome:
+                    </Typography>
+                    {finalCallStatus === 'completed' && (
+                      <Chip
+                        label="Answered & Completed"
+                        color="success"
+                        icon={<CheckCircleIcon />}
+                        sx={{ fontWeight: 600 }}
+                      />
+                    )}
+                    {finalCallStatus === 'no_answer' && (
+                      <Chip
+                        label="Not Answered"
+                        color="warning"
+                        icon={<WarningIcon />}
+                        sx={{ fontWeight: 600 }}
+                      />
+                    )}
+                    {finalCallStatus === 'busy' && (
+                      <Chip
+                        label="Line Busy"
+                        color="warning"
+                        icon={<WarningIcon />}
+                        sx={{ fontWeight: 600 }}
+                      />
+                    )}
+                    {finalCallStatus === 'cancelled' && (
+                      <Chip
+                        label="Cancelled"
+                        color="default"
+                        icon={<PendingIcon />}
+                        sx={{ fontWeight: 600 }}
+                      />
+                    )}
+                    {finalCallStatus === 'failed' && (
+                      <Chip
+                        label="Call Failed"
+                        color="error"
+                        icon={<ErrorIcon />}
+                        sx={{ fontWeight: 600 }}
+                      />
+                    )}
+                  </Box>
+                )}
 
                 {/* Progress Bar */}
                 {callStatus !== 'idle' && callStatus !== 'completed' && callStatus !== 'failed' && (
