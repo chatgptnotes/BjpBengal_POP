@@ -58,6 +58,8 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function PersonaDashboard() {
+  console.log('[PersonaDashboard] Component mounting');
+
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const initialTab = tabParam ? parseInt(tabParam, 10) : 0;
@@ -68,6 +70,8 @@ export default function PersonaDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<PersonaFilters>({});
+
+  console.log('[PersonaDashboard] State initialized:', { activeTab, initialTab, loading });
 
   // Update tab from URL parameter
   useEffect(() => {
