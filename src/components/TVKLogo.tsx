@@ -1,7 +1,7 @@
 import React from 'react'
 
 interface TVKLogoProps {
-  size?: 'small' | 'medium' | 'large'
+  size?: 'small' | 'medium' | 'large' | number
   className?: string
 }
 
@@ -18,7 +18,7 @@ export const TVKLogo: React.FC<TVKLogoProps> = ({ size = 'medium', className = '
     large: 64
   }
 
-  const dimension = sizeMap[size]
+  const dimension = typeof size === 'number' ? size : sizeMap[size]
 
   return (
     <svg
