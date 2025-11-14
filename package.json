@@ -28,6 +28,7 @@
     "_comment_scrapers": "=== Data Scrapers ===",
     "scraper:news": "tsx scripts/tamil-news-scraper.js",
     "scraper:news:once": "tsx scripts/tamil-news-scraper.js --once",
+    "scrape-news": "tsx scripts/tamil-news-scraper.js --once",
     "_comment_cloudflare": "=== Cloudflare Workers ===",
     "workers:dev": "cd cloudflare-workers && wrangler dev",
     "workers:deploy": "cd cloudflare-workers && wrangler publish",

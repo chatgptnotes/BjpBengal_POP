@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapboxTamilNadu } from '../components/maps/MapboxTamilNadu';
+import { EnhancedMapboxTamilNadu } from '../components/maps/EnhancedMapboxTamilNadu';
 import MapIcon from '@mui/icons-material/Map';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -208,7 +208,7 @@ const TamilNaduMapDashboard: React.FC = () => {
                 </p>
               </div>
 
-              <MapboxTamilNadu
+              <EnhancedMapboxTamilNadu
                 height="700px"
                 onConstituencyClick={(constituency) => {
                   console.log('Clicked:', constituency);

@@ -14,6 +14,7 @@
  *   node scripts/tamil-news-scraper.js --once  (single run, no loop)
  */
 
+import 'dotenv/config';
 import Parser from 'rss-parser';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -35,9 +36,11 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 const rssParser = new Parser({
-  timeout: 10000,
+  timeout: 15000,
   headers: {
-    'User-Agent': 'Mozilla/5.0 (compatible; PulseOfPeople/1.0; +https://pulseofpeople.com)'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+    'Accept-Language': 'en-US,en;q=0.9,hi;q=0.8,ta;q=0.7'
   }
 });
 
@@ -55,17 +58,25 @@ const NEWS_SOURCES = [
     id: 'dinakaran',
     name: 'Dinakaran',
     language: 'ta',
-    rss: 'https://www.dinakaran.com/feed/',
+    rss: 'https://www.dinakaran.com/rss_dkn.asp',
     baseUrl: 'https://www.dinakaran.com',
     credibility: 0.80
   },
   {
-    id: 'puthiyathalaimurai',
-    name: 'Puthiya Thalaimurai',
+    id: 'tamil-oneindia',
+    name: 'Tamil Oneindia',
     language: 'ta',
-    rss: 'https://www.puthiyathalaimurai.com/rss',
-    baseUrl: 'https://www.puthiyathalaimurai.com',
-    credibility: 0.82
+    rss: 'https://tamil.oneindia.com/rss/tamil-news.xml',
+    baseUrl: 'https://tamil.oneindia.com',
+    credibility: 0.80
+  },
+  {
+    id: 'daily-thanthi',
+    name: 'Daily Thanthi',
+    language: 'ta',
+    rss: 'http://www.dailythanthi.com/RSS/SectionRss.aspx',
+    baseUrl: 'https://www.dailythanthi.com',
+    credibility: 0.86
   },
   {
     id: 'hindu-tamil',
@@ -74,14 +85,6 @@ const NEWS_SOURCES = [
     rss: 'https://tamil.thehindu.com/news/feeder/default.rss',
     baseUrl: 'https://tamil.thehindu.com',
     credibility: 0.90
-  },
-  {
-    id: 'news18-tamil',
-    name: 'News18 Tamil Nadu',
-    language: 'ta',
-    rss: 'https://tamil.news18.com/rss/tamilnadu.xml',
-    baseUrl: 'https://tamil.news18.com',
-    credibility: 0.75
   },
   {
     id: 'thehindu',
@@ -98,6 +101,86 @@ const NEWS_SOURCES = [
     rss: 'https://timesofindia.indiatimes.com/rssfeeds/2950623.cms',
     baseUrl: 'https://timesofindia.indiatimes.com',
     credibility: 0.78
+  },
+  {
+    id: 'manorama',
+    name: 'Malayala Manorama',
+    language: 'ml',
+    rss: 'https://www.onmanorama.com/news/india.feeds.onmrss.xml',
+    baseUrl: 'https://www.onmanorama.com',
+    credibility: 0.88
+  },
+  {
+    id: 'mathrubhumi',
+    name: 'Mathrubhumi',
+    language: 'ml',
+    rss: 'http://feeds.feedburner.com/mathrubhumi',
+    baseUrl: 'https://www.mathrubhumi.com',
+    credibility: 0.87
+  },
+  {
+    id: 'indian-express',
+    name: 'Indian Express - Tamil Nadu',
+    language: 'en',
+    rss: 'https://indianexpress.com/section/cities/chennai/feed/',
+    baseUrl: 'https://indianexpress.com',
+    credibility: 0.90
+  },
+  {
+    id: 'deccan-chronicle',
+    name: 'Deccan Chronicle',
+    language: 'en',
+    rss: 'https://www.deccanchronicle.com/rss_feed/chennai',
+    baseUrl: 'https://www.deccanchronicle.com',
+    credibility: 0.76
+  },
+  {
+    id: 'newindian-express',
+    name: 'New Indian Express - Tamil Nadu',
+    language: 'en',
+    rss: 'https://www.newindianexpress.com/states/tamil-nadu?widgetName=rssfeed&widgetId=1216758&getXmlFeed=true',
+    baseUrl: 'https://www.newindianexpress.com',
+    credibility: 0.84
+  },
+  {
+    id: 'amar-ujala',
+    name: 'Amar Ujala',
+    language: 'hi',
+    rss: 'https://www.amarujala.com/rss/india-news.xml',
+    baseUrl: 'https://www.amarujala.com',
+    credibility: 0.85
+  },
+  {
+    id: 'dainik-jagran',
+    name: 'Dainik Jagran',
+    language: 'hi',
+    rss: 'http://rss.jagran.com/rss/news/national.xml',
+    baseUrl: 'https://www.jagran.com',
+    credibility: 0.88
+  },
+  {
+    id: 'aaj-tak',
+    name: 'Aaj Tak',
+    language: 'hi',
+    rss: 'https://www.aajtak.in/rssfeeds/?id=home',
+    baseUrl: 'https://www.aajtak.in',
+    credibility: 0.78
+  },
+  {
+    id: 'zee-news-hindi',
+    name: 'Zee News Hindi',
+    language: 'hi',
+    rss: 'https://zeenews.india.com/hindi/rss.xml',
+    baseUrl: 'https://zeenews.india.com/hindi',
+    credibility: 0.82
+  },
+  {
+    id: 'hindi-oneindia',
+    name: 'Hindi Oneindia',
+    language: 'hi',
+    rss: 'https://hindi.oneindia.com/rss/hindi-news.xml',
+    baseUrl: 'https://hindi.oneindia.com',
+    credibility: 0.80
   }
 ];
 
@@ -111,6 +194,29 @@ const TVK_KEYWORDS = {
 const ALL_TVK_KEYWORDS = [...TVK_KEYWORDS.party, ...TVK_KEYWORDS.leader, ...TVK_KEYWORDS.related];
 
 // ================== HELPER FUNCTIONS ==================
+
+/**
+ * Strip HTML tags and decode HTML entities from text
+ * @param {string} html - Text potentially containing HTML
+ * @returns {string} Clean text without HTML tags
+ */
+function stripHtmlTags(html) {
+  if (!html) return '';
+
+  return html
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')  // Remove script tags and content
+    .replace(/<style[^>]*>.*?<\/style>/gi, '')    // Remove style tags and content
+    .replace(/<[^>]+>/g, '')                       // Remove all HTML tags
+    .replace(/&nbsp;/g, ' ')                       // Replace &nbsp; with space
+    .replace(/&amp;/g, '&')                        // Decode &amp;
+    .replace(/&lt;/g, '<')                         // Decode &lt;
+    .replace(/&gt;/g, '>')                         // Decode &gt;
+    .replace(/&quot;/g, '"')                       // Decode &quot;
+    .replace(/&#39;/g, "'")                        // Decode &#39;
+    .replace(/&apos;/g, "'")                       // Decode &apos;
+    .replace(/\s+/g, ' ')                          // Normalize multiple spaces
+    .trim();                                        // Remove leading/trailing whitespace
+}
 
 function containsTVKMention(text) {
   if (!text) return false;
@@ -148,7 +254,16 @@ async function analyzeSentimentWithAI(text, language) {
   }
 
   try {
-    const prompt = `Analyze the sentiment of this ${language === 'ta' ? 'Tamil' : 'English'} news article text.
+    const languageMap = {
+      'ta': 'Tamil',
+      'ml': 'Malayalam',
+      'en': 'English',
+      'hi': 'Hindi'
+    };
+
+    const languageName = languageMap[language] || 'English';
+
+    const prompt = `Analyze the sentiment of this ${languageName} news article text.
 
 Text: "${text}"
 
@@ -158,13 +273,14 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
   "sentiment_polarity": "<positive/negative/neutral>",
   "emotion": "<anger/trust/fear/hope/pride/joy/sadness/surprise/disgust/neutral>",
   "confidence": <number between 0 and 1>,
-  "summary": "<2-3 sentence summary>"
+  "summary": "<2-3 sentence summary in English>"
 }
 
 Rules:
 - sentiment_score: -1 (very negative) to +1 (very positive)
 - confidence: How confident you are in the analysis
-- If the text is about TVK/Vijay party, focus on sentiment towards them specifically`;
+- If the text is about TVK/Vijay party or Kerala/Tamil Nadu politics, focus on sentiment towards them specifically
+- For Malayalam text, provide analysis about political sentiment relevant to South Indian politics`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -231,12 +347,26 @@ async function scrapeRSSFeed(source) {
     for (const item of feed.items.slice(0, 20)) { // Latest 20 articles
       const tvkMentioned = containsTVKMention(item.title + ' ' + (item.contentSnippet || item.content || ''));
 
-      // Only process articles with TVK mention OR major political news
-      if (!tvkMentioned && !item.title.toLowerCase().includes('tamil nadu')) {
+      // Only process articles with TVK mention OR major political/regional news
+      const isPoliticalNews = item.title.toLowerCase().includes('tamil nadu') ||
+                             item.title.toLowerCase().includes('kerala') ||
+                             item.title.toLowerCase().includes('chennai') ||
+                             item.title.toLowerCase().includes('thiruvananthapuram') ||
+                             item.title.toLowerCase().includes('കേരളം') ||
+                             item.title.toLowerCase().includes('തമിഴ്‌നാട്');
+
+      if (!tvkMentioned && !isPoliticalNews && source.language !== 'ml') {
         continue;
       }
 
-      const content = item.contentSnippet || item.content || item.summary || '';
+      // For Malayalam sources, take more articles since they cover broader South Indian news
+      if (source.language === 'ml' && !isPoliticalNews) {
+        continue;
+      }
+
+      // Extract content and strip HTML tags
+      const rawContent = item.contentSnippet || item.content || item.summary || '';
+      const content = stripHtmlTags(rawContent);
       const fullText = item.title + ' ' + content;
 
       console.log(`  📄 ${item.title.substring(0, 80)}...`);
@@ -253,10 +383,15 @@ async function scrapeRSSFeed(source) {
         }
       }
 
+      // Clean summary from sentiment or create from cleaned content
+      const cleanSummary = sentiment.summary
+        ? stripHtmlTags(sentiment.summary)
+        : content.substring(0, 300) + (content.length > 300 ? '...' : '');
+
       articles.push({
         title: item.title,
         content: content,
-        summary: sentiment.summary || content.substring(0, 300),
+        summary: cleanSummary,
         url: item.link,
         source: source.name,
         author: item.creator || item.author || null,

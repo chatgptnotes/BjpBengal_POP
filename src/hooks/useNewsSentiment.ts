@@ -3,7 +3,7 @@
  * React hook for managing news sentiment analysis and TVK reports
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { newsService, NewsArticle, TVKSentimentReport, ArticleFilters } from '../services/newsService';
 import { tvkNewsAgent, AnalysisResult } from '../services/newsAgent';
 
@@ -57,8 +57,11 @@ export const useNewsSentiment = (options: {
   const {
     autoFetch = true,
     autoFetchInterval = 60000, // 1 minute
-    filters: defaultFilters = {}
+    filters
   } = options;
+
+  // Memoize defaultFilters to prevent infinite re-render loops
+  const defaultFilters = useMemo(() => filters || {}, [filters]);
 
   // State for articles
   const [articles, setArticles] = useState<NewsArticle[]>([]);
@@ -86,15 +89,25 @@ export const useNewsSentiment = (options: {
     setLoadingArticles(true);
     setArticlesError(null);
 
+    // Add 10-second timeout to prevent infinite loading
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout after 10 seconds')), 10000)
+    );
+
     try {
-      const fetchedArticles = await newsService.getArticles({
-        ...defaultFilters,
-        ...filters
-      });
-      setArticles(fetchedArticles);
+      const result = await Promise.race([
+        newsService.getArticles({
+          ...defaultFilters,
+          ...filters
+        }),
+        timeout
+      ]);
+      setArticles(result);
     } catch (error) {
       console.error('Error fetching articles:', error);
       setArticlesError(error instanceof Error ? error.message : 'Failed to fetch articles');
+      // Set empty array on error to prevent hanging
+      setArticles([]);
     } finally {
       setLoadingArticles(false);
     }
@@ -257,7 +270,8 @@ export const useNewsSentiment = (options: {
     if (autoFetch) {
       refreshData();
     }
-  }, [autoFetch, refreshData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFetch]);
 
   /**
    * Auto-refresh interval
@@ -271,7 +285,8 @@ export const useNewsSentiment = (options: {
     }, autoFetchInterval);
 
     return () => clearInterval(intervalId);
-  }, [autoFetch, autoFetchInterval, refreshData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFetch, autoFetchInterval]);
 
   /**
    * Update agent status periodically

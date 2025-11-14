@@ -139,6 +139,7 @@ export interface NewsSource {
 }
 
 export interface ArticleFilters {
+  organizationId?: string;
   startDate?: string;
   endDate?: string;
   sources?: string[];
@@ -179,6 +180,37 @@ export const TVK_KEYWORDS = {
     'Tamil Nadu politics'
   ]
 };
+
+// =====================================================
+// HELPER FUNCTIONS
+// =====================================================
+
+/**
+ * Get organization_id from session or use default
+ * Helps prevent infinite loading from missing organization context
+ */
+async function getOrganizationId(): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const orgId = session?.user?.user_metadata?.organization_id;
+
+    // Fallback to environment variable for development/testing
+    if (!orgId) {
+      const defaultOrgId = import.meta.env.VITE_DEFAULT_ORGANIZATION_ID;
+      if (defaultOrgId) {
+        console.log('Using default organization_id from environment');
+        return defaultOrgId;
+      }
+      console.warn('No organization_id found in session or environment');
+      return null;
+    }
+
+    return orgId;
+  } catch (error) {
+    console.error('Error getting organization_id:', error);
+    return import.meta.env.VITE_DEFAULT_ORGANIZATION_ID || null;
+  }
+}
 
 // =====================================================
 // NEWS SERVICE CLASS
