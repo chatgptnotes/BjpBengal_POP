@@ -50,22 +50,22 @@ export default {
           },
         },
 
-        // Accent colors (ChatGPT green)
+        // Accent colors (BJP saffron)
         accent: {
-          DEFAULT: '#10A37F',
-          hover: '#0E8B6F',
-          light: '#D1F4E8',
-          dark: '#0D8B6F'
+          DEFAULT: '#FF9933',
+          hover: '#E6852E',
+          light: '#FFE5CC',
+          dark: '#CC7729'
         },
 
-        // Keep existing primary/secondary for compatibility
+        // Keep existing primary/secondary for compatibility (BJP saffron theme)
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          500: '#10A37F',
-          600: '#0E8B6F',
-          700: '#0D8B6F',
-          900: '#0A6B56',
+          50: '#FFF5EB',
+          100: '#FFE5CC',
+          500: '#FF9933',
+          600: '#E6852E',
+          700: '#CC7729',
+          900: '#995724',
         },
         secondary: {
           50: '#F7F7F8',

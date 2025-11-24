@@ -1,5 +1,5 @@
 /**
- * Tamil Nadu Map Dashboard Page
+ * West Bengal Map Dashboard Page
  * Interactive and official electoral maps
  */
 
@@ -15,6 +15,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import ExploreIcon from '@mui/icons-material/Explore';
 import CloseIcon from '@mui/icons-material/Close';
 import { exportData, ExportFormat } from '../lib/data-export';
+// Note: West Bengal GeoJSON to be added later
 import tamilNaduGeoJSON from '../assets/maps/tamilnadu-constituencies.json';
 
 const TamilNaduMapDashboard: React.FC = () => {
@@ -32,9 +33,9 @@ const TamilNaduMapDashboard: React.FC = () => {
 
   // Sample sentiment data (in production, fetch from API)
   const sentimentData = {
-    'Chennai Central': { sentiment: 62, status: 'Positive', voters: 245000 },
-    'Coimbatore South': { sentiment: 70, status: 'Positive', voters: 198000 },
-    'Madurai East': { sentiment: 64, status: 'Positive', voters: 212000 },
+    'Kolkata North': { sentiment: 62, status: 'Positive', voters: 245000 },
+    'Howrah Central': { sentiment: 70, status: 'Positive', voters: 198000 },
+    'Siliguri': { sentiment: 64, status: 'Positive', voters: 212000 },
   };
 
   const handleExportData = () => {
@@ -72,7 +73,7 @@ const TamilNaduMapDashboard: React.FC = () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `tamilnadu-constituencies-with-sentiment-${new Date().toISOString().split('T')[0]}.geojson`;
+        link.download = `westbengal-constituencies-with-sentiment-${new Date().toISOString().split('T')[0]}.geojson`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -98,7 +99,7 @@ const TamilNaduMapDashboard: React.FC = () => {
 
         await exportData(constituencyList, {
           format,
-          filename: `tamilnadu-constituencies-${new Date().toISOString().split('T')[0]}`,
+          filename: `westbengal-constituencies-${new Date().toISOString().split('T')[0]}`,
           includeHeaders: true,
         });
       }
@@ -125,11 +126,11 @@ const TamilNaduMapDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-                <MapIcon className="w-8 h-8 text-blue-600" />
-                <span>Tamil Nadu Electoral Map</span>
+                <MapIcon className="w-8 h-8 text-orange-600" />
+                <span>West Bengal Electoral Map</span>
               </h1>
               <p className="text-gray-600 mt-2">
-                Comprehensive sentiment analysis across 234 assembly constituencies
+                Comprehensive sentiment analysis across 294 assembly constituencies
               </p>
             </div>
 
@@ -150,12 +151,12 @@ const TamilNaduMapDashboard: React.FC = () => {
           transition={{ delay: 0.1 }}
           className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-start space-x-3"
         >
-          <InfoIcon className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
+          <InfoIcon className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-orange-800">
             <p className="font-medium mb-1">Official Election Map Reference:</p>
-            <ul className="list-disc list-inside space-y-1 text-blue-700">
+            <ul className="list-disc list-inside space-y-1 text-orange-700">
               <li>View accurate constituency boundaries from Election Commission of India</li>
-              <li>All 234 Tamil Nadu assembly constituencies clearly marked</li>
+              <li>All 294 West Bengal assembly constituencies clearly marked</li>
               <li>2021 election results with party-wise color coding</li>
               <li>Zoom in to view detailed constituency information</li>
             </ul>

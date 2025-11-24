@@ -1,7 +1,7 @@
 {
-  "name": "pulse-of-people",
+  "name": "pulse-of-people-bjp-wb",
   "version": "1.0.0",
-  "description": "AI-powered voter sentiment analysis platform with multi-tenant architecture",
+  "description": "AI-powered voter sentiment analysis platform for BJP West Bengal",
   "private": true,
   "type": "module",
   "scripts": {

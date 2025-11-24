@@ -1,8 +1,8 @@
 /**
- * Enhanced Mapbox Interactive Map for Tamil Nadu - Multi-Layer Visualization
+ * Enhanced Mapbox Interactive Map for West Bengal - Multi-Layer Visualization
  *
  * Features:
- * - Base sentiment layer (overall TVK sentiment by constituency)
+ * - Base sentiment layer (overall BJP sentiment by constituency)
  * - Issue-specific overlays (Jobs, Healthcare, Infrastructure, etc.)
  * - Alert markers for critical issues
  * - Layer toggle controls
@@ -93,8 +93,8 @@ export const EnhancedMapboxTamilNadu: React.FC<EnhancedMapboxTamilNaduProps> = R
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11', // Light style for better data visualization
-      center: [78.6569, 11.1271],
-      zoom: 6.5,
+      center: [88.3639, 22.5726], // Kolkata, West Bengal
+      zoom: 7,
       attributionControl: true
     });
 

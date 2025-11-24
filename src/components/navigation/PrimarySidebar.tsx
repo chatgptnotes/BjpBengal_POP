@@ -20,7 +20,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../contexts/PermissionContext';
-import { TVKLogo } from '../TVKLogo';
+import { BJPLogo } from '../BJPLogo';
 import UserProfileMenu from './UserProfileMenu';
 import NotificationsPanel from './NotificationsPanel';
 
@@ -113,7 +113,7 @@ export default function PrimarySidebar({
       {/* Logo Section */}
       <div className="logo-section">
         <div className="w-12 h-12 flex items-center justify-center">
-          <TVKLogo size={40} />
+          <BJPLogo size={40} />
         </div>
       </div>
 

@@ -79,7 +79,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { usePermission } from '../hooks/usePermission';
 import Logo from './Logo';
-import { TVKLogo } from './TVKLogo';
+import { BJPLogo } from './BJPLogo';
 
 interface MenuItem {
   name: string;
@@ -387,11 +387,11 @@ export function EnhancedNavigation() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0
       `}>
-        {/* Logos - TVK and Pulse of People side by side */}
+        {/* Logos - BJP and Pulse of People side by side */}
         <div className="h-20 flex items-center justify-center gap-3 px-6 border-b border-gray-200">
-          {/* TVK Party Logo */}
+          {/* BJP Party Logo */}
           <div className="flex-shrink-0">
-            <TVKLogo size="medium" />
+            <BJPLogo size="medium" />
           </div>
 
           {/* Pulse of People Logo - Reduced to 60% size */}

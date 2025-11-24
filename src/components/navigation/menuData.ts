@@ -239,8 +239,8 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       icon: GlobalIcon
     },
     {
-      name: 'Tamil Nadu Map',
-      href: '/tamil-nadu-map',
+      name: 'West Bengal Map',
+      href: '/west-bengal-map',
       icon: MapIcon
     },
     {

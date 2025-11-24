@@ -9,7 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import FullScreenLoader from './components/FullScreenLoader'
 import Layout from './components/Layout'
 import LandingLayout from './components/LandingLayout'
-import TVKLandingPage from './pages/TVKLandingPage'
+import BJPLandingPage from './pages/BJPLandingPage'
 import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
 import Reports from './pages/Reports'
@@ -106,10 +106,10 @@ function AppRoutes() {
 
   return (
     <Routes>
-              {/* TVK Landing Page */}
+              {/* BJP Landing Page */}
               <Route path="/" element={
                 <LandingLayout>
-                  <TVKLandingPage />
+                  <BJPLandingPage />
                 </LandingLayout>
               } />
 
@@ -585,6 +585,14 @@ function AppRoutes() {
                   </Layout>
                 </ProtectedRoute>
               } />
+              <Route path="/west-bengal-map" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TamilNaduMapDashboard />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              {/* Keep old route for backward compatibility */}
               <Route path="/tamil-nadu-map" element={
                 <ProtectedRoute>
                   <Layout>
