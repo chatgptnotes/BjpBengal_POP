@@ -7,6 +7,7 @@ import {
   CompareArrows as CompareIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface CompetitorMetrics {
   id: string;
@@ -26,7 +27,6 @@ interface CompetitorMetrics {
 }
 
 export default function CompetitorSentimentDashboard() {
-  const { supabase } = useAuth();
   const [competitors, setCompetitors] = useState<CompetitorMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
