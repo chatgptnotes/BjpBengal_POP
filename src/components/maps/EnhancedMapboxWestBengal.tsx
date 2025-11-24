@@ -68,10 +68,14 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
   }, []);
 
   // Get color based on active layer and data
-  const getLayerColor = useCallback((constituencyName: string): string => {
+  const getLayerColor = useCallback((constituencyName: string, acNo?: number): string => {
+    // Generate constituency code from AC_NO (e.g., AC_NO=1 -> WB001)
+    const constituencyCode = acNo ? `WB${String(acNo).padStart(3, '0')}` : '';
+
     if (activeLayer === 'sentiment') {
-      // Use provided sentimentData first, then fall back to default data
-      const score = sentimentData[constituencyName] || getConstituencySentiment(constituencyName);
+      // Use provided sentimentData first, then fall back to default data with code
+      const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
+      const score = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
       return getSentimentColor(score);
     } else if (activeLayer === 'alerts') {
       return '#9E9E9E'; // Gray for alerts layer (markers handle visualization)
@@ -79,7 +83,7 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
       // Issue-specific layers (jobs, healthcare, infrastructure, education, agriculture)
       // Try provided issueData first, then fall back to default issue data
       const issueKey = activeLayer as 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture';
-      const issueScore = issueData[constituencyName]?.[activeLayer] || getIssueScore(constituencyName, issueKey);
+      const issueScore = issueData[constituencyName]?.[activeLayer] || getIssueScore(constituencyCode || constituencyName, issueKey);
       return getSentimentColor(issueScore);
     }
   }, [activeLayer, sentimentData, issueData, getSentimentColor]);
@@ -369,6 +373,9 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
         const featureId = feature.id;
         const properties = feature.properties;
         const constituencyName = properties?.AC_NAME;
+        const acNo = properties?.AC_NO;
+        // Generate constituency code from AC_NO (e.g., AC_NO=1 -> WB001)
+        const constituencyCode = acNo ? `WB${String(acNo).padStart(3, '0')}` : '';
 
         map.current.getCanvas().style.cursor = 'pointer';
 
@@ -389,7 +396,8 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
         }
 
         // Show hover popup with sentiment score
-        const score = getConstituencySentiment(constituencyName);
+        const sentimentScore = getConstituencySentiment(constituencyCode);
+        const score = sentimentScore?.positive || 0;
         const popupHTML = createHoverPopupHTML(constituencyName, properties, score);
         hoverPopup.setLngLat(e.lngLat).setHTML(popupHTML).addTo(map.current);
       });
@@ -420,6 +428,8 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
         const featureId = feature.id;
         const properties = feature.properties;
         const constituencyName = properties?.AC_NAME;
+        const acNo = properties?.AC_NO;
+        const constituencyCode = acNo ? `WB${String(acNo).padStart(3, '0')}` : '';
 
         // Clear previous click state
         if (clickedStateId !== null && clickedStateId !== featureId) {
@@ -442,7 +452,8 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
         hoverPopup.remove();
 
         // Get sentiment score - use provided data or fall back to default
-        const score = sentimentData[constituencyName] || getConstituencySentiment(constituencyName);
+        const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
+        const score = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
 
         // Create and show detailed popup
         const popupHTML = createClickPopupHTML(constituencyName, properties, score);
@@ -559,12 +570,15 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
 
         features.forEach((feature: any) => {
           const constituencyName = feature.properties.AC_NAME;
+          const acNo = feature.properties.AC_NO;
+          const constituencyCode = acNo ? `WB${String(acNo).padStart(3, '0')}` : '';
 
           if (processedNames.has(constituencyName)) return;
           processedNames.add(constituencyName);
 
           // Use default sentiment data immediately
-          const score = getConstituencySentiment(constituencyName);
+          const sentimentScore = getConstituencySentiment(constituencyCode || constituencyName);
+          const score = sentimentScore?.positive || 0;
           const color = getSentimentColor(score);
 
           colorExpression.push(constituencyName, color);
@@ -611,6 +625,8 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
 
     features.forEach((feature: any) => {
       const constituencyName = feature.properties.AC_NAME;
+      const acNo = feature.properties.AC_NO;
+      const constituencyCode = acNo ? `WB${String(acNo).padStart(3, '0')}` : '';
 
       // Skip if we've already processed this name (handles duplicates)
       if (processedNames.has(constituencyName)) {
@@ -619,19 +635,20 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
       }
       processedNames.add(constituencyName);
 
-      const color = getLayerColor(constituencyName);
+      const color = getLayerColor(constituencyName, acNo);
       colorExpression.push(constituencyName, color);
 
       // Add sentiment score as label
       if (activeLayer === 'sentiment') {
-        const score = sentimentData[constituencyName] || getConstituencySentiment(constituencyName);
+        const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
+        const score = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
         labelExpression.push(constituencyName, `${score}%`);
       } else if (activeLayer === 'alerts') {
         labelExpression.push(constituencyName, '');
       } else {
         // Issue-specific layers
         const issueKey = activeLayer as 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture';
-        const issueScore = issueData[constituencyName]?.[activeLayer] || getIssueScore(constituencyName, issueKey);
+        const issueScore = issueData[constituencyName]?.[activeLayer] || getIssueScore(constituencyCode || constituencyName, issueKey);
         labelExpression.push(constituencyName, `${issueScore}%`);
       }
     });
