@@ -6,7 +6,7 @@ import CompetitorComparison from '../components/CompetitorComparison'
 import SentimentHeatmap from '../components/SentimentHeatmap'
 import InfluencerTracking from '../components/InfluencerTracking'
 import AlertsPanel from '../components/AlertsPanel'
-import { MapboxTamilNadu } from '../components/maps/MapboxTamilNadu'
+import { MapboxWestBengal } from '../components/maps/MapboxWestBengal'
 import ExportManager from '../components/ExportManager'
 import AdvancedChart from '../components/AdvancedChart'
 import { MobileNavigation, ResponsiveContainer, MobileCard, ResponsiveGrid, MobileButton, MobileStats } from '../components/MobileResponsive'
@@ -403,7 +403,7 @@ export default function Dashboard() {
           )}
 
           <div className="w-full">
-            <MapboxTamilNadu height="600px" onConstituencyClick={handleConstituencyClick} />
+            <MapboxWestBengal height="600px" onConstituencyClick={handleConstituencyClick} />
           </div>
 
           <ResponsiveGrid cols={{ sm: 1, lg: 2, xl: 3 }}>

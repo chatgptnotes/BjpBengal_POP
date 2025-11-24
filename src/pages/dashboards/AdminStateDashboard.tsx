@@ -9,7 +9,7 @@ import {
   BarChart3, Calendar, Clock, Flame, Award, TrendingUpIcon
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { EnhancedMapboxTamilNadu } from '../../components/maps/EnhancedMapboxTamilNadu';
+import { EnhancedMapboxWestBengal } from '../../components/maps/EnhancedMapboxWestBengal';
 import { WithTooltip } from '../../components/common/CardTooltip';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
@@ -409,7 +409,7 @@ export default function AdminStateDashboard() {
                 </div>
               </div>
               <div className="relative">
-                <EnhancedMapboxTamilNadu
+                <EnhancedMapboxWestBengal
                   height="550px"
                   onConstituencyClick={handleConstituencyClick}
                   sentimentData={prepareSentimentData()}

@@ -1,0 +1,18 @@
+{
+  "type": "FeatureCollection",
+  "name": "West_Bengal_State",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "ST_CODE": 19,
+        "ST_NAME": "WEST BENGAL",
+        "STATE": "West Bengal"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[88.0, 21.5], [89.0, 21.5], [89.5, 22.0], [89.5, 27.5], [88.5, 27.5], [87.5, 26.5], [87.0, 25.0], [87.5, 22.0], [88.0, 21.5]]]
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+Version: 1.1
+Date: 2025-11-24
+Changes: Migrated from Tamil Nadu to West Bengal
+- Changed map region from Tamil Nadu (234 constituencies) to West Bengal (294 constituencies)
+- Updated all 23 districts with West Bengal data
+- Integrated 2021 West Bengal Assembly Election results
+- All map components now show West Bengal Electoral Map
+- Updated branding and configuration for BJP West Bengal

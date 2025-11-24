@@ -62,7 +62,7 @@ import CompetitorRegistry from './pages/CompetitorRegistry'
 import CompetitorSocialMonitor from './pages/CompetitorSocialMonitor'
 import CompetitorSentimentDashboard from './pages/CompetitorSentimentDashboard'
 import RegionalMap from './pages/RegionalMap'
-import TamilNaduMapDashboard from './pages/TamilNaduMapDashboard'
+import WestBengalMapDashboard from './pages/WestBengalMapDashboard'
 import { MobileContactBar } from './components/MobileResponsive'
 import SuperAdminDashboard from './pages/SuperAdmin/Dashboard'
 import AdminManagement from './pages/SuperAdmin/AdminManagement'
@@ -588,15 +588,7 @@ function AppRoutes() {
               <Route path="/west-bengal-map" element={
                 <ProtectedRoute>
                   <Layout>
-                    <TamilNaduMapDashboard />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              {/* Keep old route for backward compatibility */}
-              <Route path="/tamil-nadu-map" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <TamilNaduMapDashboard />
+                    <WestBengalMapDashboard />
                   </Layout>
                 </ProtectedRoute>
               } />

@@ -11,7 +11,7 @@ import {
   MessageSquare, FileText, Activity, BarChart3, Map
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { MapboxTamilNadu } from '../../components/maps/MapboxTamilNadu';
+import { MapboxWestBengal } from '../../components/maps/MapboxWestBengal';
 import { useStateAnalytics, useDistricts, useIssues, useFeedbackList } from '../../hooks/useApiHooks';
 import { LoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
@@ -208,7 +208,7 @@ export default function AdminStateDashboardEnhanced() {
         <p className="text-sm text-gray-600 mb-4">
           Click on any constituency to view detailed analytics and sentiment data
         </p>
-        <MapboxTamilNadu
+        <MapboxWestBengal
           height="600px"
           onConstituencyClick={(constituency) => {
             console.log('Clicked constituency:', constituency);
