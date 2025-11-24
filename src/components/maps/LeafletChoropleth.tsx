@@ -1,6 +1,6 @@
 /**
  * LeafletChoropleth Component
- * Interactive map with sentiment-based coloring for Tamil Nadu regions
+ * Interactive map with sentiment-based coloring for West Bengal regions
  */
 
 import React, { useEffect, useRef, useCallback, useMemo } from 'react';

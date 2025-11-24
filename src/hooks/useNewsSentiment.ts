@@ -1,11 +1,11 @@
 /**
  * useNewsSentiment Hook
- * React hook for managing news sentiment analysis and TVK reports
+ * React hook for managing news sentiment analysis and BJP reports
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { newsService, NewsArticle, TVKSentimentReport, ArticleFilters } from '../services/newsService';
-import { tvkNewsAgent, AnalysisResult } from '../services/newsAgent';
+import { newsService, NewsArticle, BJPSentimentReport, ArticleFilters } from '../services/newsService';
+import { bjpNewsAgent, AnalysisResult } from '../services/newsAgent';
 
 // =====================================================
 // TYPE DEFINITIONS
@@ -14,13 +14,13 @@ import { tvkNewsAgent, AnalysisResult } from '../services/newsAgent';
 export interface UseNewsSentimentReturn {
   // Articles
   articles: NewsArticle[];
-  tvkArticles: NewsArticle[];
+  bjpArticles: NewsArticle[];
   loadingArticles: boolean;
   articlesError: string | null;
 
   // Reports
-  latestReport: TVKSentimentReport | null;
-  reports: TVKSentimentReport[];
+  latestReport: BJPSentimentReport | null;
+  reports: BJPSentimentReport[];
   loadingReports: boolean;
   reportsError: string | null;
 
@@ -35,11 +35,11 @@ export interface UseNewsSentimentReturn {
 
   // Actions
   fetchArticles: (filters?: ArticleFilters) => Promise<void>;
-  fetchTVKArticles: (filters?: ArticleFilters) => Promise<void>;
+  fetchBJPArticles: (filters?: ArticleFilters) => Promise<void>;
   fetchLatestReport: () => Promise<void>;
   fetchReports: (startDate: string, endDate: string) => Promise<void>;
   runAnalysis: (options?: { articleIds?: string[]; generateReport?: boolean }) => Promise<AnalysisResult>;
-  generateReport: (startDate?: string, endDate?: string) => Promise<TVKSentimentReport | null>;
+  generateReport: (startDate?: string, endDate?: string) => Promise<BJPSentimentReport | null>;
   startAgent: () => void;
   stopAgent: () => void;
   refreshData: () => Promise<void>;
@@ -65,18 +65,18 @@ export const useNewsSentiment = (options: {
 
   // State for articles
   const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [tvkArticles, setTvkArticles] = useState<NewsArticle[]>([]);
+  const [bjpArticles, setTvkArticles] = useState<NewsArticle[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [articlesError, setArticlesError] = useState<string | null>(null);
 
   // State for reports
-  const [latestReport, setLatestReport] = useState<TVKSentimentReport | null>(null);
-  const [reports, setReports] = useState<TVKSentimentReport[]>([]);
+  const [latestReport, setLatestReport] = useState<BJPSentimentReport | null>(null);
+  const [reports, setReports] = useState<BJPSentimentReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
   const [reportsError, setReportsError] = useState<string | null>(null);
 
   // State for agent
-  const [agentStatus, setAgentStatus] = useState(tvkNewsAgent.getStatus());
+  const [agentStatus, setAgentStatus] = useState(bjpNewsAgent.getStatus());
 
   // =====================================================
   // FETCH FUNCTIONS
@@ -114,35 +114,35 @@ export const useNewsSentiment = (options: {
   }, [defaultFilters]);
 
   /**
-   * Fetch TVK-specific articles
+   * Fetch BJP-specific articles
    */
-  const fetchTVKArticles = useCallback(async (filters: ArticleFilters = {}) => {
+  const fetchBJPArticles = useCallback(async (filters: ArticleFilters = {}) => {
     setLoadingArticles(true);
     setArticlesError(null);
 
     try {
-      const fetchedArticles = await newsService.getTVKArticles({
+      const fetchedArticles = await newsService.getBJPArticles({
         ...defaultFilters,
         ...filters
       });
       setTvkArticles(fetchedArticles);
     } catch (error) {
-      console.error('Error fetching TVK articles:', error);
-      setArticlesError(error instanceof Error ? error.message : 'Failed to fetch TVK articles');
+      console.error('Error fetching BJP articles:', error);
+      setArticlesError(error instanceof Error ? error.message : 'Failed to fetch BJP articles');
     } finally {
       setLoadingArticles(false);
     }
   }, [defaultFilters]);
 
   /**
-   * Fetch latest TVK sentiment report
+   * Fetch latest BJP sentiment report
    */
   const fetchLatestReport = useCallback(async () => {
     setLoadingReports(true);
     setReportsError(null);
 
     try {
-      const report = await newsService.getLatestTVKReport('daily');
+      const report = await newsService.getLatestBJPReport('daily');
       setLatestReport(report);
     } catch (error) {
       console.error('Error fetching latest report:', error);
@@ -153,14 +153,14 @@ export const useNewsSentiment = (options: {
   }, []);
 
   /**
-   * Fetch TVK reports for date range
+   * Fetch BJP reports for date range
    */
   const fetchReports = useCallback(async (startDate: string, endDate: string) => {
     setLoadingReports(true);
     setReportsError(null);
 
     try {
-      const fetchedReports = await newsService.getTVKReports(startDate, endDate, 'daily');
+      const fetchedReports = await newsService.getBJPReports(startDate, endDate, 'daily');
       setReports(fetchedReports);
     } catch (error) {
       console.error('Error fetching reports:', error);
@@ -182,10 +182,10 @@ export const useNewsSentiment = (options: {
     generateReport?: boolean;
   } = {}): Promise<AnalysisResult> => {
     try {
-      const result = await tvkNewsAgent.runManualAnalysis(options);
+      const result = await bjpNewsAgent.runManualAnalysis(options);
 
       // Update agent status
-      setAgentStatus(tvkNewsAgent.getStatus());
+      setAgentStatus(bjpNewsAgent.getStatus());
 
       // Refresh data after analysis
       await refreshData();
@@ -196,7 +196,7 @@ export const useNewsSentiment = (options: {
       return {
         success: false,
         articlesAnalyzed: 0,
-        tvkArticlesFound: 0,
+        bjpArticlesFound: 0,
         averageSentiment: 0,
         errors: [error instanceof Error ? error.message : 'Unknown error']
       };
@@ -204,23 +204,23 @@ export const useNewsSentiment = (options: {
   }, []);
 
   /**
-   * Generate TVK sentiment report
+   * Generate BJP sentiment report
    */
   const generateReport = useCallback(async (
     startDate?: string,
     endDate?: string
-  ): Promise<TVKSentimentReport | null> => {
+  ): Promise<BJPSentimentReport | null> => {
     try {
-      let report: TVKSentimentReport | null;
+      let report: BJPSentimentReport | null;
 
       if (startDate && endDate) {
-        report = await tvkNewsAgent.generateCustomReport(startDate, endDate);
+        report = await bjpNewsAgent.generateCustomReport(startDate, endDate);
       } else {
-        report = await tvkNewsAgent.generateDailyTVKReport();
+        report = await bjpNewsAgent.generateDailyBJPReport();
       }
 
       // Update agent status
-      setAgentStatus(tvkNewsAgent.getStatus());
+      setAgentStatus(bjpNewsAgent.getStatus());
 
       // Refresh reports
       await fetchLatestReport();
@@ -236,16 +236,16 @@ export const useNewsSentiment = (options: {
    * Start the autonomous agent
    */
   const startAgent = useCallback(() => {
-    tvkNewsAgent.start();
-    setAgentStatus(tvkNewsAgent.getStatus());
+    bjpNewsAgent.start();
+    setAgentStatus(bjpNewsAgent.getStatus());
   }, []);
 
   /**
    * Stop the autonomous agent
    */
   const stopAgent = useCallback(() => {
-    tvkNewsAgent.stop();
-    setAgentStatus(tvkNewsAgent.getStatus());
+    bjpNewsAgent.stop();
+    setAgentStatus(bjpNewsAgent.getStatus());
   }, []);
 
   /**
@@ -254,10 +254,10 @@ export const useNewsSentiment = (options: {
   const refreshData = useCallback(async () => {
     await Promise.all([
       fetchArticles(),
-      fetchTVKArticles(),
+      fetchBJPArticles(),
       fetchLatestReport()
     ]);
-  }, [fetchArticles, fetchTVKArticles, fetchLatestReport]);
+  }, [fetchArticles, fetchBJPArticles, fetchLatestReport]);
 
   // =====================================================
   // EFFECTS
@@ -281,7 +281,7 @@ export const useNewsSentiment = (options: {
 
     const intervalId = setInterval(() => {
       refreshData();
-      setAgentStatus(tvkNewsAgent.getStatus());
+      setAgentStatus(bjpNewsAgent.getStatus());
     }, autoFetchInterval);
 
     return () => clearInterval(intervalId);
@@ -293,7 +293,7 @@ export const useNewsSentiment = (options: {
    */
   useEffect(() => {
     const statusInterval = setInterval(() => {
-      setAgentStatus(tvkNewsAgent.getStatus());
+      setAgentStatus(bjpNewsAgent.getStatus());
     }, 5000); // Update every 5 seconds
 
     return () => clearInterval(statusInterval);
@@ -306,7 +306,7 @@ export const useNewsSentiment = (options: {
   return {
     // Articles
     articles,
-    tvkArticles,
+    bjpArticles,
     loadingArticles,
     articlesError,
 
@@ -321,7 +321,7 @@ export const useNewsSentiment = (options: {
 
     // Actions
     fetchArticles,
-    fetchTVKArticles,
+    fetchBJPArticles,
     fetchLatestReport,
     fetchReports,
     runAnalysis,

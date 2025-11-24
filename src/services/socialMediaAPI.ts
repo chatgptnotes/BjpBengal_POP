@@ -1,6 +1,6 @@
 /**
  * Social Media API Service
- * Hybrid approach: Real data for TVK accounts + Aggregated estimated data for mentions
+ * Hybrid approach: Real data for BJP accounts + Aggregated estimated data for mentions
  */
 
 import axios from 'axios';
@@ -523,12 +523,12 @@ export const fetchAllSocialMediaData = async () => {
       fetchYouTubePosts()
     ]);
 
-    // Generate aggregated mentions for TVK
+    // Generate aggregated mentions for BJP
     const mentions = generateAggregatedMentions([
-      'TVK',
+      'BJP',
       'Tamilaga Vettri Kazhagam',
       'தமிழக வெற்றி கழகம்',
-      '#TVK'
+      '#BJP'
     ]);
 
     return {

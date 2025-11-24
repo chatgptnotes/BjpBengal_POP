@@ -24,7 +24,7 @@ interface DrillDownControlsProps {
 
 export const DrillDownControls: React.FC<DrillDownControlsProps> = ({
   drillDownLevel,
-  stateName = 'Tamil Nadu',
+  stateName = 'West Bengal',
   districtName,
   constituencyName,
   onLevelClick,

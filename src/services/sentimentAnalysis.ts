@@ -252,12 +252,12 @@ export class SentimentAnalysisEngine {
   private getStateFromCoordinates(coordinates: [number, number]): string {
     // Implement coordinate to state mapping
     // This would use a proper geolocation service
-    return 'Tamil Nadu'; // Placeholder
+    return 'West Bengal'; // Placeholder
   }
 
   private getStateFromWard(ward: string): string {
     // Extract state from ward information
-    return 'Tamil Nadu'; // Placeholder
+    return 'West Bengal'; // Placeholder
   }
 
   private groupByTime(sentiments: SentimentData[], timeWindow: string): any {

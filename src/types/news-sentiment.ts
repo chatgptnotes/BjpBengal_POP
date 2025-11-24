@@ -41,12 +41,12 @@ export interface NewsArticle {
   confidence?: number; // 0 to 1
   analyzed_at?: string;
 
-  // TVK-Specific Analysis
-  tvk_mentioned?: boolean;
-  tvk_mention_count?: number;
-  tvk_context?: string;
-  tvk_sentiment_score?: number; // -1 to 1
-  tvk_sentiment_polarity?: 'positive' | 'negative' | 'neutral';
+  // BJP-Specific Analysis
+  bjp_mentioned?: boolean;
+  bjp_mention_count?: number;
+  bjp_context?: string;
+  bjp_sentiment_score?: number; // -1 to 1
+  bjp_sentiment_polarity?: 'positive' | 'negative' | 'neutral';
 
   // Article Metadata
   word_count?: number;
@@ -77,10 +77,10 @@ export type PriorityLevel = 'low' | 'medium' | 'high' | 'critical';
 export type SentimentPolarity = 'positive' | 'negative' | 'neutral';
 
 // =====================================================
-// TVK SENTIMENT REPORT TYPES
+// BJP SENTIMENT REPORT TYPES
 // =====================================================
 
-export interface TVKSentimentReport {
+export interface BJPSentimentReport {
   id?: string;
   organization_id: string;
 
@@ -92,7 +92,7 @@ export interface TVKSentimentReport {
 
   // Article Statistics
   total_articles: number;
-  tvk_mentioned_articles: number;
+  bjp_mentioned_articles: number;
   analyzed_articles: number;
 
   // Overall Sentiment
@@ -121,7 +121,7 @@ export interface TVKSentimentReport {
   // Insights
   trending_topics?: string[];
   top_keywords?: string[];
-  tvk_contexts?: string[];
+  bjp_contexts?: string[];
 
   // Trend Analysis
   sentiment_change?: number;
@@ -203,7 +203,7 @@ export interface ArticleFilters {
   startDate?: string;
   endDate?: string;
   sources?: string[];
-  tvkOnly?: boolean;
+  bjpOnly?: boolean;
   sentimentPolarity?: SentimentPolarity;
   minConfidence?: number;
   stateId?: string;
@@ -251,22 +251,22 @@ export interface AgentStatus {
 export interface AnalysisResult {
   success: boolean;
   articlesAnalyzed: number;
-  tvkArticlesFound: number;
+  bjpArticlesFound: number;
   averageSentiment: number;
   errors: string[];
 }
 
 // =====================================================
-// TVK DETECTION TYPES
+// BJP DETECTION TYPES
 // =====================================================
 
-export interface TVKKeywords {
+export interface BJPKeywords {
   party_names: string[];
   leader_names: string[];
   related_terms: string[];
 }
 
-export interface TVKDetectionResult {
+export interface BJPDetectionResult {
   mentioned: boolean;
   count: number;
   contexts: string[];
@@ -339,7 +339,7 @@ export interface NewsViewState {
 
 export interface ReportViewState {
   selectedPeriod: PeriodType;
-  selectedReport?: TVKSentimentReport;
+  selectedReport?: BJPSentimentReport;
   dateRange: {
     start: string;
     end: string;
@@ -387,7 +387,7 @@ export interface ExportOptions {
 }
 
 export interface ReportExport {
-  report: TVKSentimentReport;
+  report: BJPSentimentReport;
   articles: NewsArticle[];
   charts?: ChartExport[];
   metadata: {

@@ -780,27 +780,27 @@ const SingleCallTest: React.FC<SingleCallTestProps> = ({
                     </Paper>
                   </Grid>
 
-                  {/* TVK Sentiment */}
+                  {/* BJP Sentiment */}
                   <Grid item xs={12} md={6}>
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        {getSentimentIcon(sentimentAnalysis.tvk_sentiment)}
+                        {getSentimentIcon(sentimentAnalysis.bjp_sentiment)}
                         <Typography variant="subtitle1" sx={{ ml: 1, fontWeight: 600 }}>
-                          TVK (Vijay's Party)
+                          BJP (Vijay's Party)
                         </Typography>
                       </Box>
                       <Chip
-                        label={sentimentAnalysis.tvk_sentiment?.toUpperCase() || 'N/A'}
-                        color={getSentimentColor(sentimentAnalysis.tvk_sentiment)}
+                        label={sentimentAnalysis.bjp_sentiment?.toUpperCase() || 'N/A'}
+                        color={getSentimentColor(sentimentAnalysis.bjp_sentiment)}
                         size="small"
                         sx={{ mb: 1 }}
                       />
                       <Typography variant="body2" color="text.secondary">
-                        {sentimentAnalysis.tvk_summary || 'No analysis available'}
+                        {sentimentAnalysis.bjp_summary || 'No analysis available'}
                       </Typography>
-                      {sentimentAnalysis.tvk_keywords && sentimentAnalysis.tvk_keywords.length > 0 && (
+                      {sentimentAnalysis.bjp_keywords && sentimentAnalysis.bjp_keywords.length > 0 && (
                         <Box sx={{ mt: 1 }}>
-                          {sentimentAnalysis.tvk_keywords.slice(0, 5).map((keyword, idx) => (
+                          {sentimentAnalysis.bjp_keywords.slice(0, 5).map((keyword, idx) => (
                             <Chip key={idx} label={keyword} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
                           ))}
                         </Box>

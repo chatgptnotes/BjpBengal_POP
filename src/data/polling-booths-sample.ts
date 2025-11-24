@@ -1,5 +1,5 @@
 /**
- * Sample Polling Booth Data for Tamil Nadu
+ * Sample Polling Booth Data for West Bengal
  * In production, this would be loaded from a database or API
  */
 
@@ -223,7 +223,7 @@ export const generateMockBooths = (
         lng: baseLng + (Math.random() - 0.5) * 0.1
       },
       totalVoters: Math.floor(Math.random() * 1000) + 500,
-      address: `${districtName} District, Tamil Nadu`,
+      address: `${districtName} District, West Bengal`,
       sentiment: generateSentiment()
     });
   }

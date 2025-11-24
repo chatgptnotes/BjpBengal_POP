@@ -262,8 +262,8 @@ class AI4BharatSentimentService {
   async analyzeVoterSentiment(transcript: string): Promise<{
     previous_govt_sentiment: 'positive' | 'negative' | 'neutral' | 'not_mentioned';
     previous_govt_score: number;
-    tvk_sentiment: 'support' | 'against' | 'undecided' | 'not_mentioned';
-    tvk_score: number;
+    bjp_sentiment: 'support' | 'against' | 'undecided' | 'not_mentioned';
+    bjp_score: number;
     overall_sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
     confidence_score: number;
   }> {
@@ -279,25 +279,25 @@ class AI4BharatSentimentService {
 
       // Secondary analyses for additional context
       const govtSentiment = await this.analyzeGovernmentMentions(transcript);
-      const tvkSentiment = await this.analyzeTVKMentions(transcript);
+      const bjpSentiment = await this.analyzeBJPMentions(transcript);
 
-      // Map voting intention to TVK sentiment
-      let mappedTVKSentiment: 'support' | 'against' | 'undecided' | 'not_mentioned';
-      if (votingIntention.voting_for === 'TVK') {
-        mappedTVKSentiment = 'support';
+      // Map voting intention to BJP sentiment
+      let mappedBJPSentiment: 'support' | 'against' | 'undecided' | 'not_mentioned';
+      if (votingIntention.voting_for === 'BJP') {
+        mappedBJPSentiment = 'support';
       } else if (votingIntention.voting_for === 'Undecided') {
-        mappedTVKSentiment = 'undecided';
+        mappedBJPSentiment = 'undecided';
       } else if (votingIntention.voting_for !== 'Undecided' && votingIntention.voting_for !== '') {
-        mappedTVKSentiment = 'against';
+        mappedBJPSentiment = 'against';
       } else {
-        mappedTVKSentiment = tvkSentiment.sentiment;
+        mappedBJPSentiment = bjpSentiment.sentiment;
       }
 
       return {
         previous_govt_sentiment: govtSentiment.sentiment,
         previous_govt_score: govtSentiment.score,
-        tvk_sentiment: mappedTVKSentiment,
-        tvk_score: votingIntention.voting_for === 'TVK' ? 1 :
+        bjp_sentiment: mappedBJPSentiment,
+        bjp_score: votingIntention.voting_for === 'BJP' ? 1 :
                    votingIntention.voting_for === 'Undecided' ? 0 : -1,
         // OVERALL SENTIMENT IS NOW BASED ON VOTING INTENTION
         overall_sentiment: votingIntention.overall_sentiment,
@@ -309,8 +309,8 @@ class AI4BharatSentimentService {
       return {
         previous_govt_sentiment: 'not_mentioned',
         previous_govt_score: 0,
-        tvk_sentiment: 'not_mentioned',
-        tvk_score: 0,
+        bjp_sentiment: 'not_mentioned',
+        bjp_score: 0,
         overall_sentiment: 'neutral',
         confidence_score: 0,
       };
@@ -356,49 +356,49 @@ class AI4BharatSentimentService {
   }
 
   /**
-   * Analyze TVK-specific mentions in transcript
+   * Analyze BJP-specific mentions in transcript
    */
-  private async analyzeTVKMentions(transcript: string): Promise<{
+  private async analyzeBJPMentions(transcript: string): Promise<{
     sentiment: 'support' | 'against' | 'undecided' | 'not_mentioned';
     score: number;
   }> {
     const lowerTranscript = transcript.toLowerCase();
 
-    // Check if TVK is mentioned
-    const tvkKeywords = ['tvk', 'vijay', 'தளபதி', 'விஜய்', 'thalapathy', 'tamilaga vettri'];
-    const hasMention = tvkKeywords.some(keyword => lowerTranscript.includes(keyword));
+    // Check if BJP is mentioned
+    const bjpKeywords = ['bjp', 'vijay', 'தளபதி', 'விஜய்', 'thalapathy', 'tamilaga vettri'];
+    const hasMention = bjpKeywords.some(keyword => lowerTranscript.includes(keyword));
 
     if (!hasMention) {
       return { sentiment: 'not_mentioned', score: 0 };
     }
 
-    // Extract sentences mentioning TVK
+    // Extract sentences mentioning BJP
     const sentences = transcript.split(/[.!?।]/);
-    const tvkSentences = sentences.filter(sentence => {
+    const bjpSentences = sentences.filter(sentence => {
       const lower = sentence.toLowerCase();
-      return tvkKeywords.some(keyword => lower.includes(keyword));
+      return bjpKeywords.some(keyword => lower.includes(keyword));
     });
 
-    if (tvkSentences.length === 0) {
+    if (bjpSentences.length === 0) {
       return { sentiment: 'not_mentioned', score: 0 };
     }
 
-    // Analyze sentiment of TVK mentions
-    const tvkText = tvkSentences.join('. ');
-    const result = await this.analyzeSentiment(tvkText);
+    // Analyze sentiment of BJP mentions
+    const bjpText = bjpSentences.join('. ');
+    const result = await this.analyzeSentiment(bjpText);
 
-    // Map sentiment to TVK-specific categories
-    let tvkSentiment: 'support' | 'against' | 'undecided';
+    // Map sentiment to BJP-specific categories
+    let bjpSentiment: 'support' | 'against' | 'undecided';
     if (result.sentiment === 'positive') {
-      tvkSentiment = 'support';
+      bjpSentiment = 'support';
     } else if (result.sentiment === 'negative') {
-      tvkSentiment = 'against';
+      bjpSentiment = 'against';
     } else {
-      tvkSentiment = 'undecided';
+      bjpSentiment = 'undecided';
     }
 
     return {
-      sentiment: tvkSentiment,
+      sentiment: bjpSentiment,
       score: result.score,
     };
   }
@@ -408,7 +408,7 @@ class AI4BharatSentimentService {
    * This is the PRIMARY metric for sentiment analysis
    */
   async analyzeVotingIntentionFocused(transcript: string): Promise<{
-    voting_for: string; // 'TVK', 'DMK', 'AIADMK', 'Other', 'Undecided'
+    voting_for: string; // 'BJP', 'DMK', 'AIADMK', 'Other', 'Undecided'
     overall_sentiment: 'positive' | 'negative' | 'neutral';
     confidence: number;
   }> {
@@ -416,7 +416,7 @@ class AI4BharatSentimentService {
 
     // Party keywords
     const partyKeywords = {
-      tvk: ['tvk', 'vijay', 'thalapathy', 'விஜய்', 'தளபதி', 'tamilaga vettri', 'வெற்றி கழகம்'],
+      bjp: ['bjp', 'vijay', 'thalapathy', 'விஜய்', 'தளபதி', 'tamilaga vettri', 'வெற்றி கழகம்'],
       dmk: ['dmk', 'stalin', 'திமுக', 'ஸ்டாலின்'],
       aiadmk: ['aiadmk', 'admk', 'அதிமுக', 'edappadi', 'eps', 'ops'],
       bjp: ['bjp', 'பாஜக', 'annamalai'],
@@ -484,8 +484,8 @@ class AI4BharatSentimentService {
     // Step 3: Determine overall sentiment based on voting intention
     let overallSentiment: 'positive' | 'negative' | 'neutral';
 
-    if (votingFor === 'TVK') {
-      overallSentiment = 'positive';  // Will vote for TVK = POSITIVE
+    if (votingFor === 'BJP') {
+      overallSentiment = 'positive';  // Will vote for BJP = POSITIVE
     } else if (votingFor === 'Undecided') {
       overallSentiment = 'neutral';   // Undecided = NEUTRAL
     } else {

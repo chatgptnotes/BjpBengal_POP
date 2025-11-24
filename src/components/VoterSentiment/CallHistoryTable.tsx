@@ -416,12 +416,12 @@ const CallHistoryTable: React.FC<CallHistoryTableProps> = ({ organizationId }) =
                         <Grid item xs={6}>
                           <Paper variant="outlined" sx={{ p: 2 }}>
                             <Typography variant="caption" color="text.secondary">
-                              TVK Sentiment
+                              BJP Sentiment
                             </Typography>
                             <Box sx={{ mt: 1 }}>
                               <Chip
-                                label={sentiment?.tvk_sentiment?.toUpperCase() || 'N/A'}
-                                color={getSentimentColor(sentiment?.tvk_sentiment)}
+                                label={sentiment?.bjp_sentiment?.toUpperCase() || 'N/A'}
+                                color={getSentimentColor(sentiment?.bjp_sentiment)}
                                 size="small"
                               />
                             </Box>

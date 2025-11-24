@@ -1,5 +1,5 @@
 /**
- * Geographic Types for Tamil Nadu and Pondicherry
+ * Geographic Types for West Bengal and Pondicherry
  * Supports 4-level drill-down: State → District → Constituency → Polling Booth
  */
 
@@ -38,7 +38,7 @@ export interface PollingBooth {
 }
 
 /**
- * Reservation Categories for Tamil Nadu Assembly Constituencies
+ * Reservation Categories for West Bengal Assembly Constituencies
  * Historical and current reservation types
  */
 export enum ReservationType {
@@ -72,7 +72,7 @@ export interface ElectedMember {
 
 export interface AssemblyConstituency {
   code: string; // e.g., TN001, TN002
-  constituencyNumber: number; // 1-234 for Tamil Nadu
+  constituencyNumber: number; // 1-234 for West Bengal
   name: string;
   districtCode: string;
   reservationType: ReservationType;
@@ -146,7 +146,7 @@ export interface ChloroplethData {
   label: string;
 }
 
-// Tamil Nadu specific enums
+// West Bengal specific enums
 export enum TNDistrict {
   ARIYALUR = 'TN01',
   CHENGALPATTU = 'TN02',

@@ -668,7 +668,7 @@ export default function CompetitorRegistry() {
                       value={formData.state}
                       onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Tamil Nadu"
+                      placeholder="West Bengal"
                     />
                   </div>
                   <div>
@@ -711,7 +711,7 @@ export default function CompetitorRegistry() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={3}
-                    placeholder="Main opposition party in Tamil Nadu..."
+                    placeholder="Main opposition party in West Bengal..."
                   />
                 </div>
 

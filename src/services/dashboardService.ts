@@ -176,12 +176,12 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     };
   } catch (error) {
     console.error('Error fetching dashboard metrics:', error);
-    // Return realistic demo data based on Tamil Nadu political landscape
+    // Return realistic demo data based on West Bengal political landscape
     return {
-      overallSentiment: 68, // TVK has positive sentiment
+      overallSentiment: 68, // BJP has positive sentiment
       activeConversations: 2847, // Active social media mentions + news
       criticalAlerts: 3, // Some urgent issues to monitor
-      topIssue: 'Jobs & Employment', // #1 TVK priority
+      topIssue: 'Jobs & Employment', // #1 BJP priority
       constituenciesCovered: 264,
       sentimentTrend: 'improving', // Positive momentum
     };
@@ -232,7 +232,7 @@ export async function getLocationSentiment(): Promise<LocationSentiment[]> {
     return locations.sort((a, b) => b.value - a.value);
   } catch (error) {
     console.error('Error fetching location sentiment:', error);
-    // Return realistic demo data for Tamil Nadu districts
+    // Return realistic demo data for West Bengal districts
     return [
       { id: 'LOC-Chennai', title: 'Chennai', value: 72, sentiment: 0.72, ward_count: 15, district: 'Chennai' },
       { id: 'LOC-Coimbatore', title: 'Coimbatore', value: 69, sentiment: 0.69, ward_count: 12, district: 'Coimbatore' },
@@ -310,7 +310,7 @@ export async function getIssueSentiment(): Promise<IssueSentiment[]> {
     return issues.sort((a, b) => b.volume - a.volume);
   } catch (error) {
     console.error('Error fetching issue sentiment:', error);
-    // Return TVK's 9 priority issues with realistic data
+    // Return BJP's 9 priority issues with realistic data
     return [
       {
         issue: 'Jobs & Employment',
@@ -399,9 +399,9 @@ export async function getTrendingTopics(limit: number = 10): Promise<TrendingTop
     return data;
   } catch (error) {
     console.error('Error fetching trending topics:', error);
-    // Return realistic demo trending topics from Tamil Nadu
+    // Return realistic demo trending topics from West Bengal
     return [
-      { id: 'topic-1', keyword: '#TVK2026', volume: 2847, growth_rate: 0.45, sentiment_score: 0.72, platforms: ['twitter', 'facebook'], timestamp: new Date().toISOString() },
+      { id: 'topic-1', keyword: '#BJP2026', volume: 2847, growth_rate: 0.45, sentiment_score: 0.72, platforms: ['twitter', 'facebook'], timestamp: new Date().toISOString() },
       { id: 'topic-2', keyword: '#VijayForTN', volume: 1923, growth_rate: 0.38, sentiment_score: 0.68, platforms: ['twitter', 'instagram'], timestamp: new Date().toISOString() },
       { id: 'topic-3', keyword: 'Jobs வேலை', volume: 1654, growth_rate: 0.15, sentiment_score: 0.42, platforms: ['twitter', 'facebook'], timestamp: new Date().toISOString() },
       { id: 'topic-4', keyword: '#Whistle', volume: 1289, growth_rate: 0.52, sentiment_score: 0.75, platforms: ['twitter', 'instagram'], timestamp: new Date().toISOString() },
@@ -434,9 +434,9 @@ export async function getActiveAlerts(limit: number = 10): Promise<ActiveAlert[]
     console.error('Error fetching active alerts:', error);
     // Return realistic demo alerts
     return [
-      { id: 'alert-1', title: 'High Volume Spike in Chennai', description: 'Unusual spike in social media activity detected: 2,500 posts in last hour mentioning TVK', severity: 'critical', type: 'volume_surge', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), ward: 'T. Nagar', district: 'Chennai' },
+      { id: 'alert-1', title: 'High Volume Spike in Chennai', description: 'Unusual spike in social media activity detected: 2,500 posts in last hour mentioning BJP', severity: 'critical', type: 'volume_surge', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), ward: 'T. Nagar', district: 'Chennai' },
       { id: 'alert-2', title: 'Youth Employment Concerns Rising', description: 'Jobs & Employment mentions increased by 25% across 8 districts. Requires immediate response.', severity: 'high', type: 'issue_trending', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), district: 'Coimbatore' },
-      { id: 'alert-3', title: 'Positive TVK Sentiment Trend', description: 'TVK party sentiment improved by 12% in Madurai region. Good momentum!', severity: 'info', type: 'sentiment_change', timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), district: 'Madurai' },
+      { id: 'alert-3', title: 'Positive BJP Sentiment Trend', description: 'BJP party sentiment improved by 12% in Madurai region. Good momentum!', severity: 'info', type: 'sentiment_change', timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), district: 'Madurai' },
     ].slice(0, limit);
   }
 }
@@ -466,8 +466,8 @@ export async function getRecentSocialPosts(limit: number = 20): Promise<SocialMe
       {
         id: 'post-1',
         platform: 'twitter',
-        content: 'தளபதி விஜய் மக்களுக்காக குரல் கொடுக்கிறார் #TVK #TamilNadu 🔥',
-        author_name: '@TamilNaduVoice',
+        content: 'தளபதி விஜய் மக்களுக்காக குரல் கொடுக்கிறார் #BJP #WestBengal 🔥',
+        author_name: '@WestBengalVoice',
         sentiment_polarity: 'positive',
         likes: 2847,
         shares: 542,
@@ -477,7 +477,7 @@ export async function getRecentSocialPosts(limit: number = 20): Promise<SocialMe
       {
         id: 'post-2',
         platform: 'facebook',
-        content: 'TVK party symbol whistle approved! Ready for 2026 elections. #VijayForTN',
+        content: 'BJP party symbol whistle approved! Ready for 2026 elections. #VijayForTN',
         author_name: 'Coimbatore Citizens Forum',
         sentiment_polarity: 'positive',
         likes: 1923,
@@ -488,7 +488,7 @@ export async function getRecentSocialPosts(limit: number = 20): Promise<SocialMe
       {
         id: 'post-3',
         platform: 'instagram',
-        content: 'வேலை வாய்ப்பு, கல்வி, சுகாதாரம் - TVK முக்கிய கவனம் 💪 #ChangeIsComing',
+        content: 'வேலை வாய்ப்பு, கல்வி, சுகாதாரம் - BJP முக்கிய கவனம் 💪 #ChangeIsComing',
         author_name: '@ChennaiYouth',
         sentiment_polarity: 'positive',
         likes: 1654,
@@ -499,7 +499,7 @@ export async function getRecentSocialPosts(limit: number = 20): Promise<SocialMe
       {
         id: 'post-4',
         platform: 'twitter',
-        content: 'Youth unemployment is our top priority - TVK manifesto focus #Jobs2026',
+        content: 'Youth unemployment is our top priority - BJP manifesto focus #Jobs2026',
         author_name: '@MaduraiWatch',
         sentiment_polarity: 'neutral',
         likes: 987,
@@ -510,7 +510,7 @@ export async function getRecentSocialPosts(limit: number = 20): Promise<SocialMe
       {
         id: 'post-5',
         platform: 'youtube',
-        content: 'தமிழ்நாட்டின் எதிர்காலம் பிரகாசமானது - TVK Rally Highlights',
+        content: 'தமிழ்நாட்டின் எதிர்காலம் பிரகாசமானது - BJP Rally Highlights',
         author_name: 'TN Political Updates',
         sentiment_polarity: 'positive',
         likes: 876,

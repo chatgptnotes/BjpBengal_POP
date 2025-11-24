@@ -69,7 +69,7 @@ export default function SuperAdminDashboardEnhanced() {
 
   // Mock organization health data
   const organizationHealthData = [
-    { name: 'TVK Tamil Nadu', health: 95, users: 450, status: 'active' },
+    { name: 'BJP West Bengal', health: 95, users: 450, status: 'active' },
     { name: 'BJP Karnataka', health: 88, users: 320, status: 'active' },
     { name: 'Congress Kerala', health: 72, users: 280, status: 'active' },
     { name: 'AAP Delhi', health: 91, users: 200, status: 'active' },
@@ -314,7 +314,7 @@ export default function SuperAdminDashboardEnhanced() {
         <div className="space-y-4">
           <div className="flex items-center text-sm">
             <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-            <span className="text-gray-600">New organization "TVK Tamil Nadu" created</span>
+            <span className="text-gray-600">New organization "BJP West Bengal" created</span>
             <span className="ml-auto text-gray-400">2 hours ago</span>
           </div>
           <div className="flex items-center text-sm">

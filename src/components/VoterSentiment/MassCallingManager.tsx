@@ -364,7 +364,7 @@ const MassCallingManager: React.FC<MassCallingManagerProps> = ({
               label="Campaign Name"
               value={newCampaignName}
               onChange={(e) => setNewCampaignName(e.target.value)}
-              placeholder="Tamil Nadu Voter Outreach 2025"
+              placeholder="West Bengal Voter Outreach 2025"
             />
 
             <TextField

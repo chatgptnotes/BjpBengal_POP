@@ -432,7 +432,7 @@ export default function LandingPage() {
                 </div>
                 <div className="mt-4 pt-3 border-t border-gray-700">
                   <p className="text-xs font-medium">24/7 Sales Support</p>
-                  <p className="text-xs">Tamil Nadu Project Office Available</p>
+                  <p className="text-xs">West Bengal Project Office Available</p>
                 </div>
               </div>
             </div>

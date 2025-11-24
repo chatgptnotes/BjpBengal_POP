@@ -313,7 +313,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       const userDataPromise = supabase
-        .from('users')
+        .from('user_profiles')
         .select('*')
         .eq('email', email)
         .single();
@@ -354,7 +354,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           email: userData.email,
           role: userData.role as UserRole,
           permissions: userData.permissions || [],
-          avatar: userData.avatar_url,
+          avatar: userData.avatar,
           is_super_admin: userData.is_super_admin,
           organization_id: userData.organization_id,
           status: userData.status || 'active',

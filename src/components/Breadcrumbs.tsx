@@ -17,7 +17,7 @@ export default function Breadcrumbs() {
     'voter-database': 'Voter Database',
     'field-workers': 'Field Workers',
     'field-worker-management': 'Field Worker Management',
-    'tamil-nadu-map': 'Tamil Nadu Map',
+    'west-bengal-map': 'West Bengal Map',
     'regional-map': 'Regional Map',
     'superadmin': 'Super Admin',
     'admin': 'Admin',

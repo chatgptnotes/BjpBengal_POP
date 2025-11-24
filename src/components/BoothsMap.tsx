@@ -66,7 +66,7 @@ export default function BoothsMap({ booths: externalBooths, height = '600px' }: 
         ward_code: `W${String((i % 30) + 1).padStart(4, '0')}`,
         constituency_code: `AC${String((i % 10) + 1).padStart(3, '0')}`,
         constituency_name: `Constituency ${(i % 10) + 1}`,
-        address: `${i + 1} Main Street, Tamil Nadu`,
+        address: `${i + 1} Main Street, West Bengal`,
         latitude: 11.0168 + (Math.random() - 0.5) * 2,
         longitude: 76.9558 + (Math.random() - 0.5) * 2,
         total_voters: Math.floor(Math.random() * 2000) + 500,
@@ -91,7 +91,7 @@ export default function BoothsMap({ booths: externalBooths, height = '600px' }: 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [78.6569, 11.1271], // Tamil Nadu center
+      center: [78.6569, 11.1271], // West Bengal center
       zoom: 7,
     });
 

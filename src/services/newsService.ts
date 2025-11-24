@@ -1,6 +1,6 @@
 /**
  * News Service
- * Handles CRUD operations for news articles, TVK detection, and relevance scoring
+ * Handles CRUD operations for news articles, BJP detection, and relevance scoring
  */
 
 import { supabase } from '../lib/supabase';
@@ -43,12 +43,12 @@ export interface NewsArticle {
   confidence?: number;
   analyzed_at?: string;
 
-  // TVK Specific
-  tvk_mentioned?: boolean;
-  tvk_mention_count?: number;
-  tvk_context?: string;
-  tvk_sentiment_score?: number;
-  tvk_sentiment_polarity?: 'positive' | 'negative' | 'neutral';
+  // BJP Specific
+  bjp_mentioned?: boolean;
+  bjp_mention_count?: number;
+  bjp_context?: string;
+  bjp_sentiment_score?: number;
+  bjp_sentiment_polarity?: 'positive' | 'negative' | 'neutral';
 
   // Metadata
   word_count?: number;
@@ -62,7 +62,7 @@ export interface NewsArticle {
   updated_at?: string;
 }
 
-export interface TVKSentimentReport {
+export interface BJPSentimentReport {
   id?: string;
   organization_id: string;
 
@@ -74,7 +74,7 @@ export interface TVKSentimentReport {
 
   // Statistics
   total_articles: number;
-  tvk_mentioned_articles: number;
+  bjp_mentioned_articles: number;
   analyzed_articles: number;
 
   // Sentiment
@@ -103,7 +103,7 @@ export interface TVKSentimentReport {
   // Insights
   trending_topics?: string[];
   top_keywords?: string[];
-  tvk_contexts?: string[];
+  bjp_contexts?: string[];
 
   // Trend
   sentiment_change?: number;
@@ -143,7 +143,7 @@ export interface ArticleFilters {
   startDate?: string;
   endDate?: string;
   sources?: string[];
-  tvkOnly?: boolean;
+  bjpOnly?: boolean;
   sentimentPolarity?: 'positive' | 'negative' | 'neutral';
   minConfidence?: number;
   stateId?: string;
@@ -151,12 +151,12 @@ export interface ArticleFilters {
 }
 
 // =====================================================
-// TVK DETECTION CONFIGURATION
+// BJP DETECTION CONFIGURATION
 // =====================================================
 
-export const TVK_KEYWORDS = {
+export const BJP_KEYWORDS = {
   party_names: [
-    'TVK',
+    'BJP',
     'தமிழக வெற்றி கழகம்',
     'Tamilaga Vettri Kazhagam',
     'தவக',
@@ -173,11 +173,11 @@ export const TVK_KEYWORDS = {
     'Actor Vijay'
   ],
   related_terms: [
-    'TVK party',
+    'BJP party',
     'Vijay party',
     'விஜய் கட்சி',
     'தமிழக அரசியல்',
-    'Tamil Nadu politics'
+    'West Bengal politics'
   ]
 };
 
@@ -218,13 +218,13 @@ async function getOrganizationId(): Promise<string | null> {
 
 class NewsService {
   /**
-   * Detect TVK mentions in article content
+   * Detect BJP mentions in article content
    */
-  detectTVKMentions(text: string): { mentioned: boolean; count: number; contexts: string[] } {
+  detectBJPMentions(text: string): { mentioned: boolean; count: number; contexts: string[] } {
     const allKeywords = [
-      ...TVK_KEYWORDS.party_names,
-      ...TVK_KEYWORDS.leader_names,
-      ...TVK_KEYWORDS.related_terms
+      ...BJP_KEYWORDS.party_names,
+      ...BJP_KEYWORDS.leader_names,
+      ...BJP_KEYWORDS.related_terms
     ];
 
     const lowerText = text.toLowerCase();
@@ -264,9 +264,9 @@ class NewsService {
   calculateRelevanceScore(article: NewsArticle): number {
     let score = 0;
 
-    // TVK mentions (max 40 points)
-    if (article.tvk_mentioned) {
-      score += Math.min(40, (article.tvk_mention_count || 0) * 10);
+    // BJP mentions (max 40 points)
+    if (article.bjp_mentioned) {
+      score += Math.min(40, (article.bjp_mention_count || 0) * 10);
     }
 
     // Source credibility (max 20 points)
@@ -306,8 +306,8 @@ class NewsService {
    */
   async createArticle(article: NewsArticle): Promise<NewsArticle | null> {
     try {
-      // Detect TVK mentions
-      const tvkDetection = this.detectTVKMentions(article.title + ' ' + article.content);
+      // Detect BJP mentions
+      const bjpDetection = this.detectBJPMentions(article.title + ' ' + article.content);
 
       // Calculate metadata
       const wordCount = article.content.split(/\s+/).length;
@@ -315,9 +315,9 @@ class NewsService {
 
       const articleData = {
         ...article,
-        tvk_mentioned: tvkDetection.mentioned,
-        tvk_mention_count: tvkDetection.count,
-        tvk_context: tvkDetection.contexts.join(' ... '),
+        bjp_mentioned: bjpDetection.mentioned,
+        bjp_mention_count: bjpDetection.count,
+        bjp_context: bjpDetection.contexts.join(' ... '),
         word_count: wordCount,
         reading_time_minutes: readingTime,
         fetched_at: new Date().toISOString()
@@ -361,8 +361,8 @@ class NewsService {
       if (filters.sources && filters.sources.length > 0) {
         query = query.in('source', filters.sources);
       }
-      if (filters.tvkOnly) {
-        query = query.eq('tvk_mentioned', true);
+      if (filters.bjpOnly) {
+        query = query.eq('bjp_mentioned', true);
       }
       if (filters.sentimentPolarity) {
         query = query.eq('sentiment_polarity', filters.sentimentPolarity);
@@ -485,46 +485,46 @@ class NewsService {
   }
 
   /**
-   * Get TVK-related articles
+   * Get BJP-related articles
    */
-  async getTVKArticles(filters: ArticleFilters = {}): Promise<NewsArticle[]> {
-    return this.getArticles({ ...filters, tvkOnly: true });
+  async getBJPArticles(filters: ArticleFilters = {}): Promise<NewsArticle[]> {
+    return this.getArticles({ ...filters, bjpOnly: true });
   }
 
   // =====================================================
-  // TVK SENTIMENT REPORTS
+  // BJP SENTIMENT REPORTS
   // =====================================================
 
   /**
-   * Create TVK sentiment report
+   * Create BJP sentiment report
    */
-  async createTVKReport(report: TVKSentimentReport): Promise<TVKSentimentReport | null> {
+  async createBJPReport(report: BJPSentimentReport): Promise<BJPSentimentReport | null> {
     try {
       const { data, error } = await supabase
-        .from('tvk_sentiment_reports')
+        .from('bjp_sentiment_reports')
         .insert([report])
         .select()
         .single();
 
       if (error) {
-        console.error('Error creating TVK report:', error);
+        console.error('Error creating BJP report:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in createTVKReport:', error);
+      console.error('Error in createBJPReport:', error);
       return null;
     }
   }
 
   /**
-   * Get latest TVK report
+   * Get latest BJP report
    */
-  async getLatestTVKReport(periodType: string = 'daily'): Promise<TVKSentimentReport | null> {
+  async getLatestBJPReport(periodType: string = 'daily'): Promise<BJPSentimentReport | null> {
     try {
       const { data, error } = await supabase
-        .from('tvk_sentiment_reports')
+        .from('bjp_sentiment_reports')
         .select('*')
         .eq('period_type', periodType)
         .order('report_date', { ascending: false })
@@ -532,24 +532,24 @@ class NewsService {
         .single();
 
       if (error) {
-        console.error('Error fetching latest TVK report:', error);
+        console.error('Error fetching latest BJP report:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getLatestTVKReport:', error);
+      console.error('Error in getLatestBJPReport:', error);
       return null;
     }
   }
 
   /**
-   * Get TVK reports by date range
+   * Get BJP reports by date range
    */
-  async getTVKReports(startDate: string, endDate: string, periodType: string = 'daily'): Promise<TVKSentimentReport[]> {
+  async getBJPReports(startDate: string, endDate: string, periodType: string = 'daily'): Promise<BJPSentimentReport[]> {
     try {
       const { data, error } = await supabase
-        .from('tvk_sentiment_reports')
+        .from('bjp_sentiment_reports')
         .select('*')
         .eq('period_type', periodType)
         .gte('report_date', startDate)
@@ -557,13 +557,13 @@ class NewsService {
         .order('report_date', { ascending: false });
 
       if (error) {
-        console.error('Error fetching TVK reports:', error);
+        console.error('Error fetching BJP reports:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getTVKReports:', error);
+      console.error('Error in getBJPReports:', error);
       return [];
     }
   }

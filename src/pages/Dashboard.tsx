@@ -186,7 +186,7 @@ export default function Dashboard() {
     },
   ];
 
-  // Tamil Nadu Districts Map Data - from real Supabase data
+  // West Bengal Districts Map Data - from real Supabase data
   const tamilNaduMapData = locations.length > 0 ? locations : [
     // Fallback data if no real data available
     { id: 'TN-Loading', title: 'Loading...', value: 50, sentiment: 0.5, constituencies: 0 },

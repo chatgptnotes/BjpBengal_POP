@@ -286,11 +286,11 @@ export interface CallSentimentAnalysis {
   previous_govt_keywords?: string[];
   previous_govt_summary?: string;
 
-  // Sentiment about TVK (Vijay's party)
-  tvk_sentiment?: 'support' | 'against' | 'undecided' | 'not_mentioned';
-  tvk_score?: number; // -1 to 1
-  tvk_keywords?: string[];
-  tvk_summary?: string;
+  // Sentiment about BJP (Vijay's party)
+  bjp_sentiment?: 'support' | 'against' | 'undecided' | 'not_mentioned';
+  bjp_score?: number; // -1 to 1
+  bjp_keywords?: string[];
+  bjp_summary?: string;
 
   // Key issues discussed
   key_issues?: Array<{
@@ -377,7 +377,7 @@ export interface SentimentStats {
     not_mentioned: number;
   };
 
-  tvk: {
+  bjp: {
     support: number;
     against: number;
     undecided: number;

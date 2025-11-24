@@ -47,7 +47,7 @@ export default function PulseOfPeopleDashboard() {
   const [selectedDemographic, setSelectedDemographic] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
 
-  // Mock real-time pulse data with Tamil Nadu-specific content
+  // Mock real-time pulse data with West Bengal-specific content
   const [pulseData, setPulseData] = useState<PulseData[]>([
     {
       id: '1',
@@ -214,7 +214,7 @@ export default function PulseOfPeopleDashboard() {
             <Activity className="mr-2 h-6 w-6 text-blue-600" />
             Pulse of the People Dashboard
           </h3>
-          <p className="text-sm text-gray-600 mt-1">Real-time sentiment monitoring and data collection from Tamil Nadu</p>
+          <p className="text-sm text-gray-600 mt-1">Real-time sentiment monitoring and data collection from West Bengal</p>
         </div>
         <div className="flex space-x-2">
           <button

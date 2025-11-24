@@ -127,7 +127,7 @@ export default function MagicSearchBar() {
     {
       id: '5',
       type: 'pulse',
-      title: 'Real-time Pulse: Tamil Nadu Education Sentiment',
+      title: 'Real-time Pulse: West Bengal Education Sentiment',
       summary: 'Current pulse shows 74% positive sentiment on digital education initiatives. Trending topics: smart classrooms, teacher training, rural connectivity.',
       relevanceScore: 0.86,
       metadata: {
@@ -158,7 +158,7 @@ export default function MagicSearchBar() {
     {
       id: '7',
       type: 'trend',
-      title: 'Trending: Digital Payment Adoption in Rural Tamil Nadu',
+      title: 'Trending: Digital Payment Adoption in Rural West Bengal',
       summary: 'Unexpected 45% increase in digital payment discussions in rural areas. Correlation with employment schemes and agriculture subsidies.',
       relevanceScore: 0.77,
       metadata: {
@@ -195,7 +195,7 @@ export default function MagicSearchBar() {
     'rural development sentiment',
     'women safety concerns',
     'agriculture policy impact',
-    'startup ecosystem Tamil Nadu'
+    'startup ecosystem West Bengal'
   ];
 
   useEffect(() => {

@@ -86,7 +86,7 @@ export default function DjangoTest() {
               disabled={loading}
               className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:bg-gray-400"
             >
-              Get Issues (TVK)
+              Get Issues (BJP)
             </button>
 
             <button

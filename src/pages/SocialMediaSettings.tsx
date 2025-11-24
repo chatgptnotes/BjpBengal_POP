@@ -37,7 +37,7 @@ import {
   Clock,
   Shield
 } from 'lucide-react';
-import { TVKLogo } from '../components/TVKLogo';
+import { BJPLogo } from '../components/BJPLogo';
 
 // ============================================================================
 // INTERFACES
@@ -350,11 +350,11 @@ export default function SocialMediaSettings() {
   const [activeTab, setActiveTab] = useState<'accounts' | 'credentials' | 'seeddata' | 'thirdparty'>('accounts');
   const [accounts, setAccounts] = useState<SocialMediaAccount[]>([]);
   const [seedData, setSeedData] = useState<SeedData>({
-    keywords: ['TVK', 'Tamilaga Vettri Kazhagam', 'தமிழக வெற்றி கழகம்'],
-    hashtags: ['#TVK', '#TamilNadu', '#தமிழகம்'],
+    keywords: ['BJP', 'Bharatiya Janata Party', 'भारतीय जनता पार्टी'],
+    hashtags: ['#BJP', '#WestBengal', '#தமிழகம்'],
     competitorAccounts: [],
     influencers: [],
-    locations: ['Tamil Nadu', 'Chennai', 'Coimbatore', 'Madurai']
+    locations: ['West Bengal', 'Chennai', 'Coimbatore', 'Madurai']
   });
   const [thirdPartyServices, setThirdPartyServices] = useState<ThirdPartyService[]>([]);
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
@@ -370,9 +370,9 @@ export default function SocialMediaSettings() {
 
   const loadSavedData = () => {
     try {
-      const savedAccounts = localStorage.getItem('tvk_social_accounts');
-      const savedSeedData = localStorage.getItem('tvk_seed_data');
-      const savedServices = localStorage.getItem('tvk_third_party_services');
+      const savedAccounts = localStorage.getItem('bjp_social_accounts');
+      const savedSeedData = localStorage.getItem('bjp_seed_data');
+      const savedServices = localStorage.getItem('bjp_third_party_services');
 
       if (savedAccounts) setAccounts(JSON.parse(savedAccounts));
       if (savedSeedData) setSeedData(JSON.parse(savedSeedData));
@@ -416,7 +416,7 @@ export default function SocialMediaSettings() {
       : [...accounts, account];
 
     setAccounts(updatedAccounts);
-    saveToLocalStorage('tvk_social_accounts', updatedAccounts);
+    saveToLocalStorage('bjp_social_accounts', updatedAccounts);
     setShowAddAccountModal(false);
     setEditingAccount(null);
   };
@@ -425,7 +425,7 @@ export default function SocialMediaSettings() {
     if (confirm('Are you sure you want to delete this account?')) {
       const updatedAccounts = accounts.filter(a => a.id !== id);
       setAccounts(updatedAccounts);
-      saveToLocalStorage('tvk_social_accounts', updatedAccounts);
+      saveToLocalStorage('bjp_social_accounts', updatedAccounts);
     }
   };
 
@@ -450,7 +450,7 @@ export default function SocialMediaSettings() {
           : a
       );
       setAccounts(finalAccounts);
-      saveToLocalStorage('tvk_social_accounts', finalAccounts);
+      saveToLocalStorage('bjp_social_accounts', finalAccounts);
     }, 2000);
   };
 
@@ -466,7 +466,7 @@ export default function SocialMediaSettings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tvk-social-media-config-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `bjp-social-media-config-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -481,15 +481,15 @@ export default function SocialMediaSettings() {
         const config = JSON.parse(e.target?.result as string);
         if (config.accounts) {
           setAccounts(config.accounts);
-          saveToLocalStorage('tvk_social_accounts', config.accounts);
+          saveToLocalStorage('bjp_social_accounts', config.accounts);
         }
         if (config.seedData) {
           setSeedData(config.seedData);
-          saveToLocalStorage('tvk_seed_data', config.seedData);
+          saveToLocalStorage('bjp_seed_data', config.seedData);
         }
         if (config.thirdPartyServices) {
           setThirdPartyServices(config.thirdPartyServices);
-          saveToLocalStorage('tvk_third_party_services', config.thirdPartyServices);
+          saveToLocalStorage('bjp_third_party_services', config.thirdPartyServices);
         }
         alert('Configuration imported successfully!');
       } catch (error) {
@@ -507,14 +507,14 @@ export default function SocialMediaSettings() {
     if (keyword && !seedData.keywords.includes(keyword)) {
       const updated = { ...seedData, keywords: [...seedData.keywords, keyword] };
       setSeedData(updated);
-      saveToLocalStorage('tvk_seed_data', updated);
+      saveToLocalStorage('bjp_seed_data', updated);
     }
   };
 
   const removeKeyword = (keyword: string) => {
     const updated = { ...seedData, keywords: seedData.keywords.filter(k => k !== keyword) };
     setSeedData(updated);
-    saveToLocalStorage('tvk_seed_data', updated);
+    saveToLocalStorage('bjp_seed_data', updated);
   };
 
   // ============================================================================
@@ -545,7 +545,7 @@ export default function SocialMediaSettings() {
       : [...thirdPartyServices, service];
 
     setThirdPartyServices(updatedServices);
-    saveToLocalStorage('tvk_third_party_services', updatedServices);
+    saveToLocalStorage('bjp_third_party_services', updatedServices);
     setShowServiceModal(false);
     setEditingService(null);
   };
@@ -564,7 +564,7 @@ export default function SocialMediaSettings() {
           : s
       );
       setThirdPartyServices(finalServices);
-      saveToLocalStorage('tvk_third_party_services', finalServices);
+      saveToLocalStorage('bjp_third_party_services', finalServices);
     }, 2000);
   };
 
@@ -573,7 +573,7 @@ export default function SocialMediaSettings() {
       s.id === serviceId ? { ...s, enabled: !s.enabled } : s
     );
     setThirdPartyServices(updatedServices);
-    saveToLocalStorage('tvk_third_party_services', updatedServices);
+    saveToLocalStorage('bjp_third_party_services', updatedServices);
   };
 
   // ============================================================================
@@ -587,10 +587,10 @@ export default function SocialMediaSettings() {
         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <TVKLogo size="medium" />
+              <BJPLogo size="medium" />
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Social Media Configuration</h1>
-                <p className="text-gray-600 mt-1">Manage TVK's social media accounts, credentials, and monitoring settings</p>
+                <p className="text-gray-600 mt-1">Manage BJP's social media accounts, credentials, and monitoring settings</p>
               </div>
             </div>
             <div className="flex space-x-3">
@@ -742,7 +742,7 @@ export default function SocialMediaSettings() {
             {/* Existing Accounts */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">TVK Social Media Accounts</h3>
+                <h3 className="text-lg font-semibold text-gray-900">BJP Social Media Accounts</h3>
                 <p className="text-gray-600 text-sm mt-1">
                   {accounts.length} account{accounts.length !== 1 ? 's' : ''} configured
                 </p>
@@ -1140,7 +1140,7 @@ export default function SocialMediaSettings() {
             <div className="space-y-4 mb-6">
               <input
                 type="text"
-                placeholder="Account Name (e.g., TVK Official)"
+                placeholder="Account Name (e.g., BJP Official)"
                 value={editingAccount.accountName}
                 onChange={(e) => setEditingAccount({ ...editingAccount, accountName: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"

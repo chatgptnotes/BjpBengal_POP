@@ -102,12 +102,12 @@ const SentimentAnalyticsDashboard: React.FC<SentimentAnalyticsDashboardProps> = 
     { name: 'Not Mentioned', value: stats.previous_govt.not_mentioned, color: COLORS.not_mentioned },
   ].filter(item => item.value > 0);
 
-  // Prepare data for TVK sentiment chart
-  const tvkSentimentData = [
-    { name: 'Support', value: stats.tvk.support, color: COLORS.support },
-    { name: 'Against', value: stats.tvk.against, color: COLORS.against },
-    { name: 'Undecided', value: stats.tvk.undecided, color: COLORS.undecided },
-    { name: 'Not Mentioned', value: stats.tvk.not_mentioned, color: COLORS.not_mentioned },
+  // Prepare data for BJP sentiment chart
+  const bjpSentimentData = [
+    { name: 'Support', value: stats.bjp.support, color: COLORS.support },
+    { name: 'Against', value: stats.bjp.against, color: COLORS.against },
+    { name: 'Undecided', value: stats.bjp.undecided, color: COLORS.undecided },
+    { name: 'Not Mentioned', value: stats.bjp.not_mentioned, color: COLORS.not_mentioned },
   ].filter(item => item.value > 0);
 
   // Prepare voting intention data
@@ -226,17 +226,17 @@ const SentimentAnalyticsDashboard: React.FC<SentimentAnalyticsDashboardProps> = 
           </Card>
         </Grid>
 
-        {/* TVK Sentiment */}
+        {/* BJP Sentiment */}
         <Grid item xs={12} md={6}>
           <Card elevation={2}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                TVK (Vijay's Party) Sentiment
+                BJP (Vijay's Party) Sentiment
               </Typography>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={tvkSentimentData}
+                    data={bjpSentimentData}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -245,7 +245,7 @@ const SentimentAnalyticsDashboard: React.FC<SentimentAnalyticsDashboardProps> = 
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {tvkSentimentData.map((entry, index) => (
+                    {bjpSentimentData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>

@@ -1,5 +1,5 @@
 /**
- * Default Issue-Specific Scores for Tamil Nadu Constituencies
+ * Default Issue-Specific Scores for West Bengal Constituencies
  *
  * Provides baseline data for each issue layer:
  * - jobs: Employment sentiment (0-100)

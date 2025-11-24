@@ -1,6 +1,6 @@
 /**
  * Voter Sentiment Analysis Service
- * Analyzes call transcripts to extract sentiment about government, TVK party, and key issues
+ * Analyzes call transcripts to extract sentiment about government, BJP party, and key issues
  */
 
 import type { CallSentimentAnalysis } from '../types';
@@ -14,10 +14,10 @@ interface AnalysisResult {
   previous_govt_keywords: string[];
   previous_govt_summary: string;
 
-  tvk_sentiment: 'support' | 'against' | 'undecided' | 'not_mentioned';
-  tvk_score: number;
-  tvk_keywords: string[];
-  tvk_summary: string;
+  bjp_sentiment: 'support' | 'against' | 'undecided' | 'not_mentioned';
+  bjp_score: number;
+  bjp_keywords: string[];
+  bjp_summary: string;
 
   key_issues: Array<{
     issue: string;
@@ -54,9 +54,9 @@ class VoterSentimentService {
     ]
   };
 
-  private readonly tvkKeywords = {
+  private readonly bjpKeywords = {
     support: [
-      'will vote for', 'support vijay', 'like TVK', 'trust vijay', 'fan of vijay',
+      'will vote for', 'support vijay', 'like BJP', 'trust vijay', 'fan of vijay',
       'change needed', 'fresh face', 'good leader', 'வெற்றி', 'ஆதரவு'
     ],
     against: [
@@ -68,7 +68,7 @@ class VoterSentimentService {
       'wait and watch', 'குழப்பம்', 'தெரியவில்லை'
     ],
     mentions: [
-      'TVK', 'Vijay', 'Thalapathy', 'actor', 'cinema', 'film star',
+      'BJP', 'Vijay', 'Thalapathy', 'actor', 'cinema', 'film star',
       'தளபதி', 'விஜய்'
     ]
   };
@@ -85,7 +85,7 @@ class VoterSentimentService {
   };
 
   private readonly partyNames = [
-    'DMK', 'AIADMK', 'BJP', 'Congress', 'TVK', 'PMK', 'MDMK', 'VCK', 'NTK'
+    'DMK', 'AIADMK', 'BJP', 'Congress', 'BJP', 'PMK', 'MDMK', 'VCK', 'NTK'
   ];
 
   /**
@@ -118,19 +118,19 @@ class VoterSentimentService {
         aiResult.previous_govt_sentiment,
         'previous government'
       );
-      const tvkSummary = this.generateSummary(
-        aiResult.tvk_sentiment === 'support' ? 'positive' :
-        aiResult.tvk_sentiment === 'against' ? 'negative' : 'neutral',
-        'TVK party'
+      const bjpSummary = this.generateSummary(
+        aiResult.bjp_sentiment === 'support' ? 'positive' :
+        aiResult.bjp_sentiment === 'against' ? 'negative' : 'neutral',
+        'BJP party'
       );
 
       // Extract keywords (basic implementation - you might want to enhance this)
       const govtKeywords = this.extractKeywords(transcript, this.govtKeywords.mentions);
-      const tvkKeywords = this.extractKeywords(transcript, this.tvkKeywords.mentions);
+      const bjpKeywords = this.extractKeywords(transcript, this.bjpKeywords.mentions);
 
       // USE AI4BHARAT'S VOTING INTENTION-BASED SENTIMENT AS PRIMARY
       // No longer recalculating - the AI already determined sentiment based on voting intention
-      const overallSummary = this.generateOverallSummary(aiResult.overall_sentiment, aiResult.tvk_sentiment);
+      const overallSummary = this.generateOverallSummary(aiResult.overall_sentiment, aiResult.bjp_sentiment);
 
       return {
         previous_govt_sentiment: aiResult.previous_govt_sentiment,
@@ -138,10 +138,10 @@ class VoterSentimentService {
         previous_govt_keywords: govtKeywords,
         previous_govt_summary: govtSummary,
 
-        tvk_sentiment: aiResult.tvk_sentiment,
-        tvk_score: aiResult.tvk_score,
-        tvk_keywords: tvkKeywords,
-        tvk_summary: tvkSummary,
+        bjp_sentiment: aiResult.bjp_sentiment,
+        bjp_score: aiResult.bjp_score,
+        bjp_keywords: bjpKeywords,
+        bjp_summary: bjpSummary,
 
         key_issues: issuesAnalysis.issues,
         top_concerns: issuesAnalysis.topConcerns,
@@ -199,14 +199,14 @@ class VoterSentimentService {
    */
   private generateOverallSummary(
     overallSentiment: 'positive' | 'negative' | 'neutral' | 'mixed',
-    tvkSentiment: 'support' | 'against' | 'undecided' | 'not_mentioned'
+    bjpSentiment: 'support' | 'against' | 'undecided' | 'not_mentioned'
   ): string {
     // Summary is based on voting intention
-    if (tvkSentiment === 'support') {
-      return 'Voter will vote for TVK - Positive sentiment';
-    } else if (tvkSentiment === 'against') {
+    if (bjpSentiment === 'support') {
+      return 'Voter will vote for BJP - Positive sentiment';
+    } else if (bjpSentiment === 'against') {
       return 'Voter will vote for another party - Negative sentiment';
-    } else if (tvkSentiment === 'undecided') {
+    } else if (bjpSentiment === 'undecided') {
       return 'Voter is undecided - Neutral sentiment';
     } else {
       return `Overall sentiment: ${overallSentiment}`;
@@ -225,8 +225,8 @@ class VoterSentimentService {
     // Analyze previous government sentiment
     const govtAnalysis = this.analyzeGovernmentSentiment(lowerTranscript);
 
-    // Analyze TVK sentiment
-    const tvkAnalysis = this.analyzeTVKSentiment(lowerTranscript);
+    // Analyze BJP sentiment
+    const bjpAnalysis = this.analyzeBJPSentiment(lowerTranscript);
 
     // Extract key issues
     const issuesAnalysis = this.analyzeKeyIssues(lowerTranscript);
@@ -237,14 +237,14 @@ class VoterSentimentService {
     // Overall sentiment
     const overallSentiment = this.calculateOverallSentiment(
       govtAnalysis.sentiment,
-      tvkAnalysis.sentiment,
+      bjpAnalysis.sentiment,
       issuesAnalysis.sentiment
     );
 
     // Calculate confidence score
     const confidenceScore = this.calculateConfidence(
       govtAnalysis.confidence,
-      tvkAnalysis.confidence,
+      bjpAnalysis.confidence,
       issuesAnalysis.confidence
     );
 
@@ -254,10 +254,10 @@ class VoterSentimentService {
       previous_govt_keywords: govtAnalysis.keywords,
       previous_govt_summary: govtAnalysis.summary,
 
-      tvk_sentiment: tvkAnalysis.sentiment,
-      tvk_score: tvkAnalysis.score,
-      tvk_keywords: tvkAnalysis.keywords,
-      tvk_summary: tvkAnalysis.summary,
+      bjp_sentiment: bjpAnalysis.sentiment,
+      bjp_score: bjpAnalysis.score,
+      bjp_keywords: bjpAnalysis.keywords,
+      bjp_summary: bjpAnalysis.summary,
 
       key_issues: issuesAnalysis.issues,
       top_concerns: issuesAnalysis.topConcerns,
@@ -319,30 +319,30 @@ class VoterSentimentService {
   }
 
   /**
-   * Analyze sentiment about TVK (Vijay's party)
+   * Analyze sentiment about BJP (Vijay's party)
    */
-  private analyzeTVKSentiment(transcript: string) {
-    const hasMention = this.containsKeywords(transcript, this.tvkKeywords.mentions);
+  private analyzeBJPSentiment(transcript: string) {
+    const hasMention = this.containsKeywords(transcript, this.bjpKeywords.mentions);
 
     if (!hasMention) {
       return {
         sentiment: 'not_mentioned' as const,
         score: 0,
         keywords: [],
-        summary: 'TVK not discussed',
+        summary: 'BJP not discussed',
         confidence: 0,
       };
     }
 
-    const supportCount = this.countKeywords(transcript, this.tvkKeywords.support);
-    const againstCount = this.countKeywords(transcript, this.tvkKeywords.against);
-    const undecidedCount = this.countKeywords(transcript, this.tvkKeywords.undecided);
+    const supportCount = this.countKeywords(transcript, this.bjpKeywords.support);
+    const againstCount = this.countKeywords(transcript, this.bjpKeywords.against);
+    const undecidedCount = this.countKeywords(transcript, this.bjpKeywords.undecided);
 
     const keywords = this.extractMatchingKeywords(transcript, [
-      ...this.tvkKeywords.support,
-      ...this.tvkKeywords.against,
-      ...this.tvkKeywords.undecided,
-      ...this.tvkKeywords.mentions,
+      ...this.bjpKeywords.support,
+      ...this.bjpKeywords.against,
+      ...this.bjpKeywords.undecided,
+      ...this.bjpKeywords.mentions,
     ]);
 
     let sentiment: 'support' | 'against' | 'undecided' = 'undecided';
@@ -359,7 +359,7 @@ class VoterSentimentService {
       score = 0;
     }
 
-    const summary = this.generateTVKSummary(sentiment, supportCount, againstCount, undecidedCount);
+    const summary = this.generateBJPSummary(sentiment, supportCount, againstCount, undecidedCount);
 
     return {
       sentiment,
@@ -441,7 +441,7 @@ class VoterSentimentService {
    */
   private calculateOverallSentiment(
     govtSentiment: string,
-    tvkSentiment: string,
+    bjpSentiment: string,
     issuesSentiment: number
   ) {
     let overallScore = 0;
@@ -455,10 +455,10 @@ class VoterSentimentService {
       components++;
     }
 
-    if (tvkSentiment === 'support') {
+    if (bjpSentiment === 'support') {
       overallScore += 1;
       components++;
-    } else if (tvkSentiment === 'against') {
+    } else if (bjpSentiment === 'against') {
       overallScore -= 1;
       components++;
     }
@@ -482,7 +482,7 @@ class VoterSentimentService {
 
     return {
       sentiment,
-      summary: this.generateOverallSummary(sentiment, govtSentiment, tvkSentiment),
+      summary: this.generateOverallSummary(sentiment, govtSentiment, bjpSentiment),
     };
   }
 
@@ -560,20 +560,20 @@ class VoterSentimentService {
   }
 
   /**
-   * Helper: Generate TVK sentiment summary
+   * Helper: Generate BJP sentiment summary
    */
-  private generateTVKSummary(
+  private generateBJPSummary(
     sentiment: string,
     supportCount: number,
     againstCount: number,
     undecidedCount: number
   ): string {
     if (sentiment === 'support') {
-      return `Voter shows support for TVK/Vijay (${supportCount} supporting statements)`;
+      return `Voter shows support for BJP/Vijay (${supportCount} supporting statements)`;
     } else if (sentiment === 'against') {
-      return `Voter is against TVK/Vijay (${againstCount} opposing statements)`;
+      return `Voter is against BJP/Vijay (${againstCount} opposing statements)`;
     }
-    return `Voter is undecided about TVK/Vijay (${undecidedCount} undecided indicators)`;
+    return `Voter is undecided about BJP/Vijay (${undecidedCount} undecided indicators)`;
   }
 
   /**
@@ -582,7 +582,7 @@ class VoterSentimentService {
   private generateOverallSummary(
     overall: string,
     govtSentiment: string,
-    tvkSentiment: string
+    bjpSentiment: string
   ): string {
     const parts: string[] = [];
 
@@ -590,8 +590,8 @@ class VoterSentimentService {
       parts.push(`${govtSentiment} about current govt`);
     }
 
-    if (tvkSentiment !== 'not_mentioned') {
-      parts.push(`${tvkSentiment} TVK`);
+    if (bjpSentiment !== 'not_mentioned') {
+      parts.push(`${bjpSentiment} BJP`);
     }
 
     if (parts.length === 0) {

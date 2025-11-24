@@ -87,11 +87,11 @@ function mapDBArticleToComponent(dbArticle: DBNewsArticle): NewsArticle {
   // Calculate engagement score (mock for now, can be enhanced)
   const engagement = Math.floor((dbArticle.credibility_score || 50) * 10 + Math.random() * 500);
 
-  // Extract mentions from TVK context or empty array
+  // Extract mentions from BJP context or empty array
   const mentions: string[] = [];
-  if (dbArticle.tvk_mentioned && dbArticle.tvk_context) {
+  if (dbArticle.bjp_mentioned && dbArticle.bjp_context) {
     // Extract potential entity mentions from context (simple implementation)
-    const contextWords = dbArticle.tvk_context.split(/\s+/);
+    const contextWords = dbArticle.bjp_context.split(/\s+/);
     const capitalizedWords = contextWords.filter(word => /^[A-Z]/.test(word));
     mentions.push(...capitalizedWords.slice(0, 3));
   }
@@ -108,7 +108,7 @@ function mapDBArticleToComponent(dbArticle: DBNewsArticle): NewsArticle {
     engagement,
     topics,
     mentions,
-    region: 'Tamil Nadu', // Default, can be enhanced with state/district lookup
+    region: 'West Bengal', // Default, can be enhanced with state/district lookup
     language: dbArticle.language || 'en',
     url: dbArticle.url || '#',
     isBreaking: dbArticle.is_breaking || false,
@@ -124,7 +124,7 @@ const newsSources: NewsSource[] = [
     logo: '📰',
     credibilityScore: 92,
     bias: 'center',
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     language: 'Tamil',
     active: true,
     articlesCount: 1247,
@@ -136,7 +136,7 @@ const newsSources: NewsSource[] = [
     logo: '📖',
     credibilityScore: 89,
     bias: 'center',
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     language: 'Tamil',
     active: true,
     articlesCount: 1156,
@@ -184,7 +184,7 @@ const newsSources: NewsSource[] = [
     logo: '📺',
     credibilityScore: 82,
     bias: 'center',
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     language: 'Tamil',
     active: true,
     articlesCount: 1689,
@@ -219,7 +219,7 @@ const newsSources: NewsSource[] = [
 const mockArticles: NewsArticle[] = [
   {
     id: '1',
-    title: 'Tamil Nadu Budget 2026: Focus on Education and Healthcare Infrastructure',
+    title: 'West Bengal Budget 2026: Focus on Education and Healthcare Infrastructure',
     summary: 'State government announces major allocation for educational reforms and healthcare modernization across all districts.',
     source: 'Malayala Manorama',
     timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
@@ -229,7 +229,7 @@ const mockArticles: NewsArticle[] = [
     engagement: 1245,
     topics: ['Budget', 'Education', 'Healthcare', 'Infrastructure'],
     mentions: ['Chief Minister', 'Finance Minister', 'Education Department'],
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     language: 'Tamil',
     url: '#',
     isBreaking: true,
@@ -248,7 +248,7 @@ const mockArticles: NewsArticle[] = [
     engagement: 892,
     topics: ['Election', 'Polling', 'Politics', 'Survey'],
     mentions: ['Opposition Leader', 'Political Parties', 'Voters'],
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     language: 'English',
     url: '#',
     isBreaking: false,
@@ -267,7 +267,7 @@ const mockArticles: NewsArticle[] = [
     engagement: 654,
     topics: ['Infrastructure', 'Development', 'Government', 'Projects'],
     mentions: ['PWD', 'Contractors', 'Local Bodies'],
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     language: 'Tamil',
     url: '#',
     isBreaking: false,
@@ -815,7 +815,7 @@ export default function PressMediaMonitoring() {
                         className="w-full p-2 border border-gray-300 rounded text-sm"
                       >
                         <option value="all">All Regions</option>
-                        <option value="Tamil Nadu">Tamil Nadu</option>
+                        <option value="West Bengal">West Bengal</option>
                         <option value="National">National</option>
                       </select>
                     </div>

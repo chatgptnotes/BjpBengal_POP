@@ -78,7 +78,7 @@ export const SentimentLegend: React.FC<SentimentLegendProps> = ({
       {/* Header */}
       <div className="mb-3">
         <h3 className="text-sm font-semibold text-gray-900">Sentiment Scale</h3>
-        <p className="text-xs text-gray-500 mt-0.5">Based on TVK support</p>
+        <p className="text-xs text-gray-500 mt-0.5">Based on BJP support</p>
       </div>
 
       {/* Legend items */}

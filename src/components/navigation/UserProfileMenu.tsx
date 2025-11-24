@@ -56,7 +56,7 @@ export default function UserProfileMenu({ isOpen, onClose, anchorEl }: UserProfi
     onClose();
   };
 
-  // Get role badge color - Using TVK brand colors
+  // Get role badge color - Using BJP brand colors
   const getRoleBadgeColor = () => {
     switch (user.role) {
       case 'admin':

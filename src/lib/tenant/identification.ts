@@ -13,7 +13,7 @@ import { TenantIdentification } from './types';
  * Extract tenant slug from subdomain
  * Examples:
  *   - kerala.pulseofpeople.com → kerala
- *   - tamilnadu.pulseofpeople.com → tamilnadu
+ *   - westbengal.pulseofpeople.com → westbengal
  *   - app.pulseofpeople.com → null (main app)
  */
 export function extractTenantFromSubdomain(hostname: string): string | null {
@@ -48,7 +48,7 @@ export function extractTenantFromSubdomain(hostname: string): string | null {
  * Extract tenant from URL path
  * Examples:
  *   - /kerala/dashboard → kerala
- *   - /tamilnadu/analytics → tamilnadu
+ *   - /westbengal/analytics → westbengal
  */
 export function extractTenantFromPath(pathname: string): string | null {
   const parts = pathname.split('/').filter(Boolean);

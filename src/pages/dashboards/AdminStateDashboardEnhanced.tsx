@@ -98,9 +98,9 @@ export default function AdminStateDashboardEnhanced() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tamil Nadu State Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">West Bengal State Dashboard</h1>
           <p className="mt-2 text-gray-600">
-            State-wide overview for Tamil Nadu + Puducherry (38 Districts, 234 Constituencies)
+            State-wide overview for West Bengal (23 Districts, 294 Constituencies)
           </p>
         </div>
         <ExportButton
@@ -204,7 +204,7 @@ export default function AdminStateDashboardEnhanced() {
 
       {/* Interactive Map */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Tamil Nadu Interactive Map</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">West Bengal Interactive Map</h2>
         <p className="text-sm text-gray-600 mb-4">
           Click on any constituency to view detailed analytics and sentiment data
         </p>
@@ -219,7 +219,7 @@ export default function AdminStateDashboardEnhanced() {
       {/* Quick Navigation */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Link
-          to="/tamil-nadu-map"
+          to="/west-bengal-map"
           className="bg-white rounded-lg shadow-sm border-2 border-gray-200 p-6 hover:border-blue-500 hover:shadow-md transition-all"
         >
           <div className="flex items-center">
@@ -242,7 +242,7 @@ export default function AdminStateDashboardEnhanced() {
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Competitor Analysis</h3>
               <p className="text-sm text-gray-600 mt-1">
-                TVK vs DMK vs AIADMK vs BJP
+                BJP vs DMK vs AIADMK vs BJP
               </p>
             </div>
           </div>

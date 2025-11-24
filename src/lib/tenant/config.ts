@@ -135,9 +135,9 @@ function getMockTenantConfig(tenantSlug: string): TenantConfig {
   const configs: Record<string, TenantConfig> = {
     'party-a': {
       id: 'mock-party-a',
-      slug: 'tvk-tamil-nadu',
-      name: 'TVK Tamil Nadu Campaign 2026',
-      displayName: 'TVK - Tamilaga Vettri Kazhagam',
+      slug: 'bjp-west-bengal',
+      name: 'BJP West Bengal Campaign 2026',
+      displayName: 'BJP - Bharatiya Janata Party',
       subdomain: 'party-a',
       customDomain: null,
       status: 'active',
@@ -146,9 +146,9 @@ function getMockTenantConfig(tenantSlug: string): TenantConfig {
       branding: {
         primaryColor: '#dc2626',
         secondaryColor: '#fbbf24',
-        logo: '/assets/images/tvk-logo.png',
+        logo: '/assets/images/bjp-logo.png',
         theme: 'red-yellow',
-        heroTitle: 'TVK - Building Progressive Tamil Nadu',
+        heroTitle: 'BJP - Building Progressive West Bengal',
         motto: 'Pirappokkum Ella Uyirkkum - All Lives are Equal by Birth'
       },
       features: {
@@ -161,13 +161,13 @@ function getMockTenantConfig(tenantSlug: string): TenantConfig {
         digitalCampaigning: true
       },
       config: {
-        state: 'Tamil Nadu',
+        state: 'West Bengal',
         districts: ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli', 'Erode', 'Vellore', 'Thoothukudi', 'Thanjavur'],
         partySymbol: 'rising-sun',
         electionYear: '2026'
       },
       metadata: {
-        partyAffiliation: 'TVK',
+        partyAffiliation: 'BJP',
         regionalParty: true,
         founded: '2024-02-02',
         leader: 'Vijay'
@@ -176,8 +176,8 @@ function getMockTenantConfig(tenantSlug: string): TenantConfig {
     'party-b': {
       id: 'mock-party-b',
       slug: 'bjp-kerala',
-      name: 'BJP Tamil Nadu Campaign 2026',
-      displayName: 'BJP Tamil Nadu',
+      name: 'BJP West Bengal Campaign 2026',
+      displayName: 'BJP West Bengal',
       subdomain: 'party-b',
       customDomain: null,
       status: 'active',
@@ -188,7 +188,7 @@ function getMockTenantConfig(tenantSlug: string): TenantConfig {
         secondaryColor: '#FF6B00',
         logo: '/assets/images/bjp-logo.png',
         theme: 'saffron',
-        heroTitle: 'BJP Tamil Nadu - Building a Stronger Tomorrow',
+        heroTitle: 'BJP West Bengal - Building a Stronger Tomorrow',
         motto: 'Sabka Saath, Sabka Vikas, Sabka Vishwas, Sabka Prayas'
       },
       features: {
@@ -200,7 +200,7 @@ function getMockTenantConfig(tenantSlug: string): TenantConfig {
         digitalCampaigning: true
       },
       config: {
-        state: 'Tamil Nadu',
+        state: 'West Bengal',
         districts: ['Thiruvananthapuram', 'Kollam', 'Pathanamthitta', 'Alappuzha', 'Kottayam', 'Idukki', 'Ernakulam', 'Thrissur', 'Palakkad', 'Malappuram', 'Kozhikode', 'Wayanad', 'Kannur', 'Kasaragod'],
         partySymbol: 'lotus',
         electionYear: '2026'

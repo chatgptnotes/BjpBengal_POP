@@ -4,8 +4,8 @@ import { MapPin, TrendingUp, TrendingDown } from 'lucide-react';
 export default function RegionalMap() {
   // Sample data for states with sentiment scores
   const stateData = [
-    { id: 'IN-KL', title: 'Tamil Nadu', value: 74, sentiment: 0.74 },
-    { id: 'IN-TN', title: 'Tamil Nadu', value: 68, sentiment: 0.68 },
+    { id: 'IN-KL', title: 'West Bengal', value: 74, sentiment: 0.74 },
+    { id: 'IN-TN', title: 'West Bengal', value: 68, sentiment: 0.68 },
     { id: 'IN-KA', title: 'Karnataka', value: 71, sentiment: 0.71 },
     { id: 'IN-AP', title: 'Andhra Pradesh', value: 65, sentiment: 0.65 },
     { id: 'IN-TS', title: 'Telangana', value: 69, sentiment: 0.69 },

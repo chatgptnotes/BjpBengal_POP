@@ -214,9 +214,9 @@ const mockSocialPosts: SocialPost[] = [
   {
     id: '1',
     platform: 'Facebook',
-    author: 'Tamil Nadu State News',
+    author: 'West Bengal State News',
     authorFollowers: 450000,
-    content: 'Breaking: Tamil Nadu Budget 2026 allocates ₹15,000 crores for education sector modernization. This historic investment will benefit over 45 lakh students across the state. #Tamil NaduBudget2026 #Education #Development',
+    content: 'Breaking: West Bengal Budget 2026 allocates ₹15,000 crores for education sector modernization. This historic investment will benefit over 45 lakh students across the state. #West BengalBudget2026 #Education #Development',
     timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
     engagement: {
       likes: 12500,
@@ -227,8 +227,8 @@ const mockSocialPosts: SocialPost[] = [
     sentiment: 'positive',
     sentimentScore: 0.78,
     topics: ['Budget', 'Education', 'Development'],
-    mentions: ['Tamil Nadu State', 'Education Department'],
-    hashtags: ['#Tamil NaduBudget2026', '#Education', '#Development'],
+    mentions: ['West Bengal State', 'Education Department'],
+    hashtags: ['#West BengalBudget2026', '#Education', '#Development'],
     mediaType: 'image',
     isVerified: true,
     location: 'Thiruvananthapuram',
@@ -240,9 +240,9 @@ const mockSocialPosts: SocialPost[] = [
   {
     id: '2',
     platform: 'Instagram',
-    author: 'YouthTamil NaduNow',
+    author: 'YouthWest BengalNow',
     authorFollowers: 180000,
-    content: 'Young voters are speaking up! Our generation cares about climate action, job opportunities, and digital infrastructure. Time for leaders to listen 🗳️ #YouthVoice #Tamil Nadu2026',
+    content: 'Young voters are speaking up! Our generation cares about climate action, job opportunities, and digital infrastructure. Time for leaders to listen 🗳️ #YouthVoice #West Bengal2026',
     timestamp: new Date(Date.now() - 3600000), // 1 hour ago
     engagement: {
       likes: 8500,
@@ -254,7 +254,7 @@ const mockSocialPosts: SocialPost[] = [
     sentimentScore: 0.65,
     topics: ['Youth', 'Climate', 'Employment', 'Digital Infrastructure'],
     mentions: ['Youth Voters', 'Leaders'],
-    hashtags: ['#YouthVoice', '#Tamil Nadu2026'],
+    hashtags: ['#YouthVoice', '#West Bengal2026'],
     mediaType: 'video',
     isVerified: false,
     location: 'Kochi',
@@ -266,7 +266,7 @@ const mockSocialPosts: SocialPost[] = [
   {
     id: '3',
     platform: 'Twitter/X',
-    author: 'Tamil NaduPolitics',
+    author: 'West BengalPolitics',
     authorFollowers: 75000,
     content: 'Infrastructure projects timeline extended again. Citizens deserve transparent updates on project status and realistic completion dates. #Accountability #Infrastructure',
     timestamp: new Date(Date.now() - 7200000), // 2 hours ago
@@ -283,7 +283,7 @@ const mockSocialPosts: SocialPost[] = [
     hashtags: ['#Accountability', '#Infrastructure'],
     mediaType: 'text',
     isVerified: true,
-    location: 'Tamil Nadu',
+    location: 'West Bengal',
     language: 'English',
     influence: 68,
     viralPotential: 62,
@@ -294,7 +294,7 @@ const mockSocialPosts: SocialPost[] = [
 const trendingHashtags: TrendingHashtag[] = [
   {
     id: '1',
-    hashtag: '#Tamil NaduBudget2026',
+    hashtag: '#West BengalBudget2026',
     platform: 'Multiple',
     mentions: 45600,
     growth: 185,
@@ -395,8 +395,8 @@ export default function SocialMediaChannels() {
       const transformedPosts: SocialPost[] = dbPosts.map((dbPost) => ({
         id: dbPost.id,
         platform: dbPost.platform.charAt(0).toUpperCase() + dbPost.platform.slice(1),
-        author: dbPost.platform === 'facebook' ? 'Tamil Nadu State News' :
-                dbPost.platform === 'instagram' ? 'YouthTamilNaduNow' :
+        author: dbPost.platform === 'facebook' ? 'West Bengal State News' :
+                dbPost.platform === 'instagram' ? 'YouthWestBengalNow' :
                 'TN Updates',
         authorFollowers: 450000,
         content: dbPost.post_content,
@@ -414,7 +414,7 @@ export default function SocialMediaChannels() {
         hashtags: dbPost.hashtags || [],
         mediaType: 'text',
         isVerified: true,
-        location: 'Tamil Nadu',
+        location: 'West Bengal',
         language: 'en',
         influence: socialMediaService.calculateInfluenceScore(dbPost),
         viralPotential: socialMediaService.calculateViralScore(dbPost),

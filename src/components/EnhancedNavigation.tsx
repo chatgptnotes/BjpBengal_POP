@@ -262,7 +262,7 @@ export function EnhancedNavigation() {
       categoryColor: 'orange',
       items: [
         { name: 'Regional Map', href: '/regional-map', icon: GlobalIcon },
-        { name: 'Tamil Nadu Map', href: '/tamil-nadu-map', icon: MapIcon },
+        { name: 'West Bengal Map', href: '/west-bengal-map', icon: MapIcon },
         { name: 'Ward Heatmap', href: '/heatmap', icon: MapIcon },
         { name: 'Voter Database', href: '/voter-database', icon: DatabaseIcon },
         { name: 'Advanced Voter DB', href: '/advanced-voter-database', icon: DatabaseIcon },

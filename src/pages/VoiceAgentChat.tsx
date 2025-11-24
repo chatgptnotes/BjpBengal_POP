@@ -98,7 +98,7 @@ export default function VoiceAgentChat() {
                 <li>• Click the microphone button below to start speaking</li>
                 <li>• You can speak in English or Tamil (தமிழ்)</li>
                 <li>• The AI will respond with voice and text</li>
-                <li>• Ask about voter sentiment, TVK party, or political topics</li>
+                <li>• Ask about voter sentiment, BJP party, or political topics</li>
               </ul>
             </div>
 
@@ -117,7 +117,7 @@ export default function VoiceAgentChat() {
                   <ul className="text-gray-600 space-y-1">
                     <li>• Voter sentiment information</li>
                     <li>• Political party opinions</li>
-                    <li>• TVK party details</li>
+                    <li>• BJP party details</li>
                     <li>• General political queries</li>
                   </ul>
                 </div>

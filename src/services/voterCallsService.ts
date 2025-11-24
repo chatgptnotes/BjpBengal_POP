@@ -318,7 +318,7 @@ class VoterCallsService {
           not_mentioned: 0,
         },
 
-        tvk: {
+        bjp: {
           support: 0,
           against: 0,
           undecided: 0,
@@ -341,9 +341,9 @@ class VoterCallsService {
           stats.previous_govt[sentiment.previous_govt_sentiment]++;
         }
 
-        // TVK stats
-        if (sentiment.tvk_sentiment) {
-          stats.tvk[sentiment.tvk_sentiment]++;
+        // BJP stats
+        if (sentiment.bjp_sentiment) {
+          stats.bjp[sentiment.bjp_sentiment]++;
         }
 
         // Voting intention
@@ -499,7 +499,7 @@ class VoterCallsService {
         neutral: 0,
         not_mentioned: 0,
       },
-      tvk: {
+      bjp: {
         support: 0,
         against: 0,
         undecided: 0,

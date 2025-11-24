@@ -92,7 +92,7 @@ export default function FeedbackChatbot() {
       id: '2',
       type: 'suggestion',
       title: 'Digital Job Portal for Youth',
-      content: 'Create a centralized digital platform for job postings specifically for Tamil Nadu youth with skill matching.',
+      content: 'Create a centralized digital platform for job postings specifically for West Bengal youth with skill matching.',
       category: 'Employment',
       priority: 'medium',
       status: 'open',
@@ -138,7 +138,7 @@ export default function FeedbackChatbot() {
       setChatMessages([{
         id: '1',
         type: 'bot',
-        message: `${greeting} I'm your friendly assistant for Tamil Nadu 2026 elections! 😊\n\nI'd love to help you with:\n• 💬 Complaints or concerns\n• ❓ Questions you might have\n• 💭 Feedback to share\n• 💡 Suggestions for improvement\n\nWhat's on your mind today?`,
+        message: `${greeting} I'm your friendly assistant for West Bengal 2026 elections! 😊\n\nI'd love to help you with:\n• 💬 Complaints or concerns\n• ❓ Questions you might have\n• 💭 Feedback to share\n• 💡 Suggestions for improvement\n\nWhat's on your mind today?`,
         timestamp: new Date()
       }]);
     }
@@ -395,7 +395,7 @@ Context: West Bengal has 294 assembly constituencies. Elections information and 
               <div className="bg-blue-600 text-white p-3 rounded-t-lg flex items-center justify-between">
                 <div className="flex items-center">
                   <Bot className="h-5 w-5 mr-2" />
-                  <span className="font-medium">AI Assistant - Tamil Nadu Elections 2026</span>
+                  <span className="font-medium">AI Assistant - West Bengal Elections 2026</span>
                 </div>
                 <div className="flex items-center space-x-2 text-xs">
                   <div className="w-2 h-2 bg-green-400 rounded-full"></div>

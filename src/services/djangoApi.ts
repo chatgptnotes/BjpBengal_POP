@@ -252,7 +252,7 @@ export const djangoApi = {
   },
 
   /**
-   * Get all issue categories (TVK's 9 priorities)
+   * Get all issue categories (BJP's 9 priorities)
    */
   async getIssueCategories() {
     const response = await fetch(`${DJANGO_API_URL}/issue-categories/`, {

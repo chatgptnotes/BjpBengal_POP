@@ -28,7 +28,7 @@ export default function EnhancedWardHeatmap() {
   const [showDataForm, setShowDataForm] = useState(false);
   const [rawDataPoints, setRawDataPoints] = useState<RawDataPoint[]>([]);
 
-  // Enhanced mock data with more realistic Tamil Nadu wards
+  // Enhanced mock data with more realistic West Bengal wards
   const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([
     { ward: 'Thiruvananthapuram Central', issue: 'Jobs', sentiment: 0.7, dataSource: 'survey', timestamp: new Date(), sampleSize: 150, confidence: 0.85 },
     { ward: 'Thiruvananthapuram Central', issue: 'Infrastructure', sentiment: 0.6, dataSource: 'field_worker', timestamp: new Date(), sampleSize: 89, confidence: 0.78 },

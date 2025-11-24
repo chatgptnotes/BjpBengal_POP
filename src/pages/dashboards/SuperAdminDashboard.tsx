@@ -174,7 +174,7 @@ export default function SuperAdminDashboard() {
         <div className="space-y-4">
           <div className="flex items-center text-sm">
             <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-            <span className="text-gray-600">New organization "TVK Tamil Nadu" created</span>
+            <span className="text-gray-600">New organization "BJP West Bengal" created</span>
             <span className="ml-auto text-gray-400">2 hours ago</span>
           </div>
           <div className="flex items-center text-sm">

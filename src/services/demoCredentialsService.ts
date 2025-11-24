@@ -81,25 +81,25 @@ export async function fetchDemoCredentials(): Promise<DemoCredential[]> {
 function getHardcodedFallback(): DemoCredential[] {
   return [
     {
-      email: 'superadmin@tvk.com',
+      email: 'superadmin@bjp.com',
       role: 'superadmin',
       displayName: 'Vijay Thalapathy',
       password: 'password'
     },
     {
-      email: 'shanthi.sundaram.admin1@tvk.com',
+      email: 'shanthi.sundaram.admin1@bjp.com',
       role: 'admin',
       displayName: 'Shanthi Sundaram',
       password: 'password'
     },
     {
-      email: 'ganesh.velu.chennai@tvk.com',
+      email: 'ganesh.velu.chennai@bjp.com',
       role: 'manager',
       displayName: 'Ganesh Velu',
       password: 'password'
     },
     {
-      email: 'ganesh.pandian.annanagar@tvk.com',
+      email: 'ganesh.pandian.annanagar@bjp.com',
       role: 'analyst',
       displayName: 'Ganesh Pandian',
       password: 'password'

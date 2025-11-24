@@ -135,11 +135,11 @@ export class SocialMediaMonitor {
           comments: 30,
           reach: 2500
         },
-        hashtags: ['#TamilNadu', '#வேலைவாய்ப்பு', '#கொள்கை'],
-        mentions: ['@CMOTamilNadu'],
+        hashtags: ['#WestBengal', '#வேலைவாய்ப்பு', '#கொள்கை'],
+        mentions: ['@CMOWestBengal'],
         location: {
           coordinates: [19.0760, 72.8777],
-          place_name: 'Chennai, Tamil Nadu'
+          place_name: 'Chennai, West Bengal'
         }
       }
     ];
@@ -173,7 +173,7 @@ export class SocialMediaMonitor {
         mentions: [],
         location: {
           coordinates: [18.5204, 73.8567],
-          place_name: 'Coimbatore, Tamil Nadu'
+          place_name: 'Coimbatore, West Bengal'
         }
       }
     ];
@@ -207,7 +207,7 @@ export class SocialMediaMonitor {
         mentions: [],
         location: {
           coordinates: [16.7050, 74.2433],
-          place_name: 'Madurai, Tamil Nadu'
+          place_name: 'Madurai, West Bengal'
         }
       }
     ];
@@ -241,7 +241,7 @@ export class SocialMediaMonitor {
         mentions: [],
         location: {
           coordinates: [19.9975, 73.7898],
-          place_name: 'Tiruchirappalli, Tamil Nadu'
+          place_name: 'Tiruchirappalli, West Bengal'
         }
       }
     ];
@@ -260,7 +260,7 @@ export class SocialMediaMonitor {
         source: {
           platform: 'news',
           url: 'https://news.example.com/employment-scheme',
-          author: 'Tamil Nadu Times',
+          author: 'West Bengal Times',
           followers: 150000,
           engagement: 1200,
           verified: true
@@ -276,7 +276,7 @@ export class SocialMediaMonitor {
         mentions: [],
         location: {
           coordinates: [19.0760, 72.8777],
-          place_name: 'Chennai, Tamil Nadu'
+          place_name: 'Chennai, West Bengal'
         }
       }
     ];
@@ -532,12 +532,12 @@ export class SocialMediaMonitor {
 export const defaultMonitoringConfig: MonitoringConfig = {
   platforms: ['twitter', 'facebook', 'instagram', 'youtube', 'news'],
   keywords: [
-    'தமிழ்நாடு', 'Tamil Nadu', 'சென்னை', 'Chennai', 'கோயம்புத்தூர்', 'Coimbatore',
+    'தமிழ்நாடு', 'West Bengal', 'சென்னை', 'Chennai', 'கோயம்புத்தூர்', 'Coimbatore',
     'வேலைவாய்ப்பு', 'employment', 'jobs', 'கல்வி', 'education',
     'சுகாதாரம்', 'health', 'தண்ணீர்', 'water', 'infrastructure', 'development'
   ],
   hashtags: [
-    '#TamilNadu', '#Chennai', '#Coimbatore', '#Water', '#Development',
+    '#WestBengal', '#Chennai', '#Coimbatore', '#Water', '#Development',
     '#Education', '#Health', '#Jobs', '#Infrastructure'
   ],
   candidates: [

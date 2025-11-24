@@ -200,7 +200,7 @@ export default function ManagerDistrictDashboard() {
             <div>
               {/* Breadcrumb */}
               <div className="flex items-center text-sm text-gray-500 mb-2">
-                <Link to="/dashboards/admin-state" className="hover:text-blue-600">Tamil Nadu</Link>
+                <Link to="/dashboards/admin-state" className="hover:text-blue-600">West Bengal</Link>
                 <ChevronRight className="w-4 h-4 mx-1" />
                 <span className="font-medium text-gray-900">{districtName} District</span>
               </div>
@@ -476,7 +476,7 @@ export default function ManagerDistrictDashboard() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
               <div className="space-y-2">
                 <Link
-                  to="/tamil-nadu-map"
+                  to="/west-bengal-map"
                   className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                 >
                   <div className="flex items-center">

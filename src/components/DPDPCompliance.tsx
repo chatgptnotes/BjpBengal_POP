@@ -174,7 +174,7 @@ export default function DPDPCompliance() {
       personalInfo: {
         name: 'User Name',
         email: 'user@example.com',
-        location: 'Thiruvananthapuram, Tamil Nadu',
+        location: 'Thiruvananthapuram, West Bengal',
         joinDate: '2024-08-01'
       },
       preferences: consentPreferences,

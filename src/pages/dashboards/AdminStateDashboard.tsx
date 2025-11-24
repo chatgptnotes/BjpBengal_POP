@@ -18,7 +18,7 @@ import {
 import westBengalGeoJSON from '../../assets/maps/westbengal-constituencies.json';
 
 /**
- * Modern Admin State Dashboard - Tamil Nadu + Puducherry
+ * Modern Admin State Dashboard - West Bengal + Puducherry
  *
  * Design Philosophy:
  * - Map-first approach - Interactive map takes center stage
@@ -117,12 +117,12 @@ export default function AdminStateDashboard() {
     return <Minus className="w-3.5 h-3.5 text-slate-600" />;
   };
 
-  // Competitor data
+  // Competitor data - West Bengal political parties
   const competitorData = [
-    { party: 'TVK', sentiment: metrics?.overallSentiment || 67, change: '+5', color: '#8B5CF6' },
-    { party: 'DMK', sentiment: 58, change: '-3', color: '#EF4444' },
-    { party: 'AIADMK', sentiment: 52, change: '0', color: '#10B981' },
-    { party: 'BJP', sentiment: 45, change: '+2', color: '#F97316' },
+    { party: 'BJP', sentiment: metrics?.overallSentiment || 68, change: '+5', color: '#FF9933' },
+    { party: 'TMC', sentiment: 58, change: '-3', color: '#20C05C' },
+    { party: 'Congress', sentiment: 52, change: '0', color: '#19AAED' },
+    { party: 'CPI(M)', sentiment: 45, change: '+2', color: '#DA251D' },
   ];
 
   // Prepare data for enhanced map
@@ -232,8 +232,8 @@ export default function AdminStateDashboard() {
                   <BarChart3 className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-slate-900">Tamil Nadu State Command</h1>
-                  <p className="text-xs text-slate-500">38 Districts • 264 Constituencies • Live Data</p>
+                  <h1 className="text-xl font-bold text-slate-900">West Bengal State Command</h1>
+                  <p className="text-xs text-slate-500">23 Districts • 294 Constituencies • Live Data</p>
                 </div>
               </div>
             </div>
@@ -261,17 +261,17 @@ export default function AdminStateDashboard() {
         <div className="grid grid-cols-12 gap-3">
           {/* Left Side - Compact Stats */}
           <div className="col-span-12 lg:col-span-4 space-y-2.5">
-            {/* TVK Sentiment Score - Hero Card */}
+            {/* BJP Sentiment Score - Hero Card */}
             <WithTooltip
-              title="TVK Overall Sentiment"
-              summary="This metric shows the aggregated sentiment score for TVK across all 264 constituencies in Tamil Nadu. Scores above 70% indicate strong positive sentiment. The trend shows movement compared to yesterday based on social media analysis and news coverage."
+              title="BJP Overall Sentiment"
+              summary="This metric shows the aggregated sentiment score for BJP across all 264 constituencies in West Bengal. Scores above 70% indicate strong positive sentiment. The trend shows movement compared to yesterday based on social media analysis and news coverage."
               position="top-right"
             >
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-4 shadow-xl">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-white/80 text-sm font-medium">TVK Sentiment</span>
+                    <span className="text-white/80 text-sm font-medium">BJP Sentiment</span>
                     {getTrendIcon(metrics?.sentimentTrend)}
                   </div>
                   <div className="flex items-end space-x-2">
@@ -356,7 +356,7 @@ export default function AdminStateDashboard() {
             {activeAlerts.length > 0 && (
               <WithTooltip
                 title="Crisis Alerts"
-                summary="Real-time critical alerts detected across Tamil Nadu based on sudden spikes in negative sentiment, high-volume issue reporting, or emergency keywords. These require immediate attention and response from the campaign team."
+                summary="Real-time critical alerts detected across West Bengal based on sudden spikes in negative sentiment, high-volume issue reporting, or emergency keywords. These require immediate attention and response from the campaign team."
                 position="top-right"
               >
                 <div className="bg-white rounded-xl border border-rose-200 shadow-sm">
@@ -396,11 +396,11 @@ export default function AdminStateDashboard() {
               <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-4 border-b border-slate-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900">Tamil Nadu Sentiment Map</h2>
+                    <h2 className="text-lg font-bold text-slate-900">West Bengal Sentiment Map</h2>
                     <p className="text-sm text-slate-500 mt-0.5">Click constituencies for detailed insights</p>
                   </div>
                   <Link
-                    to="/tamil-nadu-map"
+                    to="/west-bengal-map"
                     className="flex items-center space-x-1 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
                   >
                     <span>Expand</span>
@@ -424,7 +424,7 @@ export default function AdminStateDashboard() {
               {/* Trending Topics */}
               <WithTooltip
                 title="Trending Topics"
-                summary="Top 5 topics trending on social media and news related to TVK in the last 24 hours. The growth percentage shows how fast each topic is gaining traction across Tamil Nadu. Monitor these to stay ahead of the conversation."
+                summary="Top 5 topics trending on social media and news related to BJP in the last 24 hours. The growth percentage shows how fast each topic is gaining traction across West Bengal. Monitor these to stay ahead of the conversation."
                 position="top-right"
               >
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -455,7 +455,7 @@ export default function AdminStateDashboard() {
               {/* Top Districts */}
               <WithTooltip
                 title="Top Districts"
-                summary="Districts ranked by TVK sentiment score. Higher scores indicate stronger support and positive perception. Click any district to dive into detailed constituency-level analysis and demographic breakdowns."
+                summary="Districts ranked by BJP sentiment score. Higher scores indicate stronger support and positive perception. Click any district to dive into detailed constituency-level analysis and demographic breakdowns."
                 position="top-right"
               >
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -501,7 +501,7 @@ export default function AdminStateDashboard() {
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
                 <div className="px-6 py-4 border-b border-slate-100">
                   <h2 className="text-lg font-bold text-slate-900">Issue-wise Sentiment Analysis</h2>
-                  <p className="text-sm text-slate-500 mt-1">Key concerns across Tamil Nadu</p>
+                  <p className="text-sm text-slate-500 mt-1">Key concerns across West Bengal</p>
                 </div>
                 <div className="p-4 space-y-2.5">
                   {issueSentiment.slice(0, 9).map((issue, idx) => (
@@ -549,7 +549,7 @@ export default function AdminStateDashboard() {
           <div className="col-span-12 lg:col-span-6">
             <WithTooltip
               title="Recent Social Posts"
-              summary="Live feed of recent social media posts about TVK from Twitter, Facebook, and Instagram. Each post is analyzed for sentiment (positive/negative/neutral) and engagement metrics. Use this to identify viral content and influential voices."
+              summary="Live feed of recent social media posts about BJP from Twitter, Facebook, and Instagram. Each post is analyzed for sentiment (positive/negative/neutral) and engagement metrics. Use this to identify viral content and influential voices."
               position="top-right"
             >
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm">

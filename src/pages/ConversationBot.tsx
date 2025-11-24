@@ -130,8 +130,8 @@ const openai = new OpenAI({
 const botConfigurations: BotConfiguration[] = [
   {
     id: 'tamilnadu-assistant',
-    name: 'Tamil Nadu Pulse Assistant',
-    description: 'Main conversational AI for Tamil Nadu voter feedback',
+    name: 'West Bengal Pulse Assistant',
+    description: 'Main conversational AI for West Bengal voter feedback',
     language: ['Tamil', 'English'],
     active: true,
     channels: ['web', 'whatsapp', 'telegram'],
@@ -286,7 +286,7 @@ const initialMessages: Message[] = [
     id: '1',
     conversationId: '1',
     sender: 'bot',
-    content: 'Hello! I\'m Tamil Nadu Pulse Assistant. How can I help you share your thoughts about government services today?',
+    content: 'Hello! I\'m West Bengal Pulse Assistant. How can I help you share your thoughts about government services today?',
     timestamp: new Date(Date.now() - 900000),
     type: 'text',
     intent: 'greeting',
@@ -641,7 +641,7 @@ Context: West Bengal has 294 assembly constituencies. Elections information and 
                       </div>
                       <div>
                         <div className="text-responsive-sm font-semibold text-gray-900">
-                          Tamil Nadu Pulse Assistant
+                          West Bengal Pulse Assistant
                         </div>
                         <div className="text-xs text-green-600">Online</div>
                       </div>

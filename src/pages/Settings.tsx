@@ -249,7 +249,7 @@ export default function Settings() {
                       <div className="text-xs font-medium text-gray-600 mb-1">Account Details</div>
                       <div className="text-xs text-gray-500 font-mono">{user?.id.slice(0, 16)}...</div>
                       <div className="text-xs text-gray-600 mt-1">
-                        Org: {user?.organization_id ? 'TVK' : 'None'}
+                        Org: {user?.organization_id ? 'BJP' : 'None'}
                       </div>
                     </div>
 

@@ -13,6 +13,6 @@ export { ConstituencyPopup } from './ConstituencyPopup';
 export { PollingBoothMarkers } from './PollingBoothMarkers';
 
 // Re-exports for backward compatibility (if needed)
-export { WestBengalMap as TamilNaduMap } from './WestBengalMap';
-export { MapboxWestBengal as MapboxTamilNadu } from './MapboxWestBengal';
-export { EnhancedMapboxWestBengal as EnhancedMapboxTamilNadu } from './EnhancedMapboxWestBengal';
+export { WestBengalMap as WestBengalMap } from './WestBengalMap';
+export { MapboxWestBengal as MapboxWestBengal } from './MapboxWestBengal';
+export { EnhancedMapboxWestBengal as EnhancedMapboxWestBengal } from './EnhancedMapboxWestBengal';

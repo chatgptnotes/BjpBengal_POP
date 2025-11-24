@@ -134,7 +134,7 @@ export default function AgenticPlatform() {
                 50-Agent Agentic Platform
               </h1>
               <p className="text-responsive-sm text-gray-600">
-                AI-powered voter segment analysis for Tamil Nadu 2026
+                AI-powered voter segment analysis for West Bengal 2026
               </p>
             </div>
           </div>

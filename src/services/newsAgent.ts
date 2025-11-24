@@ -1,9 +1,9 @@
 /**
  * News Sentiment Analysis Agent
- * Autonomous agent that analyzes news articles and generates TVK sentiment reports
+ * Autonomous agent that analyzes news articles and generates BJP sentiment reports
  */
 
-import { newsService, NewsArticle, TVKSentimentReport, ArticleFilters } from './newsService';
+import { newsService, NewsArticle, BJPSentimentReport, ArticleFilters } from './newsService';
 import { sentimentEngine } from './sentimentAnalysis';
 import { supabase } from '../lib/supabase';
 
@@ -35,7 +35,7 @@ export interface AgentStatus {
 export interface AnalysisResult {
   success: boolean;
   articlesAnalyzed: number;
-  tvkArticlesFound: number;
+  bjpArticlesFound: number;
   averageSentiment: number;
   errors: string[];
 }
@@ -151,10 +151,10 @@ export class NewsSentimentAgent {
 
       console.log(`Analysis complete: ${analysisResult.articlesAnalyzed} articles analyzed`);
 
-      // Step 2: Generate TVK sentiment report if enabled
-      if (this.config.enableReportGeneration && analysisResult.tvkArticlesFound > 0) {
-        this.status.currentActivity = 'Generating TVK report';
-        await this.generateDailyTVKReport();
+      // Step 2: Generate BJP sentiment report if enabled
+      if (this.config.enableReportGeneration && analysisResult.bjpArticlesFound > 0) {
+        this.status.currentActivity = 'Generating BJP report';
+        await this.generateDailyBJPReport();
         this.status.reportsGenerated++;
       }
 
@@ -182,7 +182,7 @@ export class NewsSentimentAgent {
     const result: AnalysisResult = {
       success: true,
       articlesAnalyzed: 0,
-      tvkArticlesFound: 0,
+      bjpArticlesFound: 0,
       averageSentiment: 0,
       errors: []
     };
@@ -209,8 +209,8 @@ export class NewsSentimentAgent {
             result.articlesAnalyzed++;
             totalSentiment += analysis.sentiment_score || 0;
 
-            if (analysis.tvk_mentioned) {
-              result.tvkArticlesFound++;
+            if (analysis.bjp_mentioned) {
+              result.bjpArticlesFound++;
             }
           }
         } catch (error) {
@@ -258,12 +258,12 @@ export class NewsSentimentAgent {
         analyzed_at: new Date().toISOString()
       };
 
-      // If TVK is mentioned, perform TVK-specific sentiment analysis
-      if (article.tvk_mentioned && article.tvk_context) {
-        const tvkSentiment = await sentimentEngine.analyzeSentiment(article.tvk_context, language);
+      // If BJP is mentioned, perform BJP-specific sentiment analysis
+      if (article.bjp_mentioned && article.bjp_context) {
+        const bjpSentiment = await sentimentEngine.analyzeSentiment(article.bjp_context, language);
 
-        updates.tvk_sentiment_score = tvkSentiment.sentiment;
-        updates.tvk_sentiment_polarity = tvkSentiment.polarity;
+        updates.bjp_sentiment_score = bjpSentiment.sentiment;
+        updates.bjp_sentiment_polarity = bjpSentiment.polarity;
       }
 
       // Filter out low confidence results if threshold is set
@@ -293,7 +293,7 @@ export class NewsSentimentAgent {
     const result: AnalysisResult = {
       success: true,
       articlesAnalyzed: 0,
-      tvkArticlesFound: 0,
+      bjpArticlesFound: 0,
       averageSentiment: 0,
       errors: []
     };
@@ -315,8 +315,8 @@ export class NewsSentimentAgent {
           result.articlesAnalyzed++;
           totalSentiment += analysis.sentiment_score || 0;
 
-          if (analysis.tvk_mentioned) {
-            result.tvkArticlesFound++;
+          if (analysis.bjp_mentioned) {
+            result.bjpArticlesFound++;
           }
         }
       } catch (error) {
@@ -335,73 +335,73 @@ export class NewsSentimentAgent {
   }
 
   // =====================================================
-  // TVK REPORT GENERATION
+  // BJP REPORT GENERATION
   // =====================================================
 
   /**
-   * Generate daily TVK sentiment report
+   * Generate daily BJP sentiment report
    */
-  async generateDailyTVKReport(): Promise<TVKSentimentReport | null> {
+  async generateDailyBJPReport(): Promise<BJPSentimentReport | null> {
     try {
       const today = new Date();
       const startOfDay = new Date(today.setHours(0, 0, 0, 0));
       const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
-      return await this.generateTVKReport(
+      return await this.generateBJPReport(
         startOfDay.toISOString(),
         endOfDay.toISOString(),
         'daily'
       );
     } catch (error) {
-      console.error('Error generating daily TVK report:', error);
+      console.error('Error generating daily BJP report:', error);
       return null;
     }
   }
 
   /**
-   * Generate TVK sentiment report for a specific period
+   * Generate BJP sentiment report for a specific period
    */
-  async generateTVKReport(
+  async generateBJPReport(
     startTime: string,
     endTime: string,
     periodType: 'hourly' | 'daily' | 'weekly' | 'monthly' = 'daily'
-  ): Promise<TVKSentimentReport | null> {
+  ): Promise<BJPSentimentReport | null> {
     try {
-      // Get TVK articles for the period
+      // Get BJP articles for the period
       const filters: ArticleFilters = {
         startDate: startTime,
         endDate: endTime,
-        tvkOnly: true
+        bjpOnly: true
       };
 
-      const tvkArticles = await newsService.getTVKArticles(filters);
+      const bjpArticles = await newsService.getBJPArticles(filters);
       const allArticles = await newsService.getArticles({
         startDate: startTime,
         endDate: endTime
       });
 
-      if (tvkArticles.length === 0) {
-        console.log('No TVK articles found for the period');
+      if (bjpArticles.length === 0) {
+        console.log('No BJP articles found for the period');
         return null;
       }
 
       // Calculate sentiment statistics
-      const analyzedArticles = tvkArticles.filter(a => a.analyzed_at);
+      const analyzedArticles = bjpArticles.filter(a => a.analyzed_at);
 
       const sentimentScores = analyzedArticles
-        .map(a => a.tvk_sentiment_score || a.sentiment_score || 0);
+        .map(a => a.bjp_sentiment_score || a.sentiment_score || 0);
 
       const overallSentiment = sentimentScores.reduce((sum, score) => sum + score, 0) / sentimentScores.length;
 
       // Calculate distribution
       const positive = analyzedArticles.filter(a =>
-        (a.tvk_sentiment_polarity || a.sentiment_polarity) === 'positive'
+        (a.bjp_sentiment_polarity || a.sentiment_polarity) === 'positive'
       ).length;
       const neutral = analyzedArticles.filter(a =>
-        (a.tvk_sentiment_polarity || a.sentiment_polarity) === 'neutral'
+        (a.bjp_sentiment_polarity || a.sentiment_polarity) === 'neutral'
       ).length;
       const negative = analyzedArticles.filter(a =>
-        (a.tvk_sentiment_polarity || a.sentiment_polarity) === 'negative'
+        (a.bjp_sentiment_polarity || a.sentiment_polarity) === 'negative'
       ).length;
 
       const total = positive + neutral + negative;
@@ -423,7 +423,7 @@ export class NewsSentimentAgent {
 
       // Source distribution
       const sourceCounts: Record<string, number> = {};
-      tvkArticles.forEach(article => {
+      bjpArticles.forEach(article => {
         sourceCounts[article.source] = (sourceCounts[article.source] || 0) + 1;
       });
 
@@ -436,7 +436,7 @@ export class NewsSentimentAgent {
       const stateCounts: Record<string, number> = {};
       const districtCounts: Record<string, number> = {};
 
-      tvkArticles.forEach(article => {
+      bjpArticles.forEach(article => {
         if (article.state_id) {
           stateCounts[article.state_id] = (stateCounts[article.state_id] || 0) + 1;
         }
@@ -446,14 +446,14 @@ export class NewsSentimentAgent {
       });
 
       // Extract trending topics and keywords
-      const allContexts = tvkArticles
-        .map(a => a.tvk_context)
+      const allContexts = bjpArticles
+        .map(a => a.bjp_context)
         .filter(c => c);
 
-      const tvkContexts = allContexts.slice(0, 10); // Top 10 contexts
+      const bjpContexts = allContexts.slice(0, 10); // Top 10 contexts
 
       // Calculate sentiment change (compare with previous period)
-      const previousReport = await newsService.getLatestTVKReport(periodType);
+      const previousReport = await newsService.getLatestBJPReport(periodType);
       const sentimentChange = previousReport
         ? overallSentiment - previousReport.overall_sentiment_score
         : 0;
@@ -478,7 +478,7 @@ export class NewsSentimentAgent {
       }
 
       // Create report
-      const report: TVKSentimentReport = {
+      const report: BJPSentimentReport = {
         organization_id: this.config.organizationId,
         report_date: new Date().toISOString().split('T')[0],
         period_type: periodType,
@@ -486,7 +486,7 @@ export class NewsSentimentAgent {
         end_time: endTime,
 
         total_articles: allArticles.length,
-        tvk_mentioned_articles: tvkArticles.length,
+        bjp_mentioned_articles: bjpArticles.length,
         analyzed_articles: analyzedArticles.length,
 
         overall_sentiment_score: overallSentiment,
@@ -508,7 +508,7 @@ export class NewsSentimentAgent {
         state_distribution: stateCounts,
         district_distribution: districtCounts,
 
-        tvk_contexts: tvkContexts as string[],
+        bjp_contexts: bjpContexts as string[],
 
         sentiment_change: sentimentChange,
         trend_direction: trendDirection,
@@ -521,14 +521,14 @@ export class NewsSentimentAgent {
       };
 
       // Save report to database
-      const savedReport = await newsService.createTVKReport(report);
+      const savedReport = await newsService.createBJPReport(report);
 
-      console.log('TVK sentiment report generated:', savedReport?.id);
+      console.log('BJP sentiment report generated:', savedReport?.id);
 
       return savedReport;
 
     } catch (error) {
-      console.error('Error generating TVK report:', error);
+      console.error('Error generating BJP report:', error);
       return null;
     }
   }
@@ -539,7 +539,7 @@ export class NewsSentimentAgent {
   async generateCustomReport(
     startDate: string,
     endDate: string
-  ): Promise<TVKSentimentReport | null> {
+  ): Promise<BJPSentimentReport | null> {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -552,7 +552,7 @@ export class NewsSentimentAgent {
     else if (daysDiff <= 31) periodType = 'weekly';
     else periodType = 'monthly';
 
-    return await this.generateTVKReport(
+    return await this.generateBJPReport(
       start.toISOString(),
       end.toISOString(),
       periodType
@@ -584,8 +584,8 @@ export class NewsSentimentAgent {
       }
 
       // Generate report if requested
-      if (options.generateReport && result.tvkArticlesFound > 0) {
-        await this.generateDailyTVKReport();
+      if (options.generateReport && result.bjpArticlesFound > 0) {
+        await this.generateDailyBJPReport();
       }
 
       return result;
@@ -595,7 +595,7 @@ export class NewsSentimentAgent {
       return {
         success: false,
         articlesAnalyzed: 0,
-        tvkArticlesFound: 0,
+        bjpArticlesFound: 0,
         averageSentiment: 0,
         errors: [`Error: ${error}`]
       };
@@ -622,7 +622,7 @@ export const createNewsAgent = (organizationId: string, config?: Partial<AgentCo
   return new NewsSentimentAgent({ ...defaultConfig, ...config });
 };
 
-// Export singleton instance for TVK organization
-export const tvkNewsAgent = createNewsAgent('11111111-1111-1111-1111-111111111111');
+// Export singleton instance for BJP organization
+export const bjpNewsAgent = createNewsAgent('11111111-1111-1111-1111-111111111111');
 
 export default NewsSentimentAgent;

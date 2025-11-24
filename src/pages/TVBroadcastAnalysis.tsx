@@ -100,7 +100,7 @@ const tvChannels: TVChannel[] = [
     isLive: true,
     currentShow: 'News @ 9',
     bias: 'center',
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     primeTimeStart: '19:00',
     primeTimeEnd: '23:00'
   },
@@ -115,7 +115,7 @@ const tvChannels: TVChannel[] = [
     isLive: true,
     currentShow: 'Prime Time',
     bias: 'center',
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     primeTimeStart: '18:30',
     primeTimeEnd: '22:30'
   },
@@ -130,7 +130,7 @@ const tvChannels: TVChannel[] = [
     isLive: true,
     currentShow: 'Evening Bulletin',
     bias: 'center',
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     primeTimeStart: '19:00',
     primeTimeEnd: '22:00'
   },
@@ -188,9 +188,9 @@ const tvChannels: TVChannel[] = [
     viewership: 2100000,
     credibilityScore: 81,
     isLive: true,
-    currentShow: 'Tamil Nadu Roundup',
+    currentShow: 'West Bengal Roundup',
     bias: 'center',
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     primeTimeStart: '20:00',
     primeTimeEnd: '22:00'
   },
@@ -205,7 +205,7 @@ const tvChannels: TVChannel[] = [
     isLive: true,
     currentShow: 'State Focus',
     bias: 'center',
-    region: 'Tamil Nadu',
+    region: 'West Bengal',
     primeTimeStart: '19:30',
     primeTimeEnd: '21:30'
   }
@@ -219,7 +219,7 @@ const mockBroadcastSegments: BroadcastSegment[] = [
     segment: 'Budget Analysis',
     timestamp: new Date(Date.now() - 900000), // 15 minutes ago
     duration: 420, // 7 minutes
-    topic: 'Tamil Nadu Budget 2026',
+    topic: 'West Bengal Budget 2026',
     sentiment: 'positive',
     sentimentScore: 0.68,
     mentions: ['Chief Minister', 'Finance Minister', 'Opposition'],
