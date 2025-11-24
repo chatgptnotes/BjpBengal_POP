@@ -40,7 +40,7 @@ export const MapboxWestBengal: React.FC<MapboxWestBengalProps> = React.memo(({
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12', // Clean street map style
-      center: [78.6569, 11.1271], // West Bengal center coordinates
+      center: [88.3639, 22.5726], // Kolkata, West Bengal center coordinates
       zoom: 6.5,
       attributionControl: true
     });
