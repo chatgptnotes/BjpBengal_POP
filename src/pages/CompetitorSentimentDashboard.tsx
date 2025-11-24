@@ -31,12 +31,12 @@ export default function CompetitorSentimentDashboard() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
-  // TVK (Your party) metrics - shown as baseline
-  const tvkMetrics: CompetitorMetrics = {
-    id: 'tvk',
-    name: 'TVK',
-    party_name: 'Tamilaga Vettri Kazhagam',
-    color_code: '#DC2626',
+  // BJP (Your party) metrics - shown as baseline
+  const bjpMetrics: CompetitorMetrics = {
+    id: 'bjp',
+    name: 'BJP',
+    party_name: 'Bharatiya Janata Party',
+    color_code: '#FF9933',
     sentiment_score: 0.72,
     total_posts: 245,
     total_engagement: 125000,
@@ -152,7 +152,7 @@ export default function CompetitorSentimentDashboard() {
     return num.toString();
   }
 
-  const allCompetitors = [tvkMetrics, ...competitors];
+  const allCompetitors = [bjpMetrics, ...competitors];
   const maxSentiment = Math.max(...allCompetitors.map(c => c.sentiment_score));
   const maxEngagement = Math.max(...allCompetitors.map(c => c.avg_engagement_rate));
 
