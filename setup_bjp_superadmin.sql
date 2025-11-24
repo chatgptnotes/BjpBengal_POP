@@ -16,8 +16,7 @@ INSERT INTO organizations (
   address,
   state,
   subscription_status,
-  subscription_tier,
-  features,
+  subscription_plan,
   is_active,
   created_at,
   updated_at
@@ -32,18 +31,6 @@ INSERT INTO organizations (
   'West Bengal',
   'active',
   'enterprise',
-  '{
-    "voterManagement": true,
-    "sentimentTracking": true,
-    "boothAnalysis": true,
-    "constituencyMapping": true,
-    "surveyManagement": true,
-    "campaignPlanning": true,
-    "volunteerManagement": true,
-    "donationTracking": true,
-    "socialMediaMonitoring": true,
-    "aiInsights": true
-  }'::jsonb,
   true,
   NOW(),
   NOW()
