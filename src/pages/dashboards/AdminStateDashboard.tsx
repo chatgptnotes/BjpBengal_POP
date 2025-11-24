@@ -15,7 +15,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import tamilNaduGeoJSON from '../../assets/maps/tamilnadu-constituencies.json';
+import westBengalGeoJSON from '../../assets/maps/westbengal-constituencies.json';
 
 /**
  * Modern Admin State Dashboard - Tamil Nadu + Puducherry
@@ -134,7 +134,7 @@ export default function AdminStateDashboard() {
     const baseScore = metrics?.overallSentiment || 68;
 
     // Use imported GeoJSON
-    const constituencies = (tamilNaduGeoJSON as any).features;
+    const constituencies = (westBengalGeoJSON as any).features;
 
     // Generate realistic sentiment distribution
     constituencies.forEach((feature: any, index: number) => {

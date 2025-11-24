@@ -28,7 +28,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { votersService } from '../services/supabase/voters.service';
 import type { VoterInsert } from '../types/database';
 import { supabase } from '../lib/supabase';
-import tamilNaduGeoJSON from '../data/geo/tamilnadu-constituencies-full.json';
+import westBengalGeoJSON from '../assets/maps/westbengal-constituencies.json';
 import * as XLSX from 'xlsx';
 import { validateImportBatch, generateImportSummary } from '../utils/importValidation';
 
@@ -507,9 +507,9 @@ export default function VoterDatabase() {
   const [constituencySearch, setConstituencySearch] = useState('');
 
   // Extract all constituencies from GeoJSON and sort alphabetically
-  const allConstituencies = (tamilNaduGeoJSON as any).features
+  const allConstituencies = (westBengalGeoJSON as any).features
     .map((feature: any) => ({
-      code: `TN${String(Math.floor(feature.properties.AC_NO)).padStart(3, '0')}`,
+      code: `WB${String(Math.floor(feature.properties.AC_NO)).padStart(3, '0')}`,
       name: feature.properties.AC_NAME,
       district: feature.properties.DIST_NAME,
       acNumber: feature.properties.AC_NO
