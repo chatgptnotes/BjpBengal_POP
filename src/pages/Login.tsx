@@ -408,65 +408,121 @@ export default function Login() {
             {mode === 'forgot-password' && renderForgotPasswordForm()}
             {mode === 'magic-link' && renderMagicLinkForm()}
 
-            {/* Test Credentials (only in login mode) - Now Dynamic! */}
+            {/* Test Credentials - Superadmin */}
             {mode === 'login' && (
-              <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/40 rounded-xl p-3 shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => setShowTestCreds(!showTestCreds)}
-                  className="w-full flex items-center justify-between"
-                >
-                  <p className="text-blue-100 text-sm font-bold flex items-center gap-2">
-                    <span className="inline-block w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-                    Demo Credentials
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-blue-200 bg-blue-500/30 px-2 py-0.5 rounded-full">
-                      {showTestCreds ? 'Hide' : 'Show'}
+              <div className="space-y-3">
+                {/* Superadmin Credentials - Always Visible */}
+                <div className="bg-gradient-to-br from-orange-500/30 to-red-500/30 border-2 border-orange-400/60 rounded-xl p-4 shadow-lg">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="bg-orange-500/40 p-1.5 rounded-lg">
+                      <Lock className="w-4 h-4 text-orange-100" />
+                    </div>
+                    <p className="text-orange-100 text-sm font-bold">
+                      Superadmin Test Account
+                    </p>
+                    <span className="ml-auto text-xs text-orange-200 bg-orange-500/40 px-2 py-0.5 rounded-full">
+                      ACTIVE
                     </span>
-                    <ChevronRight
-                      className={`w-4 h-4 text-blue-200 transition-transform ${showTestCreds ? 'rotate-90' : ''}`}
-                    />
                   </div>
-                </button>
 
-                {showTestCreds && (
-                  <>
-                    {loadingCreds ? (
-                      <div className="mt-3 text-center">
-                        <div className="w-5 h-5 border-2 border-blue-200/30 border-t-blue-200 rounded-full animate-spin mx-auto"></div>
-                        <p className="text-blue-200 text-xs mt-2">Loading credentials...</p>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-orange-200 text-xs">Email:</span>
+                        <button
+                          type="button"
+                          onClick={() => setCredentials({ email: 'admin@bjp.com', password: 'Admin@123' })}
+                          className="text-white font-mono text-sm hover:text-orange-200 transition-colors"
+                        >
+                          admin@bjp.com
+                        </button>
                       </div>
-                    ) : (
-                      <>
-                        {/* Dynamic Credentials Grid */}
-                        <div className="mt-3 max-h-64 overflow-y-auto pr-1">
-                          <div className="grid grid-cols-2 gap-2">
-                            {demoCredentials.map((cred) => (
-                              <div key={cred.email} className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
-                                <span className="text-blue-200 text-xs font-medium">{cred.role.toUpperCase()}</span>
-                                <div className="space-y-1 mt-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                                    <span className="text-white font-mono text-[10px]">{cred.email}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                                    <span className="text-white font-mono text-[10px]">{cred.password}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-orange-200 text-xs">Password:</span>
+                        <button
+                          type="button"
+                          onClick={() => setCredentials({ email: 'admin@bjp.com', password: 'Admin@123' })}
+                          className="text-white font-mono text-sm hover:text-orange-200 transition-colors"
+                        >
+                          Admin@123
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCredentials({ email: 'admin@bjp.com', password: 'Admin@123' });
+                        setTimeout(() => {
+                          const form = document.querySelector('form');
+                          if (form) form.requestSubmit();
+                        }, 100);
+                      }}
+                      className="w-full mt-3 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold py-2 rounded-lg hover:shadow-lg transition-all"
+                    >
+                      Quick Login as Superadmin
+                    </button>
+                  </div>
+                </div>
+
+                {/* Other Demo Credentials - Collapsible */}
+                <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/40 rounded-xl p-3 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => setShowTestCreds(!showTestCreds)}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <p className="text-blue-100 text-sm font-bold flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+                      Other Demo Credentials
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-blue-200 bg-blue-500/30 px-2 py-0.5 rounded-full">
+                        {showTestCreds ? 'Hide' : 'Show'}
+                      </span>
+                      <ChevronRight
+                        className={`w-4 h-4 text-blue-200 transition-transform ${showTestCreds ? 'rotate-90' : ''}`}
+                      />
+                    </div>
+                  </button>
+
+                  {showTestCreds && (
+                    <>
+                      {loadingCreds ? (
+                        <div className="mt-3 text-center">
+                          <div className="w-5 h-5 border-2 border-blue-200/30 border-t-blue-200 rounded-full animate-spin mx-auto"></div>
+                          <p className="text-blue-200 text-xs mt-2">Loading credentials...</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Dynamic Credentials Grid */}
+                          <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+                            <div className="grid grid-cols-2 gap-2">
+                              {demoCredentials.map((cred) => (
+                                <div key={cred.email} className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
+                                  <span className="text-blue-200 text-xs font-medium">{cred.role.toUpperCase()}</span>
+                                  <div className="space-y-1 mt-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
+                                      <span className="text-white font-mono text-[10px]">{cred.email}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
+                                      <span className="text-white font-mono text-[10px]">{cred.password}</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
 
-                        <p className="text-blue-200/70 text-xs mt-3 text-center italic">
-                          All passwords: "password" • 26 users created
-                        </p>
-                      </>
-                    )}
-                  </>
-                )}
+                          <p className="text-blue-200/70 text-xs mt-3 text-center italic">
+                            All passwords: "password" • 26 users created
+                          </p>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </form>
