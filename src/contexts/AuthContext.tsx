@@ -108,7 +108,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       const userDataPromise = supabase
-        .from('users')
+        .from('user_profiles')
         .select('*')
         .eq('email', session.user.email)
         .single();
@@ -141,10 +141,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        // Construct full name from first_name and last_name
-        const fullName = [userData.first_name, userData.last_name]
-          .filter(Boolean)
-          .join(' ') || userData.username || 'User';
+        // Get full name from user_profiles table
+        const fullName = userData.full_name || userData.email?.split('@')[0] || 'User';
 
         console.log('[AuthContext] ✅ User data loaded from database:', fullName, userData.role);
 
@@ -198,7 +196,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       const userDataPromise = supabase
-        .from('users')
+        .from('user_profiles')
         .select('*')
         .eq('email', session.user.email)
         .single();
@@ -232,10 +230,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        // Construct full name from first_name and last_name
-        const fullName = [userData.first_name, userData.last_name]
-          .filter(Boolean)
-          .join(' ') || userData.username || 'User';
+        // Get full name from user_profiles table
+        const fullName = userData.full_name || userData.email?.split('@')[0] || 'User';
 
         console.log('[AuthContext] ✅ User data loaded from database:', fullName, userData.role);
 
