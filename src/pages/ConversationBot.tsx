@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import OpenAI from 'openai';
 import {
   MessageCircle,
   Bot,
@@ -119,6 +120,12 @@ interface TopicAnalysis {
   relatedIssues: string[];
   suggestedActions: string[];
 }
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true // Note: In production, use a backend proxy
+});
 
 const botConfigurations: BotConfiguration[] = [
   {
@@ -377,7 +384,7 @@ export default function ConversationBot() {
   }, [messages]);
 
   // Handle sending messages
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
 
     // Add user message
@@ -389,29 +396,99 @@ export default function ConversationBot() {
       timestamp: new Date(),
       type: 'text',
       sentiment: 'neutral',
-      language: selectedLanguage === 'all' ? 'Tamil' : selectedLanguage,
+      language: selectedLanguage === 'all' ? 'English' : selectedLanguage,
       processed: true
     };
 
     setMessages(prev => [...prev, newUserMessage]);
+    const userInput = currentMessage;
     setCurrentMessage('');
 
-    // Simulate bot response
-    setTimeout(() => {
+    // Call OpenAI API
+    try {
+      // Build conversation context for OpenAI
+      const conversationMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+        {
+          role: 'system',
+          content: `You are a helpful and friendly assistant for the West Bengal Pulse of People platform - an election information and voter engagement system.
+
+Your role is to:
+- Help users with complaints, feedback, and suggestions about government services
+- Answer questions about West Bengal elections, voting procedures, constituencies, and candidates
+- Provide information about party manifestos and policies
+- Assist with voter registration and polling station locations
+- Be professional, empathetic, and supportive
+
+Guidelines:
+- Keep responses concise and helpful (2-3 paragraphs max)
+- Do NOT use emojis in your responses
+- Be natural and conversational
+- For complaints, be empathetic and explain next steps
+- For questions, provide accurate election information
+- If you don't know something specific, offer to help find the information
+
+Context: West Bengal has 294 assembly constituencies. Elections information and candidate details are available on the platform.`
+        }
+      ];
+
+      // Add recent conversation history (last 10 messages for context)
+      const recentHistory = messages.slice(-10);
+      recentHistory.forEach(msg => {
+        conversationMessages.push({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        });
+      });
+
+      // Add current user input
+      conversationMessages.push({
+        role: 'user',
+        content: userInput
+      });
+
+      // Call OpenAI API
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: conversationMessages,
+        temperature: 0.7,
+        max_tokens: 300
+      });
+
+      const responseText = completion.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response. Please try again.';
+
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
         conversationId: '1',
         sender: 'bot',
-        content: 'Thanks for your message! 😊 Our team has received it and will respond shortly. Is there anything else you\'d like to share?',
+        content: responseText,
         timestamp: new Date(),
         type: 'text',
-        intent: 'acknowledgment',
+        intent: 'response',
         confidence: 95,
-        language: selectedLanguage === 'all' ? 'Tamil' : selectedLanguage,
+        language: selectedLanguage === 'all' ? 'English' : selectedLanguage,
         processed: true
       };
+
       setMessages(prev => [...prev, botResponse]);
-    }, 1000);
+    } catch (error) {
+      console.error('OpenAI API Error:', error);
+
+      // Fallback response on error
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        conversationId: '1',
+        sender: 'bot',
+        content: 'I apologize, but I\'m having trouble connecting right now. Please try again in a moment, or contact support if the issue persists.',
+        timestamp: new Date(),
+        type: 'text',
+        intent: 'error',
+        confidence: 0,
+        language: selectedLanguage === 'all' ? 'English' : selectedLanguage,
+        processed: true
+      };
+
+      setMessages(prev => [...prev, errorResponse]);
+    }
   };
 
   const getSentimentColor = (sentiment: string) => {

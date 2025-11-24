@@ -19,6 +19,7 @@ import {
   Tag,
   Zap
 } from 'lucide-react';
+import OpenAI from 'openai';
 
 interface ChatMessage {
   id: string;
@@ -51,6 +52,12 @@ interface FeedbackEntry {
   resolution?: string;
   satisfactionRating?: number;
 }
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true // Note: In production, use a backend proxy
+});
 
 export default function FeedbackChatbot() {
   const [activeTab, setActiveTab] = useState<'chat' | 'analytics' | 'management'>('chat');
@@ -154,57 +161,110 @@ export default function FeedbackChatbot() {
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const currentInput = inputMessage;
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponse = generateBotResponse(inputMessage);
+    // Call OpenAI API
+    try {
+      const botResponse = await generateBotResponse(currentInput, chatMessages);
       setChatMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Error generating response:', error);
+      // Fallback response on error
+      const errorResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        message: 'I apologize, but I\'m having trouble connecting right now. Please try again in a moment, or contact support if the issue persists.',
+        timestamp: new Date(),
+        category: 'faq'
+      };
+      setChatMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
-  const generateBotResponse = (userInput: string): ChatMessage => {
-    const input = userInput.toLowerCase();
-    let response = '';
-    let category: 'complaint' | 'faq' | 'feedback' | 'suggestion' | undefined;
+  const generateBotResponse = async (userInput: string, conversationHistory: ChatMessage[]): Promise<ChatMessage> => {
+    try {
+      // Build conversation context for OpenAI
+      const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+        {
+          role: 'system',
+          content: `You are a helpful and friendly assistant for the West Bengal Pulse of People platform - an election information and voter engagement system.
 
-    // Determine category and response with friendly, casual tone
-    if (input.includes('complain') || input.includes('problem') || input.includes('issue') || input.includes('delay') || input.includes('bad')) {
-      category = 'complaint';
-      response = 'I hear you, and I\'m really sorry you\'re facing this issue. 💙 Let\'s work on this together!\n\nI\'ve logged your complaint and it\'ll reach the right team ASAP. Could you share a bit more about:\n• Where this happened\n• When it occurred\n• Any other details that might help\n\nWe\'re on it! 💪';
-    } else if (input.includes('suggest') || input.includes('idea') || input.includes('improve') || input.includes('recommend')) {
-      category = 'suggestion';
-      response = 'Wow, love hearing your ideas! 💡✨\n\nYour suggestion has been recorded and our policy team will definitely check it out. Your input helps us do better!\n\nGot more thoughts to share? I\'m all ears! 😊';
-    } else if (input.includes('good') || input.includes('happy') || input.includes('satisfied') || input.includes('thank')) {
-      category = 'feedback';
-      response = 'This made my day! 🌟😊\n\nThanks so much for sharing your positive experience! It really means a lot to the whole team. We love hearing when things go well!\n\nAnything specific you\'d like to highlight? Your feedback helps us keep up the good work! 🙌';
-    } else if (input.includes('how') || input.includes('what') || input.includes('when') || input.includes('where') || input.includes('?')) {
-      category = 'faq';
-      if (input.includes('vote') || input.includes('election')) {
-        response = 'Great question! 🗳️\n\nHere\'s what you need to know about voting:\n• Elections are coming up in 2026\n• Bring your valid ID to your polling station\n• Check if you\'re registered to vote\n\nNeed help finding your polling station or want to register? Just let me know! 👍';
-      } else if (input.includes('manifesto') || input.includes('policy')) {
-        response = 'Awesome that you\'re checking out the policies! 📋\n\nYou can find all the manifestos in our "Manifesto Match" section - it\'s really cool because it compares what parties promise with what voters want.\n\nWant me to walk you through it? 😊';
+Your role is to:
+- Help users with complaints, feedback, and suggestions about government services
+- Answer questions about West Bengal elections, voting procedures, constituencies, and candidates
+- Provide information about party manifestos and policies
+- Assist with voter registration and polling station locations
+- Be professional, empathetic, and supportive
+
+Guidelines:
+- Keep responses concise and helpful (2-3 paragraphs max)
+- Do NOT use emojis in your responses
+- Be natural and conversational
+- For complaints, be empathetic and explain next steps
+- For questions, provide accurate election information
+- If you don't know something specific, offer to help find the information
+
+Context: West Bengal has 294 assembly constituencies. Elections information and candidate details are available on the platform.`
+        }
+      ];
+
+      // Add conversation history (last 10 messages for context)
+      const recentHistory = conversationHistory.slice(-10);
+      recentHistory.forEach(msg => {
+        messages.push({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.message
+        });
+      });
+
+      // Add current user input
+      messages.push({
+        role: 'user',
+        content: userInput
+      });
+
+      // Call OpenAI API
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 300
+      });
+
+      const responseText = completion.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response. Please try again.';
+
+      // Determine category based on content
+      const input = userInput.toLowerCase();
+      let category: 'complaint' | 'faq' | 'feedback' | 'suggestion' | undefined;
+
+      if (input.includes('complain') || input.includes('problem') || input.includes('issue')) {
+        category = 'complaint';
+      } else if (input.includes('suggest') || input.includes('idea') || input.includes('improve')) {
+        category = 'suggestion';
+      } else if (input.includes('thank') || input.includes('good') || input.includes('happy')) {
+        category = 'feedback';
       } else {
-        response = 'I\'d love to help you out! 😊\n\nI can answer questions about:\n• 🗳️ Voting procedures\n• 👥 Candidate info\n• 📋 Party manifestos\n• 📍 Polling locations\n• ✅ Registration details\n\nWhat would you like to know more about?';
+        category = 'faq';
       }
-    } else if (input.includes('hello') || input.includes('hi') || input.includes('hey')) {
-      response = 'Hey! 👋 Great to chat with you!\n\nHow can I help you today? Feel free to ask me anything about the elections, share feedback, or just let me know what\'s on your mind! 😊';
-    } else {
-      response = 'Hmm, I\'m not quite sure I got that! 🤔\n\nNo worries though! I\'m here to help with:\n• 💬 Any complaints or concerns\n• ❓ Questions about elections\n• 💭 Feedback you want to share\n• 💡 Suggestions for improvement\n\nCould you tell me a bit more about what you\'re looking for? 😊';
+
+      setCurrentCategory(category);
+
+      return {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        message: responseText,
+        timestamp: new Date(),
+        category,
+        sentiment: calculateSentiment(userInput)
+      };
+    } catch (error) {
+      console.error('OpenAI API Error:', error);
+      throw error;
     }
-
-    setCurrentCategory(category);
-
-    return {
-      id: (Date.now() + 1).toString(),
-      type: 'bot',
-      message: response,
-      timestamp: new Date(),
-      category,
-      sentiment: calculateSentiment(userInput)
-    };
   };
 
   const calculateSentiment = (text: string): number => {
