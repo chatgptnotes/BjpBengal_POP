@@ -45,18 +45,28 @@ INSERT INTO states (
   id,
   name,
   code,
-  country,
-  is_active,
-  created_at
+  capital,
+  region,
+  total_districts,
+  total_constituencies,
+  created_at,
+  updated_at
 ) VALUES (
   '33333333-3333-3333-3333-333333333333',
   'West Bengal',
   'WB',
-  'India',
-  true,
+  'Kolkata',
+  'Eastern India',
+  23,
+  294,
+  NOW(),
   NOW()
 ) ON CONFLICT (code) DO UPDATE SET
-  name = EXCLUDED.name;
+  name = EXCLUDED.name,
+  capital = EXCLUDED.capital,
+  total_districts = EXCLUDED.total_districts,
+  total_constituencies = EXCLUDED.total_constituencies,
+  updated_at = NOW();
 
 -- Step 3: Create Superadmin User Profile
 -- =====================================================
