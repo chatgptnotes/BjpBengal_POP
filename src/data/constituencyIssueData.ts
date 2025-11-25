@@ -162,21 +162,87 @@ export const defaultConstituencyIssueData: ConstituencyIssueData = {
   // Add remaining constituencies with default balanced values
 };
 
-// Generate default scores for any missing constituencies
-const defaultScores: IssueScores = {
-  jobs: 62,
-  healthcare: 65,
-  infrastructure: 68,
-  education: 66,
-  agriculture: 55,
-};
+// Generate varied issue scores for West Bengal constituencies (WB001-WB294)
+// Each issue has different scoring patterns to show meaningful variation
+function generateIssueScores(constituencyCode: string): IssueScores {
+  // Extract AC number from code (e.g., "WB042" -> 42)
+  const acNo = parseInt(constituencyCode.replace('WB', ''));
+
+  if (isNaN(acNo)) {
+    // For named constituencies, use hash-based generation
+    const hash = constituencyCode.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+    return {
+      jobs: 40 + (hash % 45), // 40-85 range
+      healthcare: 35 + ((hash * 7) % 50), // 35-85 range
+      infrastructure: 45 + ((hash * 13) % 40), // 45-85 range
+      education: 38 + ((hash * 17) % 47), // 38-85 range
+      agriculture: 30 + ((hash * 23) % 55), // 30-85 range
+    };
+  }
+
+  // Deterministic variation based on AC number and issue type
+  const seed = acNo;
+
+  // Each issue has different patterns
+  const jobsVariation = (seed * 11) % 50; // Jobs: varies by industrial development
+  const healthcareVariation = (seed * 17) % 45; // Healthcare: varies by infrastructure
+  const infrastructureVariation = (seed * 13) % 40; // Infrastructure: varies by urbanization
+  const educationVariation = (seed * 19) % 47; // Education: varies by development
+  const agricultureVariation = (seed * 23) % 55; // Agriculture: inverse to urbanization
+
+  // Regional patterns for West Bengal
+  if (acNo <= 50) {
+    // Urban areas (Kolkata, Howrah) - high infrastructure, jobs; low agriculture
+    return {
+      jobs: 60 + jobsVariation * 0.5,
+      healthcare: 55 + healthcareVariation * 0.6,
+      infrastructure: 65 + infrastructureVariation * 0.4,
+      education: 58 + educationVariation * 0.5,
+      agriculture: 25 + agricultureVariation * 0.3,
+    };
+  } else if (acNo <= 150) {
+    // Semi-urban and industrial towns - mixed scores
+    return {
+      jobs: 50 + jobsVariation * 0.7,
+      healthcare: 45 + healthcareVariation * 0.8,
+      infrastructure: 50 + infrastructureVariation * 0.7,
+      education: 48 + educationVariation * 0.7,
+      agriculture: 40 + agricultureVariation * 0.6,
+    };
+  } else if (acNo <= 250) {
+    // Rural constituencies - higher agriculture, lower infrastructure
+    return {
+      jobs: 35 + jobsVariation * 0.8,
+      healthcare: 35 + healthcareVariation * 0.9,
+      infrastructure: 40 + infrastructureVariation * 0.8,
+      education: 40 + educationVariation * 0.8,
+      agriculture: 60 + agricultureVariation * 0.4,
+    };
+  } else {
+    // Remote/border areas - most varied
+    return {
+      jobs: 30 + jobsVariation,
+      healthcare: 30 + healthcareVariation,
+      infrastructure: 35 + infrastructureVariation,
+      education: 35 + educationVariation,
+      agriculture: 55 + agricultureVariation * 0.5,
+    };
+  }
+}
 
 /**
  * Get issue scores for a constituency
- * Falls back to default balanced scores if constituency not found
+ * Generates varied scores for each West Bengal constituency
  */
 export function getConstituencyIssueScores(constituencyName: string): IssueScores {
-  return defaultConstituencyIssueData[constituencyName] || defaultScores;
+  // If it's in the Tamil Nadu data (for backwards compatibility), return it
+  if (defaultConstituencyIssueData[constituencyName]) {
+    return defaultConstituencyIssueData[constituencyName];
+  }
+
+  // Generate scores for West Bengal constituencies
+  return generateIssueScores(constituencyName);
 }
 
 /**
@@ -187,5 +253,5 @@ export function getIssueScore(
   issue: 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture'
 ): number {
   const scores = getConstituencyIssueScores(constituencyName);
-  return scores[issue];
+  return Math.round(scores[issue]); // Ensure integer scores
 }

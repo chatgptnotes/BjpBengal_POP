@@ -14,9 +14,11 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import westBengalGeoJSON from '../../assets/maps/westbengal-constituencies.json';
-import { Layers, TrendingUp, AlertTriangle, Briefcase, Heart, Building, Users, Sprout } from 'lucide-react';
-import { defaultConstituencySentiment, getConstituencySentiment } from '../../data/defaultConstituencySentiment';
+import { Layers, TrendingUp, AlertTriangle, Briefcase, Heart, Building, Users, Sprout, Map as MapIcon } from 'lucide-react';
+import { defaultConstituencySentiment, getConstituencySentiment, buildDistrictSentimentMap, getStateSentiment } from '../../data/defaultConstituencySentiment';
 import { getIssueScore, getConstituencyIssueScores } from '../../data/constituencyIssueData';
+import { MapDrillDownLevel } from '../../types/geography';
+import { useMemo } from 'react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYmttdXJhbGkiLCJhIjoiY21ocDhoNXhiMGhodDJrcW94OGptdDg0MiJ9.dq6OU3jiKKntjhIDD9sxWQ';
 
@@ -42,17 +44,36 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
   const [selectedConstituency, setSelectedConstituency] = useState<any>(null);
   const [activeLayer, setActiveLayer] = useState<MapLayer>('sentiment');
   const [showLayerControl, setShowLayerControl] = useState(false);
+  const [geographicLevel, setGeographicLevel] = useState<MapDrillDownLevel>('constituency');
+  const [showLevelControl, setShowLevelControl] = useState(false);
   const alertMarkers = useRef<mapboxgl.Marker[]>([]);
 
   const onConstituencyClickRef = useRef(onConstituencyClick);
+  const activeLayerRef = useRef<MapLayer>('sentiment'); // Ref to track current layer for event handlers
 
   useEffect(() => {
     onConstituencyClickRef.current = onConstituencyClick;
   }, [onConstituencyClick]);
 
+  // Sync activeLayerRef with activeLayer state
+  useEffect(() => {
+    activeLayerRef.current = activeLayer;
+  }, [activeLayer]);
+
   // Ensure map always starts with 'sentiment' layer on mount/refresh
   useEffect(() => {
     setActiveLayer('sentiment');
+  }, []);
+
+  // Build district sentiment map from GeoJSON (calculated once)
+  const districtSentimentMap = useMemo(() => {
+    const features = (westBengalGeoJSON as any).features;
+    return buildDistrictSentimentMap(features);
+  }, []);
+
+  // Get state-level sentiment (calculated once)
+  const stateSentiment = useMemo(() => {
+    return getStateSentiment();
   }, []);
 
   // Color scheme for sentiment (8-step scale) - Professional colors with darker greens
@@ -67,26 +88,46 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
     return '#B71C1C'; // Deep red
   }, []);
 
-  // Get color based on active layer and data
-  const getLayerColor = useCallback((constituencyName: string, acNo?: number): string => {
+  // Get color based on active layer, geographic level, and data
+  const getLayerColor = useCallback((constituencyName: string, districtName?: string, acNo?: number): string => {
     // Generate constituency code from AC_NO (e.g., AC_NO=1 -> WB001)
     const constituencyCode = acNo ? `WB${String(acNo).padStart(3, '0')}` : '';
 
-    if (activeLayer === 'sentiment') {
-      // Use provided sentimentData first, then fall back to default data with code
-      const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
-      const score = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
-      return getSentimentColor(score);
-    } else if (activeLayer === 'alerts') {
-      return '#9E9E9E'; // Gray for alerts layer (markers handle visualization)
+    // Determine which data source to use based on geographic level
+    let score = 50; // Default
+
+    if (geographicLevel === 'state') {
+      // State level - use state-wide aggregated sentiment
+      score = typeof stateSentiment === 'object' ? stateSentiment.positive : stateSentiment;
+    } else if (geographicLevel === 'district' && districtName) {
+      // District level - use district aggregated sentiment
+      const districtSentiment = districtSentimentMap[districtName];
+      if (activeLayer === 'sentiment') {
+        score = districtSentiment?.positive || 50;
+      } else if (activeLayer !== 'alerts') {
+        // For issue layers at district level, use district sentiment as base
+        score = districtSentiment?.positive || 50;
+      }
     } else {
-      // Issue-specific layers (jobs, healthcare, infrastructure, education, agriculture)
-      // Try provided issueData first, then fall back to default issue data
-      const issueKey = activeLayer as 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture';
-      const issueScore = issueData[constituencyName]?.[activeLayer] || getIssueScore(constituencyCode || constituencyName, issueKey);
-      return getSentimentColor(issueScore);
+      // Constituency level (default) or booth level
+      if (activeLayer === 'sentiment') {
+        // Use provided sentimentData first, then fall back to default data with code
+        const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
+        score = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
+      } else if (activeLayer !== 'alerts') {
+        // Issue-specific layers (jobs, healthcare, infrastructure, education, agriculture)
+        // Try provided issueData first, then fall back to default issue data
+        const issueKey = activeLayer as 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture';
+        score = issueData[constituencyName]?.[activeLayer] || getIssueScore(constituencyCode || constituencyName, issueKey);
+      }
     }
-  }, [activeLayer, sentimentData, issueData, getSentimentColor]);
+
+    if (activeLayer === 'alerts') {
+      return '#9E9E9E'; // Gray for alerts layer (markers handle visualization)
+    }
+
+    return getSentimentColor(score);
+  }, [activeLayer, geographicLevel, sentimentData, issueData, getSentimentColor, stateSentiment, districtSentimentMap]);
 
   // Initialize map
   useEffect(() => {
@@ -229,10 +270,22 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
       let clickedStateId: string | number | null = null;
 
       // Helper function to create hover popup HTML - Compact version with score and issues
-      const createHoverPopupHTML = (constituencyName: string, properties: any, score: number) => {
+      const createHoverPopupHTML = (constituencyName: string, properties: any, score: number, layer: MapLayer = 'sentiment') => {
         const scoreColor = score >= 70 ? '#2E7D32' : score >= 50 ? '#EF6C00' : '#C62828';
         const scoreBg = score >= 70 ? '#E8F5E9' : score >= 50 ? '#FFF3E0' : '#FFEBEE';
         const status = score >= 70 ? 'Doing Well ✓' : score >= 50 ? 'Monitor' : 'Urgent Action!';
+
+        // Get layer display name
+        const layerLabels = {
+          sentiment: 'Overall Sentiment',
+          jobs: 'Jobs & Employment',
+          healthcare: 'Healthcare',
+          infrastructure: 'Infrastructure',
+          education: 'Education',
+          agriculture: 'Agriculture',
+          alerts: 'Crisis Alerts'
+        };
+        const layerLabel = layerLabels[layer] || 'Sentiment';
 
         // Get issue data for this constituency
         const issues = getConstituencyIssueScores(constituencyName);
@@ -253,8 +306,11 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
             <div style="font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px;">
               ${constituencyName}
             </div>
-            <div style="font-size: 10px; color: #666; margin-bottom: 5px;">
+            <div style="font-size: 10px; color: #666; margin-bottom: 3px;">
               ${properties?.DIST_NAME || 'N/A'}
+            </div>
+            <div style="font-size: 9px; color: #999; margin-bottom: 5px; font-style: italic;">
+              ${layerLabel}
             </div>
             <div style="background: ${scoreBg}; padding: 4px 6px; border-radius: 4px; margin-bottom: 5px;">
               <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -270,9 +326,21 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
       };
 
       // Helper function to create click popup HTML - Detailed campaign info
-      const createClickPopupHTML = (constituencyName: string, properties: any, score: number) => {
+      const createClickPopupHTML = (constituencyName: string, properties: any, score: number, layer: MapLayer = 'sentiment') => {
         const scoreColor = score >= 70 ? '#2E7D32' : score >= 50 ? '#EF6C00' : '#C62828';
         const scoreBg = score >= 70 ? '#E8F5E9' : score >= 50 ? '#FFF3E0' : '#FFEBEE';
+
+        // Get layer display name
+        const layerLabels = {
+          sentiment: 'Overall Sentiment',
+          jobs: 'Jobs & Employment',
+          healthcare: 'Healthcare',
+          infrastructure: 'Infrastructure',
+          education: 'Education',
+          agriculture: 'Agriculture',
+          alerts: 'Crisis Alerts'
+        };
+        const layerLabel = layerLabels[layer] || 'Sentiment';
 
         // Get issue data for detailed breakdown
         const issues = getConstituencyIssueScores(constituencyName);
@@ -395,10 +463,22 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
           );
         }
 
-        // Show hover popup with sentiment score
-        const sentimentScore = getConstituencySentiment(constituencyCode);
-        const score = sentimentScore?.positive || 0;
-        const popupHTML = createHoverPopupHTML(constituencyName, properties, score);
+        // Show hover popup with score based on active layer
+        let score = 50;
+        const currentLayer = activeLayerRef.current;
+
+        if (currentLayer === 'sentiment') {
+          const sentimentScore = getConstituencySentiment(constituencyCode);
+          score = sentimentScore?.positive || 0;
+        } else if (currentLayer !== 'alerts') {
+          // Issue-specific layers (jobs, healthcare, infrastructure, education, agriculture)
+          const issueKey = currentLayer as 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture';
+          score = getIssueScore(constituencyCode, issueKey);
+        } else {
+          score = 50; // alerts layer default
+        }
+
+        const popupHTML = createHoverPopupHTML(constituencyName, properties, score, currentLayer);
         hoverPopup.setLngLat(e.lngLat).setHTML(popupHTML).addTo(map.current);
       });
 
@@ -451,12 +531,23 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
         // Remove hover popup
         hoverPopup.remove();
 
-        // Get sentiment score - use provided data or fall back to default
-        const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
-        const score = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
+        // Get score based on active layer
+        let score = 50;
+        const currentLayer = activeLayerRef.current;
+
+        if (currentLayer === 'sentiment') {
+          const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
+          score = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
+        } else if (currentLayer !== 'alerts') {
+          // Issue-specific layers (jobs, healthcare, infrastructure, education, agriculture)
+          const issueKey = currentLayer as 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture';
+          score = issueData[constituencyName]?.[currentLayer] || getIssueScore(constituencyCode, issueKey);
+        } else {
+          score = 50; // alerts layer default
+        }
 
         // Create and show detailed popup
-        const popupHTML = createClickPopupHTML(constituencyName, properties, score);
+        const popupHTML = createClickPopupHTML(constituencyName, properties, score, currentLayer);
         clickPopup.setLngLat(e.lngLat).setHTML(popupHTML).addTo(map.current);
 
         // Zoom into the clicked constituency
@@ -625,31 +716,59 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
 
     features.forEach((feature: any) => {
       const constituencyName = feature.properties.AC_NAME;
+      const districtName = feature.properties.DIST_NAME;
       const acNo = feature.properties.AC_NO;
       const constituencyCode = acNo ? `WB${String(acNo).padStart(3, '0')}` : '';
 
-      // Skip if we've already processed this name (handles duplicates)
-      if (processedNames.has(constituencyName)) {
-        console.log('[Map] Skipping duplicate:', constituencyName);
+      // For geographic level grouping
+      const groupKey = geographicLevel === 'state' ? 'WEST BENGAL' :
+                       geographicLevel === 'district' ? districtName :
+                       constituencyName;
+
+      // Skip if we've already processed this group (handles duplicates)
+      if (processedNames.has(groupKey)) {
+        console.log('[Map] Skipping duplicate:', groupKey);
         return;
       }
-      processedNames.add(constituencyName);
+      processedNames.add(groupKey);
 
-      const color = getLayerColor(constituencyName, acNo);
-      colorExpression.push(constituencyName, color);
+      const color = getLayerColor(constituencyName, districtName, acNo);
 
-      // Add sentiment score as label
-      if (activeLayer === 'sentiment') {
-        const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
-        const score = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
-        labelExpression.push(constituencyName, `${score}%`);
-      } else if (activeLayer === 'alerts') {
-        labelExpression.push(constituencyName, '');
+      // Use appropriate property for color matching based on level
+      if (geographicLevel === 'state') {
+        colorExpression.push(constituencyName, color); // All constituencies same color for state
+      } else if (geographicLevel === 'district') {
+        colorExpression.push(constituencyName, color); // Color by district
       } else {
-        // Issue-specific layers
-        const issueKey = activeLayer as 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture';
-        const issueScore = issueData[constituencyName]?.[activeLayer] || getIssueScore(constituencyCode || constituencyName, issueKey);
-        labelExpression.push(constituencyName, `${issueScore}%`);
+        colorExpression.push(constituencyName, color); // Color by constituency
+      }
+
+      // Add score label based on geographic level
+      let labelScore = 50;
+
+      if (geographicLevel === 'state') {
+        // State level - show state-wide score
+        labelScore = typeof stateSentiment === 'object' ? stateSentiment.positive : stateSentiment;
+        labelExpression.push(constituencyName, ``); // Hide labels at state level (too cluttered)
+      } else if (geographicLevel === 'district') {
+        // District level - show district score
+        const districtSentiment = districtSentimentMap[districtName];
+        labelScore = districtSentiment?.positive || 50;
+        labelExpression.push(constituencyName, ``); // Hide individual labels, will show district labels differently
+      } else {
+        // Constituency level - show constituency score
+        if (activeLayer === 'sentiment') {
+          const sentimentScore = sentimentData[constituencyName] || getConstituencySentiment(constituencyCode || constituencyName);
+          labelScore = typeof sentimentScore === 'number' ? sentimentScore : sentimentScore?.positive || 0;
+          labelExpression.push(constituencyName, `${labelScore}%`);
+        } else if (activeLayer === 'alerts') {
+          labelExpression.push(constituencyName, '');
+        } else {
+          // Issue-specific layers
+          const issueKey = activeLayer as 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture';
+          const issueScore = issueData[constituencyName]?.[activeLayer] || getIssueScore(constituencyCode || constituencyName, issueKey);
+          labelExpression.push(constituencyName, `${issueScore}%`);
+        }
       }
     });
 
@@ -663,7 +782,7 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
     map.current.setPaintProperty('constituency-fills', 'fill-color', colorExpression);
     map.current.setLayoutProperty('sentiment-labels', 'text-field', labelExpression);
 
-  }, [activeLayer, getLayerColor, sentimentData, issueData]);
+  }, [activeLayer, geographicLevel, getLayerColor, sentimentData, issueData, stateSentiment, districtSentimentMap]);
 
   // Handle alert markers
   useEffect(() => {
@@ -725,6 +844,13 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
     { id: 'alerts', label: 'Crisis Alerts', icon: <AlertTriangle className="w-4 h-4" />, color: '#F44336' },
   ];
 
+  const levelOptions: Array<{ id: MapDrillDownLevel; label: string; description: string }> = [
+    { id: 'state', label: 'State Level', description: 'West Bengal (statewide view)' },
+    { id: 'district', label: 'District Level', description: '23 districts' },
+    { id: 'constituency', label: 'Constituency Level', description: '294 constituencies' },
+    { id: 'booth', label: 'Booth Level', description: '70,000+ polling booths' },
+  ];
+
   return (
     <div className="relative">
       <div
@@ -733,14 +859,56 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
         className="w-full rounded-lg border-2 border-gray-300 shadow-lg"
       />
 
-      {/* Layer Control */}
-      <div className="absolute top-4 left-4 z-10">
+      {/* Controls Container */}
+      <div className="absolute top-4 left-4 z-10 space-y-2">
+        {/* Geographic Level Control */}
+        <button
+          onClick={() => setShowLevelControl(!showLevelControl)}
+          className="w-full bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors flex items-center space-x-2"
+        >
+          <MapIcon className="w-5 h-5 text-orange-600" />
+          <span className="text-sm font-medium text-gray-700">
+            {levelOptions.find(l => l.id === geographicLevel)?.label || 'Level'}
+          </span>
+        </button>
+
+        {showLevelControl && (
+          <div className="bg-white rounded-lg shadow-xl p-3 space-y-2 max-w-xs">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Geographic Level</p>
+            {levelOptions.map(option => (
+              <button
+                key={option.id}
+                onClick={() => {
+                  setGeographicLevel(option.id);
+                  setShowLevelControl(false);
+                }}
+                className={`w-full flex flex-col items-start p-2 rounded-lg transition-colors ${
+                  geographicLevel === option.id
+                    ? 'bg-orange-50 border-2 border-orange-500'
+                    : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                }`}
+              >
+                <span className={`text-sm font-medium ${
+                  geographicLevel === option.id ? 'text-orange-900' : 'text-gray-700'
+                }`}>
+                  {option.label}
+                </span>
+                <span className="text-xs text-gray-500">{option.description}</span>
+                {geographicLevel === option.id && (
+                  <div className="ml-auto w-2 h-2 rounded-full bg-orange-600"></div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Layer/Topic Control */}
         <button
           onClick={() => setShowLayerControl(!showLayerControl)}
-          className="bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors flex items-center space-x-2"
+          className="w-full bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors flex items-center space-x-2"
         >
           <Layers className="w-5 h-5 text-gray-700" />
-          <span className="text-sm font-medium text-gray-700">Layers</span>
+          <span className="text-sm font-medium text-gray-700">Data Layer</span>
         </button>
 
         {showLayerControl && (

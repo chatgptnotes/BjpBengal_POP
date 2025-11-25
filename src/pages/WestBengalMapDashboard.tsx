@@ -267,7 +267,7 @@ const WestBengalMapDashboard: React.FC = () => {
               <div className="relative overflow-auto max-h-[700px] bg-gray-50 rounded-lg border-2 border-gray-200">
                 {!imageLoadError ? (
                   <img
-                    src="/assets/maps/tn-election-map-2021.png"
+                    src="/assets/maps/wb-election-map-2021.png"
                     alt="2021 West Bengal Legislative Assembly Election Map"
                     className="w-full h-auto"
                     onError={() => setImageLoadError(true)}
@@ -288,18 +288,18 @@ const WestBengalMapDashboard: React.FC = () => {
                         <li>
                           Visit{' '}
                           <a
-                            href="https://commons.wikimedia.org/wiki/File:2021_Tamil_Nadu_Legislative_Assembly_election_result.png"
+                            href="https://commons.wikimedia.org/wiki/File:West_Bengal_Legislative_Assembly_election_2021.svg"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline font-semibold"
                           >
                             Wikimedia Commons
                           </a>
-                          {' '}and download the election map
+                          {' '}and download the West Bengal election map
                         </li>
                         <li>Or download from the official{' '}
                           <a
-                            href="https://eci.gov.in/files/file/6852-election-map-west-bengal/"
+                            href="https://eci.gov.in/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline font-semibold"
@@ -307,8 +307,8 @@ const WestBengalMapDashboard: React.FC = () => {
                             Election Commission of India
                           </a>
                         </li>
-                        <li>Save the downloaded file as <code className="bg-blue-100 px-2 py-0.5 rounded font-mono text-xs">tn-election-map-2021.png</code></li>
-                        <li>Place it in the folder: <code className="bg-blue-100 px-2 py-0.5 rounded font-mono text-xs">frontend/public/assets/maps/</code></li>
+                        <li>Save the downloaded file as <code className="bg-blue-100 px-2 py-0.5 rounded font-mono text-xs">wb-election-map-2021.png</code></li>
+                        <li>Place it in the folder: <code className="bg-blue-100 px-2 py-0.5 rounded font-mono text-xs">public/assets/maps/</code></li>
                         <li>Refresh this page to see the map</li>
                       </ol>
                     </div>
@@ -335,12 +335,12 @@ const WestBengalMapDashboard: React.FC = () => {
                 <br />
                 <strong>Source:</strong>
                 <a
-                  href="https://commons.wikimedia.org/wiki/File:2021_Tamil_Nadu_Legislative_Assembly_Election_Map.png"
+                  href="https://commons.wikimedia.org/wiki/File:West_Bengal_Legislative_Assembly_election_2021.svg"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline ml-1"
                 >
-                  Wikimedia Commons - 2021 TN Election Map
+                  Wikimedia Commons - 2021 West Bengal Election Map
                 </a>
                 <br />
                 <strong>GeoJSON Data:</strong>
@@ -413,9 +413,9 @@ const WestBengalMapDashboard: React.FC = () => {
               Top Performing Regions
             </h4>
             <ul className="space-y-2 text-sm text-green-700">
-              <li>Chennai - 62% Positive</li>
-              <li>Coimbatore - 70% Positive</li>
-              <li>Madurai - 64% Positive</li>
+              <li>Kolkata North - 62% Positive</li>
+              <li>Howrah Central - 70% Positive</li>
+              <li>Siliguri - 64% Positive</li>
             </ul>
           </div>
 
