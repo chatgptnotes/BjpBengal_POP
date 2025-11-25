@@ -282,6 +282,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoading(true);
       console.log('[AuthContext] 🔐 Attempting login:', email);
 
+      // ============================================
+      // DEMO MODE - Bypass authentication for testing
+      // ============================================
+      const DEMO_USERS = {
+        'demo@admin.com': { password: 'demo123', role: 'superadmin' as UserRole, name: 'Demo Admin' },
+        'demo@analyst.com': { password: 'demo123', role: 'analyst' as UserRole, name: 'Demo Analyst' },
+        'demo@manager.com': { password: 'demo123', role: 'manager' as UserRole, name: 'Demo Manager' },
+        'test@test.com': { password: 'test123', role: 'superadmin' as UserRole, name: 'Test User' },
+      };
+
+      if (email in DEMO_USERS) {
+        const demoUser = DEMO_USERS[email as keyof typeof DEMO_USERS];
+
+        if (password === demoUser.password) {
+          console.log('[AuthContext] 🎭 Demo mode login successful:', email);
+
+          const demoUserData: User = {
+            id: 'demo-' + email.split('@')[0],
+            name: demoUser.name,
+            email: email,
+            role: demoUser.role,
+            permissions: ['*'], // All permissions for demo
+            is_super_admin: demoUser.role === 'superadmin',
+            organization_id: '22222222-2222-2222-2222-222222222222',
+            status: 'active',
+          };
+
+          setUser(demoUserData);
+          setIsLoading(false);
+          console.log('[AuthContext] ✅ Demo user set:', demoUserData.name, demoUserData.role);
+          return true;
+        } else {
+          console.error('[AuthContext] ❌ Demo mode: Invalid password');
+          throw new Error('Invalid demo credentials');
+        }
+      }
+
+      // Regular Supabase authentication
       // Sign in with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,

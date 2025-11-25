@@ -53,11 +53,13 @@ interface FeedbackEntry {
   satisfactionRating?: number;
 }
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // Note: In production, use a backend proxy
-});
+// Initialize OpenAI client (only if API key is available)
+const openai = import.meta.env.VITE_OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+      dangerouslyAllowBrowser: true // Note: In production, use a backend proxy
+    })
+  : null;
 
 export default function FeedbackChatbot() {
   const [activeTab, setActiveTab] = useState<'chat' | 'analytics' | 'management'>('chat');
@@ -226,6 +228,11 @@ Context: West Bengal has 294 assembly constituencies. Elections information and 
         role: 'user',
         content: userInput
       });
+
+      // Check if OpenAI client is available
+      if (!openai) {
+        throw new Error('OpenAI API key not configured. Please add VITE_OPENAI_API_KEY to your .env file.');
+      }
 
       // Call OpenAI API
       const completion = await openai.chat.completions.create({

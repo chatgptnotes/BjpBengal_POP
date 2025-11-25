@@ -94,6 +94,7 @@ import WardsList from './pages/WardsList'
 import BoothsList from './pages/BoothsList'
 import BoothsMap from './pages/BoothsMap'
 import WardsBoothsAnalytics from './pages/WardsBoothsAnalytics'
+import ConstituencyInsightsDashboard from './pages/dashboards/ConstituencyInsightsDashboard'
 
 // Inner component that uses auth context
 function AppRoutes() {
@@ -181,6 +182,15 @@ function AppRoutes() {
                 <ProtectedRoute requiredRole="viewer">
                   <Layout>
                     <ViewerDashboard />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+
+              {/* Constituency Insights Dashboard - NEW Dynamic Analytics */}
+              <Route path="/insights/constituency/:constituencyId" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ConstituencyInsightsDashboard />
                   </Layout>
                 </ProtectedRoute>
               } />

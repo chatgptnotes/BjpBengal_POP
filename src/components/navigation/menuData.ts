@@ -176,6 +176,12 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       icon: AnalyticsIcon
     },
     {
+      name: 'Constituency Insights',
+      href: '/insights/constituency/wb_kolkata_bhowanipore',
+      icon: InsightsIcon,
+      badge: 'New'
+    },
+    {
       name: 'Advanced Charts',
       href: '/advanced-charts',
       icon: AssessmentIcon
