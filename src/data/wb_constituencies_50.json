@@ -1,0 +1,452 @@
+[
+  {
+    "id": "wb_kolkata_bhowanipore",
+    "name": "Bhowanipore",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 165432,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_kolkata_beleghata",
+    "name": "Beleghata",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 178234,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_kolkata_entally",
+    "name": "Entally",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 156789,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_kolkata_ballygunge",
+    "name": "Ballygunge",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 172345,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_kolkata_chowringhee",
+    "name": "Chowringhee",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 145678,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_kolkata_rashbehari",
+    "name": "Rashbehari",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 168234,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_kolkata_tollygunge",
+    "name": "Tollygunge",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 182456,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_kolkata_jadavpur",
+    "name": "Jadavpur",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 195432,
+    "social_media_activity": "very_high"
+  },
+  {
+    "id": "wb_kolkata_kasba",
+    "name": "Kasba",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 187654,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_kolkata_behala_west",
+    "name": "Behala West",
+    "district": "Kolkata",
+    "is_urban": true,
+    "city_cluster": "Kolkata Metro",
+    "total_voters": 198765,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_howrah_howrah_uttar",
+    "name": "Howrah Uttar",
+    "district": "Howrah",
+    "is_urban": true,
+    "city_cluster": "Howrah Metro",
+    "total_voters": 176543,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_howrah_howrah_madhya",
+    "name": "Howrah Madhya",
+    "district": "Howrah",
+    "is_urban": true,
+    "city_cluster": "Howrah Metro",
+    "total_voters": 184321,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_howrah_shibpur",
+    "name": "Shibpur",
+    "district": "Howrah",
+    "is_urban": true,
+    "city_cluster": "Howrah Metro",
+    "total_voters": 167890,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_howrah_bally",
+    "name": "Bally",
+    "district": "Howrah",
+    "is_urban": true,
+    "city_cluster": "Howrah Metro",
+    "total_voters": 175432,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_howrah_uttarpara",
+    "name": "Uttarpara",
+    "district": "Howrah",
+    "is_urban": true,
+    "city_cluster": "Howrah Metro",
+    "total_voters": 163245,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_north_24_parganas_barrackpore",
+    "name": "Barrackpore",
+    "district": "North 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 189456,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_north_24_parganas_dum_dum",
+    "name": "Dum Dum",
+    "district": "North 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 192345,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_north_24_parganas_rajarhat_new_town",
+    "name": "Rajarhat New Town",
+    "district": "North 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 245678,
+    "social_media_activity": "very_high"
+  },
+  {
+    "id": "wb_north_24_parganas_bidhannagar",
+    "name": "Bidhannagar",
+    "district": "North 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 234567,
+    "social_media_activity": "very_high"
+  },
+  {
+    "id": "wb_north_24_parganas_madhyamgram",
+    "name": "Madhyamgram",
+    "district": "North 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 198765,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_south_24_parganas_jadavpur",
+    "name": "Jadavpur",
+    "district": "South 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 187654,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_south_24_parganas_sonarpur_uttar",
+    "name": "Sonarpur Uttar",
+    "district": "South 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 165432,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_south_24_parganas_budge_budge",
+    "name": "Budge Budge",
+    "district": "South 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 172345,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_darjeeling_darjeeling",
+    "name": "Darjeeling",
+    "district": "Darjeeling",
+    "is_urban": true,
+    "city_cluster": "Darjeeling Hills",
+    "total_voters": 134567,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_darjeeling_siliguri",
+    "name": "Siliguri",
+    "district": "Darjeeling",
+    "is_urban": true,
+    "city_cluster": "Siliguri Urban",
+    "total_voters": 213456,
+    "social_media_activity": "very_high"
+  },
+  {
+    "id": "wb_jalpaiguri_jalpaiguri",
+    "name": "Jalpaiguri",
+    "district": "Jalpaiguri",
+    "is_urban": true,
+    "city_cluster": "North Bengal",
+    "total_voters": 167890,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_cooch_behar_cooch_behar_uttar",
+    "name": "Cooch Behar Uttar",
+    "district": "Cooch Behar",
+    "is_urban": true,
+    "city_cluster": "North Bengal",
+    "total_voters": 154321,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_malda_english_bazar",
+    "name": "English Bazar",
+    "district": "Malda",
+    "is_urban": true,
+    "city_cluster": "North Bengal",
+    "total_voters": 176543,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_murshidabad_berhampore",
+    "name": "Berhampore",
+    "district": "Murshidabad",
+    "is_urban": true,
+    "city_cluster": "Murshidabad Urban",
+    "total_voters": 145678,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_nadia_krishnanagar_uttar",
+    "name": "Krishnanagar Uttar",
+    "district": "Nadia",
+    "is_urban": true,
+    "city_cluster": "Nadia Urban",
+    "total_voters": 158765,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_hooghly_serampore",
+    "name": "Serampore",
+    "district": "Hooghly",
+    "is_urban": true,
+    "city_cluster": "Hooghly Industrial",
+    "total_voters": 167890,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_hooghly_chandannagar",
+    "name": "Chandannagar",
+    "district": "Hooghly",
+    "is_urban": true,
+    "city_cluster": "Hooghly Industrial",
+    "total_voters": 143210,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_hooghly_chinsurah",
+    "name": "Chinsurah",
+    "district": "Hooghly",
+    "is_urban": true,
+    "city_cluster": "Hooghly Industrial",
+    "total_voters": 156789,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_purba_bardhaman_asansol_uttar",
+    "name": "Asansol Uttar",
+    "district": "Purba Bardhaman",
+    "is_urban": true,
+    "city_cluster": "Asansol Industrial",
+    "total_voters": 198765,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_purba_bardhaman_asansol_dakshin",
+    "name": "Asansol Dakshin",
+    "district": "Purba Bardhaman",
+    "is_urban": true,
+    "city_cluster": "Asansol Industrial",
+    "total_voters": 203456,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_purba_bardhaman_durgapur_purba",
+    "name": "Durgapur Purba",
+    "district": "Purba Bardhaman",
+    "is_urban": true,
+    "city_cluster": "Durgapur Industrial",
+    "total_voters": 187654,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_purba_bardhaman_durgapur_paschim",
+    "name": "Durgapur Paschim",
+    "district": "Purba Bardhaman",
+    "is_urban": true,
+    "city_cluster": "Durgapur Industrial",
+    "total_voters": 195432,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_purba_bardhaman_bardhaman_uttar",
+    "name": "Bardhaman Uttar",
+    "district": "Purba Bardhaman",
+    "is_urban": true,
+    "city_cluster": "Bardhaman Urban",
+    "total_voters": 172345,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_purba_medinipur_tamluk",
+    "name": "Tamluk",
+    "district": "Purba Medinipur",
+    "is_urban": true,
+    "city_cluster": "Purba Medinipur Urban",
+    "total_voters": 143210,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_purba_medinipur_haldia",
+    "name": "Haldia",
+    "district": "Purba Medinipur",
+    "is_urban": true,
+    "city_cluster": "Purba Medinipur Urban",
+    "total_voters": 165432,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_paschim_medinipur_midnapore",
+    "name": "Midnapore",
+    "district": "Paschim Medinipur",
+    "is_urban": true,
+    "city_cluster": "Paschim Medinipur Urban",
+    "total_voters": 154321,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_bankura_bankura",
+    "name": "Bankura",
+    "district": "Bankura",
+    "is_urban": true,
+    "city_cluster": "Bankura Urban",
+    "total_voters": 138765,
+    "social_media_activity": "low"
+  },
+  {
+    "id": "wb_purulia_purulia",
+    "name": "Purulia",
+    "district": "Purulia",
+    "is_urban": true,
+    "city_cluster": "Purulia Urban",
+    "total_voters": 142345,
+    "social_media_activity": "low"
+  },
+  {
+    "id": "wb_birbhum_bolpur",
+    "name": "Bolpur",
+    "district": "Birbhum",
+    "is_urban": false,
+    "city_cluster": "Birbhum Semi-Urban",
+    "total_voters": 145678,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_birbhum_suri",
+    "name": "Suri",
+    "district": "Birbhum",
+    "is_urban": true,
+    "city_cluster": "Birbhum Semi-Urban",
+    "total_voters": 134567,
+    "social_media_activity": "low"
+  },
+  {
+    "id": "wb_paschim_bardhaman_pandaveswar",
+    "name": "Pandaveswar",
+    "district": "Paschim Bardhaman",
+    "is_urban": false,
+    "city_cluster": "Asansol Periphery",
+    "total_voters": 156789,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_hooghly_arambag",
+    "name": "Arambag",
+    "district": "Hooghly",
+    "is_urban": false,
+    "city_cluster": "Hooghly Semi-Urban",
+    "total_voters": 147890,
+    "social_media_activity": "low"
+  },
+  {
+    "id": "wb_nadia_ranaghat_uttar_paschim",
+    "name": "Ranaghat Uttar Paschim",
+    "district": "Nadia",
+    "is_urban": false,
+    "city_cluster": "Nadia Semi-Urban",
+    "total_voters": 152345,
+    "social_media_activity": "medium"
+  },
+  {
+    "id": "wb_north_24_parganas_barasat",
+    "name": "Barasat",
+    "district": "North 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "Kolkata Suburbs",
+    "total_voters": 186543,
+    "social_media_activity": "high"
+  },
+  {
+    "id": "wb_south_24_parganas_diamond_harbour",
+    "name": "Diamond Harbour",
+    "district": "South 24 Parganas",
+    "is_urban": true,
+    "city_cluster": "South 24 Parganas Urban",
+    "total_voters": 158765,
+    "social_media_activity": "medium"
+  }
+]
