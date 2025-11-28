@@ -6,6 +6,7 @@
 export { constituenciesService, ConstituenciesService } from './constituencies.service';
 export { pollingBoothsService, PollingBoothsService } from './polling-booths.service';
 export { votersService, VotersService } from './voters.service';
+export { wardsService, WardsService } from './wards.service';
 
 // Re-export related types
 export type {

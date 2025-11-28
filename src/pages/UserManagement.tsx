@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Upload, Search, Edit, Trash2, UserPlus, Users } from 'lucide-react';
+import {
+  Add,
+  Edit,
+  Delete,
+  Search,
+  FilterList,
+  GetApp,
+  CheckBox,
+  CheckBoxOutlineBlank,
+  Close,
+  Save,
+  ArrowUpward,
+  ArrowDownward,
+  People,
+  PersonAdd,
+  Group,
+  CheckCircle,
+  Cancel,
+} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { djangoApi } from '../services/djangoApi';
-import BulkUserImport from '../components/BulkUserImport';
+import { userService } from '../services/supabase/users.service';
+import type { User, UserRole } from '../types/database';
+import { SkeletonTable, SkeletonCard } from '../components/skeletons';
 
 // Role hierarchy - matches backend
-const ROLE_HIERARCHY: Record<string, string[]> = {
+const ROLE_HIERARCHY: Record<string, UserRole[]> = {
   'superadmin': ['admin', 'manager', 'analyst', 'user', 'volunteer', 'viewer'],
   'admin': ['manager', 'analyst', 'user', 'volunteer', 'viewer'],
   'manager': ['analyst', 'user', 'volunteer', 'viewer'],
@@ -15,92 +34,168 @@ const ROLE_HIERARCHY: Record<string, string[]> = {
   'viewer': [],
 };
 
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  name: string;
-  role: string;
-  phone?: string;
-  created_at: string;
-  permissions: string[];
-}
+type SortField = 'full_name' | 'email' | 'role' | 'created_at';
+type SortDirection = 'asc' | 'desc';
 
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole | ''>('');
+  const [selectedStatus, setSelectedStatus] = useState<'active' | 'inactive' | ''>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('full_name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    byRole: {} as Record<UserRole, number>,
+  });
 
   // Create user form
   const [newUser, setNewUser] = useState({
     email: '',
     username: '',
-    name: '',
+    full_name: '',
     password: '',
-    role: 'user',
+    role: 'user' as UserRole,
     phone: ''
   });
   const [createError, setCreateError] = useState('');
-  const [createSuccess, setCreateSuccess] = useState('');
 
+  const itemsPerPage = 50;
   const allowedRoles = ROLE_HIERARCHY[currentUser?.role || 'user'] || [];
+  const canCreateUsers = allowedRoles.length > 0;
 
   useEffect(() => {
     loadUsers();
   }, []);
 
   const loadUsers = async () => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      const usersData = await djangoApi.getUsers();
+      const { data: usersData } = await userService.getAll({
+        sort: { column: sortField, direction: sortDirection },
+      });
+
       setUsers(usersData);
+      setFilteredUsers(usersData);
+
+      // Calculate statistics
+      const total = usersData.length;
+      const active = usersData.filter(u => u.is_active).length;
+      const byRole = {} as Record<UserRole, number>;
+
+      const roles: UserRole[] = ['superadmin', 'admin', 'manager', 'analyst', 'user', 'viewer', 'volunteer'];
+      roles.forEach(role => {
+        byRole[role] = usersData.filter(u => u.role === role).length;
+      });
+
+      setStats({
+        totalUsers: total,
+        activeUsers: active,
+        byRole,
+      });
     } catch (error) {
-      console.error('Failed to load users:', error);
+      console.error('Error loading users:', error);
+      alert('Failed to load users. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Re-load when sort changes
+  useEffect(() => {
+    loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortField, sortDirection]);
+
+  useEffect(() => {
+    let filtered = [...users];
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        u =>
+          (u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+          (u.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+          (u.username?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+      );
+    }
+
+    if (selectedRole) {
+      filtered = filtered.filter(u => u.role === selectedRole);
+    }
+
+    if (selectedStatus === 'active') {
+      filtered = filtered.filter(u => u.is_active);
+    } else if (selectedStatus === 'inactive') {
+      filtered = filtered.filter(u => !u.is_active);
+    }
+
+    // Client-side sorting
+    filtered.sort((a, b) => {
+      let aVal: any = a[sortField];
+      let bVal: any = b[sortField];
+
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    setFilteredUsers(filtered);
+    setCurrentPage(1);
+  }, [searchTerm, selectedRole, selectedStatus, users, sortField, sortDirection]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError('');
-    setCreateSuccess('');
 
     try {
-      const response = await djangoApi.register({
+      await userService.create({
+        organization_id: currentUser?.organization_id || '',
         email: newUser.email,
-        password: newUser.password,
-        name: newUser.name,
+        username: newUser.username,
+        full_name: newUser.full_name,
+        password_hash: newUser.password, // This should be hashed in backend
         role: newUser.role,
+        phone: newUser.phone || null,
+        is_active: true,
+        is_verified: false,
       });
 
-      setCreateSuccess(`User ${newUser.name} created successfully!`);
-      setNewUser({ email: '', username: '', name: '', password: '', role: 'user', phone: '' });
-
-      // Refresh user list
+      setNewUser({ email: '', username: '', full_name: '', password: '', role: 'user', phone: '' });
       await loadUsers();
-
-      // Close modal after 2 seconds
-      setTimeout(() => {
-        setShowCreateModal(false);
-        setCreateSuccess('');
-      }, 2000);
-
+      setShowCreateModal(false);
+      alert(`User ${newUser.full_name} created successfully!`);
     } catch (error: any) {
       setCreateError(error.message || 'Failed to create user');
     }
   };
-
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Check if current user can create users
-  const canCreateUsers = allowedRoles.length > 0;
 
   return (
     <div className="p-6">

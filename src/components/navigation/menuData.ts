@@ -259,7 +259,13 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       href: '/constituency',
       icon: PlaceIcon
     },
-    // Wards & Booths Management
+    // Geography Management - Constituencies, Wards & Booths
+    {
+      name: 'Constituencies List',
+      href: '/constituencies',
+      icon: PlaceIcon,
+      badge: 'New'
+    },
     {
       name: 'Wards List',
       href: '/wards',
@@ -268,8 +274,7 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
     {
       name: 'Upload Wards',
       href: '/wards/upload',
-      icon: UploadIcon,
-      badge: 'New'
+      icon: UploadIcon
     },
     {
       name: 'Booths List',
@@ -279,8 +284,7 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
     {
       name: 'Upload Booths',
       href: '/booths/upload',
-      icon: UploadIcon,
-      badge: 'New'
+      icon: UploadIcon
     },
     {
       name: 'Booths Map',

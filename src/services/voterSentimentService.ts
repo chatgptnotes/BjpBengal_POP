@@ -482,7 +482,7 @@ class VoterSentimentService {
 
     return {
       sentiment,
-      summary: this.generateOverallSummary(sentiment, govtSentiment, bjpSentiment),
+      summary: this.generateDetailedSentimentSummary(sentiment, govtSentiment, bjpSentiment),
     };
   }
 
@@ -577,9 +577,9 @@ class VoterSentimentService {
   }
 
   /**
-   * Helper: Generate overall summary
+   * Helper: Generate detailed sentiment summary
    */
-  private generateOverallSummary(
+  private generateDetailedSentimentSummary(
     overall: string,
     govtSentiment: string,
     bjpSentiment: string

@@ -416,7 +416,7 @@ class AI4BharatSentimentService {
 
     // Party keywords
     const partyKeywords = {
-      bjp: ['bjp', 'vijay', 'thalapathy', 'விஜய்', 'தளபதி', 'tamilaga vettri', 'வெற்றி கழகம்'],
+      tvk: ['bjp', 'vijay', 'thalapathy', 'விஜய்', 'தளபதி', 'tamilaga vettri', 'வெற்றி கழகம்'],
       dmk: ['dmk', 'stalin', 'திமுக', 'ஸ்டாலின்'],
       aiadmk: ['aiadmk', 'admk', 'அதிமுக', 'edappadi', 'eps', 'ops'],
       bjp: ['bjp', 'பாஜக', 'annamalai'],

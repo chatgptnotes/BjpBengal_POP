@@ -108,7 +108,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       const userDataPromise = supabase
-        .from('user_profiles')
+        .from('users')
         .select('*')
         .eq('email', session.user.email)
         .single();
@@ -141,8 +141,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        // Get full name from user_profiles table
-        const fullName = userData.full_name || userData.email?.split('@')[0] || 'User';
+        // Get full name from users table
+        const fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username || userData.email?.split('@')[0] || 'User';
 
         console.log('[AuthContext] ✅ User data loaded from database:', fullName, userData.role);
 
@@ -151,11 +151,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           name: fullName,
           email: userData.email,
           role: userData.role as UserRole,
-          permissions: userData.permissions || [],
+          permissions: ['*'], // Grant all permissions for now
           avatar: userData.avatar,
-          is_super_admin: userData.is_super_admin,
+          is_super_admin: userData.role === 'superadmin',
           organization_id: userData.organization_id,
-          status: userData.status || 'active',
+          status: userData.is_active ? 'active' : 'inactive',
         });
 
         setIsInitializing(false);
@@ -196,7 +196,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       const userDataPromise = supabase
-        .from('user_profiles')
+        .from('users')
         .select('*')
         .eq('email', session.user.email)
         .single();
@@ -230,8 +230,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        // Get full name from user_profiles table
-        const fullName = userData.full_name || userData.email?.split('@')[0] || 'User';
+        // Get full name from users table
+        const fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username || userData.email?.split('@')[0] || 'User';
 
         console.log('[AuthContext] ✅ User data loaded from database:', fullName, userData.role);
 
@@ -240,11 +240,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           name: fullName,
           email: userData.email,
           role: userData.role as UserRole,
-          permissions: userData.permissions || [],
+          permissions: ['*'], // Grant all permissions for now
           avatar: userData.avatar,
-          is_super_admin: userData.is_super_admin,
+          is_super_admin: userData.role === 'superadmin',
           organization_id: userData.organization_id,
-          status: userData.status || 'active',
+          status: userData.is_active ? 'active' : 'inactive',
         });
 
         setIsInitializing(false);
@@ -351,7 +351,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       const userDataPromise = supabase
-        .from('user_profiles')
+        .from('users')
         .select('*')
         .eq('email', email)
         .single();

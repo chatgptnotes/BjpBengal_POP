@@ -87,13 +87,14 @@ import AnalystConstituencyDashboard from './pages/dashboards/AnalystConstituency
 import UserBoothDashboard from './pages/dashboards/UserBoothDashboard'
 import VolunteerDashboard from './pages/dashboards/VolunteerDashboard'
 import ViewerDashboard from './pages/dashboards/ViewerDashboard'
-import UserManagementNew from './pages/UserManagement'
+import UserManagementNew from './pages/UserManagementNew'
 import WardsUpload from './pages/WardsUpload'
 import BoothsUpload from './pages/BoothsUpload'
 import WardsList from './pages/WardsList'
 import BoothsList from './pages/BoothsList'
 import BoothsMap from './pages/BoothsMap'
 import WardsBoothsAnalytics from './pages/WardsBoothsAnalytics'
+import ConstituenciesList from './pages/ConstituenciesList'
 import ConstituencyInsightsDashboard from './pages/dashboards/ConstituencyInsightsDashboard'
 
 // Inner component that uses auth context
@@ -204,7 +205,14 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
 
-              {/* Wards & Booths Management */}
+              {/* Geography Management - Constituencies, Wards & Booths */}
+              <Route path="/constituencies" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ConstituenciesList />
+                  </Layout>
+                </ProtectedRoute>
+              } />
               <Route path="/wards" element={
                 <ProtectedRoute>
                   <Layout>

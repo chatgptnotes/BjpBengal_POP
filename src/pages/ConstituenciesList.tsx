@@ -14,40 +14,32 @@ import {
   ArrowDownward,
   People,
   LocationCity,
-  TrendingUp
+  TrendingUp,
+  HowToVote,
 } from '@mui/icons-material';
-import { wardsService } from '../services/supabase/wards.service';
-import type { Ward } from '../types/database';
+import { constituenciesService } from '../services/supabase/constituencies.service';
+import type { Constituency, ConstituencyType } from '../types/database';
 import { SkeletonTable, SkeletonCard } from '../components/skeletons';
 
-interface WardWithConstituency extends Ward {
-  constituency?: {
-    id: string;
-    name: string;
-    code: string;
-  };
-}
-
-type SortField = 'ward_number' | 'name' | 'voter_count' | 'population';
+type SortField = 'name' | 'code' | 'voter_count' | 'population' | 'total_booths';
 type SortDirection = 'asc' | 'desc';
 
-export default function WardsList() {
-  const [wards, setWards] = useState<WardWithConstituency[]>([]);
-  const [filteredWards, setFilteredWards] = useState<WardWithConstituency[]>([]);
+export default function ConstituenciesList() {
+  const [constituencies, setConstituencies] = useState<Constituency[]>([]);
+  const [filteredConstituencies, setFilteredConstituencies] = useState<Constituency[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedConstituency, setSelectedConstituency] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedType, setSelectedType] = useState<ConstituencyType | ''>('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedWards, setSelectedWards] = useState<Set<string>>(new Set());
+  const [selectedConstituencies, setSelectedConstituencies] = useState<Set<string>>(new Set());
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [editingWard, setEditingWard] = useState<WardWithConstituency | null>(null);
+  const [editingConstituency, setEditingConstituency] = useState<Constituency | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<SortField>('ward_number');
+  const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [stats, setStats] = useState({
-    totalWards: 0,
+    totalConstituencies: 0,
     totalPopulation: 0,
     totalBooths: 0,
     totalVoters: 0,
@@ -55,34 +47,34 @@ export default function WardsList() {
 
   const itemsPerPage = 50;
 
-  // Mock data - Replace with actual API call
   useEffect(() => {
-    loadWards();
+    loadConstituencies();
   }, []);
 
-  const loadWards = async () => {
+  const loadConstituencies = async () => {
     setLoading(true);
     try {
-      // Fetch wards with constituency information from Supabase
-      const wardsData = await wardsService.getAllWithConstituencies();
+      const { data: constituenciesData } = await constituenciesService.getAll({
+        sort: { column: sortField, direction: sortDirection },
+      });
 
-      setWards(wardsData);
-      setFilteredWards(wardsData);
+      setConstituencies(constituenciesData);
+      setFilteredConstituencies(constituenciesData);
 
       // Calculate statistics
-      const totalPopulation = wardsData.reduce((sum, w) => sum + (w.population || 0), 0);
-      const totalBooths = wardsData.reduce((sum, w) => sum + (w.total_booths || 0), 0);
-      const totalVoters = wardsData.reduce((sum, w) => sum + (w.voter_count || 0), 0);
+      const totalPopulation = constituenciesData.reduce((sum, c) => sum + (c.population || 0), 0);
+      const totalBooths = constituenciesData.reduce((sum, c) => sum + (c.total_booths || 0), 0);
+      const totalVoters = constituenciesData.reduce((sum, c) => sum + (c.voter_count || 0), 0);
 
       setStats({
-        totalWards: wardsData.length,
+        totalConstituencies: constituenciesData.length,
         totalPopulation,
         totalBooths,
         totalVoters,
       });
     } catch (error) {
-      console.error('Error loading wards:', error);
-      alert('Failed to load wards. Please try again.');
+      console.error('Error loading constituencies:', error);
+      alert('Failed to load constituencies. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -99,24 +91,25 @@ export default function WardsList() {
 
   // Re-load when sort changes
   useEffect(() => {
-    loadWards();
+    loadConstituencies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortField, sortDirection]);
 
   useEffect(() => {
-    let filtered = [...wards];
+    let filtered = [...constituencies];
 
     if (searchTerm) {
       filtered = filtered.filter(
-        w =>
-          (w.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-          (w.code?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-          (w.constituency?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+        c =>
+          (c.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+          (c.code?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+          (c.state?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+          (c.district?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
       );
     }
 
-    if (selectedConstituency) {
-      filtered = filtered.filter(w => w.constituency_id === selectedConstituency);
+    if (selectedType) {
+      filtered = filtered.filter(c => c.type === selectedType);
     }
 
     // Client-side sorting
@@ -137,114 +130,119 @@ export default function WardsList() {
       return 0;
     });
 
-    setFilteredWards(filtered);
+    setFilteredConstituencies(filtered);
     setCurrentPage(1);
-  }, [searchTerm, selectedConstituency, wards, sortField, sortDirection]);
+  }, [searchTerm, selectedType, constituencies, sortField, sortDirection]);
 
-  const constituencies = Array.from(new Set(wards.map(w => w.constituency?.name).filter(Boolean))).sort();
-
-  const totalPages = Math.ceil(filteredWards.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredConstituencies.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedWards = filteredWards.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedConstituencies = filteredConstituencies.slice(startIndex, startIndex + itemsPerPage);
 
   const handleSelectAll = () => {
-    if (selectedWards.size === paginatedWards.length) {
-      setSelectedWards(new Set());
+    if (selectedConstituencies.size === paginatedConstituencies.length) {
+      setSelectedConstituencies(new Set());
     } else {
-      setSelectedWards(new Set(paginatedWards.map(w => w.id)));
+      setSelectedConstituencies(new Set(paginatedConstituencies.map(c => c.id)));
     }
   };
 
-  const handleSelectWard = (id: string) => {
-    const newSelected = new Set(selectedWards);
+  const handleSelectConstituency = (id: string) => {
+    const newSelected = new Set(selectedConstituencies);
     if (newSelected.has(id)) {
       newSelected.delete(id);
     } else {
       newSelected.add(id);
     }
-    setSelectedWards(newSelected);
+    setSelectedConstituencies(newSelected);
   };
 
-  const handleEdit = (ward: Ward) => {
-    setEditingWard({ ...ward });
+  const handleEdit = (constituency: Constituency) => {
+    setEditingConstituency({ ...constituency });
     setShowEditModal(true);
   };
 
   const handleSaveEdit = async () => {
-    if (!editingWard) return;
+    if (!editingConstituency) return;
 
     try {
-      // Update ward in Supabase
-      await wardsService.update(editingWard.id, {
-        name: editingWard.name,
-        code: editingWard.code,
-        ward_number: editingWard.ward_number,
-        constituency_id: editingWard.constituency_id,
-        population: editingWard.population,
-        voter_count: editingWard.voter_count,
+      // Update constituency in Supabase
+      await constituenciesService.update(editingConstituency.id, {
+        name: editingConstituency.name,
+        code: editingConstituency.code,
+        type: editingConstituency.type,
+        state: editingConstituency.state,
+        district: editingConstituency.district,
+        population: editingConstituency.population,
+        voter_count: editingConstituency.voter_count,
+        reserved_category: editingConstituency.reserved_category,
+        current_representative: editingConstituency.current_representative,
+        current_party: editingConstituency.current_party,
       });
 
-      // Reload wards to get fresh data
-      await loadWards();
+      // Reload constituencies to get fresh data
+      await loadConstituencies();
 
       setShowEditModal(false);
-      setEditingWard(null);
-      alert('Ward updated successfully');
+      setEditingConstituency(null);
+      alert('Constituency updated successfully');
     } catch (error) {
-      console.error('Error saving ward:', error);
-      alert('Failed to save ward. Please try again.');
+      console.error('Error saving constituency:', error);
+      alert('Failed to save constituency. Please try again.');
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      // Delete ward from Supabase
-      await wardsService.delete(id);
+      // Delete constituency from Supabase
+      await constituenciesService.delete(id);
 
-      // Reload wards to get fresh data
-      await loadWards();
+      // Reload constituencies to get fresh data
+      await loadConstituencies();
 
       setShowDeleteConfirm(false);
       setDeleteTarget(null);
-      alert('Ward deleted successfully');
+      alert('Constituency deleted successfully');
     } catch (error) {
-      console.error('Error deleting ward:', error);
-      alert('Failed to delete ward. Please try again.');
+      console.error('Error deleting constituency:', error);
+      alert('Failed to delete constituency. Please try again.');
     }
   };
 
   const handleBulkDelete = async () => {
-    if (selectedWards.size === 0) return;
+    if (selectedConstituencies.size === 0) return;
 
-    if (!confirm(`Delete ${selectedWards.size} selected wards? This action cannot be undone.`)) return;
+    if (!confirm(`Delete ${selectedConstituencies.size} selected constituencies? This action cannot be undone.`)) return;
 
     try {
-      // Delete each ward
-      const wardIds = Array.from(selectedWards);
-      await Promise.all(wardIds.map(id => wardsService.delete(id)));
+      // Delete each constituency
+      const constituencyIds = Array.from(selectedConstituencies);
+      await Promise.all(constituencyIds.map(id => constituenciesService.delete(id)));
 
-      // Reload wards to get fresh data
-      await loadWards();
+      // Reload constituencies to get fresh data
+      await loadConstituencies();
 
-      setSelectedWards(new Set());
-      alert(`${wardIds.length} wards deleted successfully`);
+      setSelectedConstituencies(new Set());
+      alert(`${constituencyIds.length} constituencies deleted successfully`);
     } catch (error) {
       console.error('Error bulk deleting:', error);
-      alert('Failed to delete wards. Please try again.');
+      alert('Failed to delete constituencies. Please try again.');
     }
   };
 
   const handleExport = () => {
     const csvContent = [
-      ['Ward Code', 'Ward Name', 'Ward Number', 'Constituency', 'Population', 'Voter Count', 'Total Booths'],
-      ...filteredWards.map(w => [
-        w.code || '',
-        w.name || '',
-        w.ward_number || '',
-        w.constituency?.name || '',
-        w.population || 0,
-        w.voter_count || 0,
-        w.total_booths || 0,
+      ['Code', 'Name', 'Type', 'State', 'District', 'Population', 'Voter Count', 'Total Booths', 'Current Representative', 'Current Party'],
+      ...filteredConstituencies.map(c => [
+        c.code || '',
+        c.name || '',
+        c.type || '',
+        c.state || '',
+        c.district || '',
+        c.population || 0,
+        c.voter_count || 0,
+        c.total_booths || 0,
+        c.current_representative || '',
+        c.current_party || '',
       ]),
     ]
       .map(row => row.join(','))
@@ -254,7 +252,7 @@ export default function WardsList() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `wards-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `constituencies-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -272,15 +270,15 @@ export default function WardsList() {
     return (
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Wards Management</h1>
-          <p className="text-gray-600">View and manage all wards in the system</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Constituencies Management</h1>
+          <p className="text-gray-600">View and manage all constituencies in the system</p>
         </div>
 
         {/* Statistics Skeleton */}
         <SkeletonCard count={4} className="mb-6" />
 
         {/* Table Skeleton */}
-        <SkeletonTable rows={10} columns={7} showCheckbox={true} />
+        <SkeletonTable rows={10} columns={9} showCheckbox={true} />
       </div>
     );
   }
@@ -288,8 +286,8 @@ export default function WardsList() {
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Wards Management</h1>
-        <p className="text-gray-600">View and manage all wards in the system</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Constituencies Management</h1>
+        <p className="text-gray-600">View and manage all constituencies in the system</p>
       </div>
 
       {/* Statistics Cards */}
@@ -297,8 +295,8 @@ export default function WardsList() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Wards</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalWards.toLocaleString()}</p>
+              <p className="text-sm font-medium text-gray-600">Total Constituencies</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalConstituencies.toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
               <LocationCity className="w-6 h-6 text-red-600" />
@@ -325,7 +323,7 @@ export default function WardsList() {
               <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalBooths.toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <LocationCity className="w-6 h-6 text-green-600" />
+              <HowToVote className="w-6 h-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -351,7 +349,7 @@ export default function WardsList() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search by ward name, code, or constituency..."
+                placeholder="Search by name, code, state, or district..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -361,30 +359,28 @@ export default function WardsList() {
 
           <div>
             <select
-              value={selectedConstituency}
-              onChange={(e) => setSelectedConstituency(e.target.value)}
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value as ConstituencyType | '')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
-              <option value="">All Constituencies</option>
-              {constituencies.map(c => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
+              <option value="">All Types</option>
+              <option value="assembly">Assembly</option>
+              <option value="parliamentary">Parliamentary</option>
+              <option value="local">Local</option>
             </select>
           </div>
         </div>
 
-        {(searchTerm || selectedConstituency) && (
+        {(searchTerm || selectedType) && (
           <div className="mt-4 flex items-center gap-2">
             <FilterList className="w-5 h-5 text-gray-600" />
             <span className="text-sm text-gray-600">
-              Showing {filteredWards.length} of {wards.length} wards
+              Showing {filteredConstituencies.length} of {constituencies.length} constituencies
             </span>
             <button
               onClick={() => {
                 setSearchTerm('');
-                setSelectedConstituency('');
+                setSelectedType('');
               }}
               className="ml-2 text-sm text-red-600 hover:text-red-700 font-medium"
             >
@@ -395,11 +391,11 @@ export default function WardsList() {
       </div>
 
       {/* Bulk Actions */}
-      {selectedWards.size > 0 && (
+      {selectedConstituencies.size > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-red-900">
-              {selectedWards.size} ward(s) selected
+              {selectedConstituencies.size} constituency(ies) selected
             </span>
             <div className="flex items-center gap-3">
               <button
@@ -410,7 +406,7 @@ export default function WardsList() {
                 Delete Selected
               </button>
               <button
-                onClick={() => setSelectedWards(new Set())}
+                onClick={() => setSelectedConstituencies(new Set())}
                 className="text-sm text-gray-600 hover:text-gray-700"
               >
                 Clear Selection
@@ -428,7 +424,7 @@ export default function WardsList() {
               <tr>
                 <th className="px-4 py-3 text-left">
                   <button onClick={handleSelectAll}>
-                    {selectedWards.size === paginatedWards.length && paginatedWards.length > 0 ? (
+                    {selectedConstituencies.size === paginatedConstituencies.length && paginatedConstituencies.length > 0 ? (
                       <CheckBox className="w-5 h-5 text-red-600" />
                     ) : (
                       <CheckBoxOutlineBlank className="w-5 h-5 text-gray-400" />
@@ -437,18 +433,21 @@ export default function WardsList() {
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('ward_number')}
+                  onClick={() => handleSort('code')}
                 >
-                  Ward Number <SortIcon field="ward_number" />
+                  Code <SortIcon field="code" />
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('name')}
                 >
-                  Ward Name <SortIcon field="name" />
+                  Name <SortIcon field="name" />
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Constituency
+                  Type
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  State / District
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -460,7 +459,13 @@ export default function WardsList() {
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('voter_count')}
                 >
-                  Voter Count <SortIcon field="voter_count" />
+                  Voters <SortIcon field="voter_count" />
+                </th>
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('total_booths')}
+                >
+                  Booths <SortIcon field="total_booths" />
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -468,11 +473,11 @@ export default function WardsList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedWards.map(ward => (
-                <tr key={ward.id} className="hover:bg-gray-50">
+              {paginatedConstituencies.map(constituency => (
+                <tr key={constituency.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <button onClick={() => handleSelectWard(ward.id)}>
-                      {selectedWards.has(ward.id) ? (
+                    <button onClick={() => handleSelectConstituency(constituency.id)}>
+                      {selectedConstituencies.has(constituency.id) ? (
                         <CheckBox className="w-5 h-5 text-red-600" />
                       ) : (
                         <CheckBoxOutlineBlank className="w-5 h-5 text-gray-400" />
@@ -480,29 +485,43 @@ export default function WardsList() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                    {ward.ward_number}
+                    {constituency.code}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {ward.name}
-                    {ward.code && (
-                      <div className="text-xs text-gray-400">{ward.code}</div>
+                    {constituency.name}
+                    {constituency.current_representative && (
+                      <div className="text-xs text-gray-500">
+                        {constituency.current_representative} ({constituency.current_party || 'Independent'})
+                      </div>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      constituency.type === 'parliamentary' ? 'bg-purple-100 text-purple-800' :
+                      constituency.type === 'assembly' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {constituency.type}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {ward.constituency?.name || '-'}
-                    {ward.constituency?.code && (
-                      <div className="text-xs text-gray-400">{ward.constituency.code}</div>
+                    {constituency.state || '-'}
+                    {constituency.district && (
+                      <div className="text-xs text-gray-400">{constituency.district}</div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {ward.population?.toLocaleString() || '-'}
+                    {constituency.population?.toLocaleString() || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {ward.voter_count?.toLocaleString() || '-'}
+                    {constituency.voter_count?.toLocaleString() || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {constituency.total_booths?.toLocaleString() || '-'}
                   </td>
                   <td className="px-4 py-3 text-right text-sm">
                     <button
-                      onClick={() => handleEdit(ward)}
+                      onClick={() => handleEdit(constituency)}
                       className="text-blue-600 hover:text-blue-700 mr-3"
                       title="Edit"
                     >
@@ -510,7 +529,7 @@ export default function WardsList() {
                     </button>
                     <button
                       onClick={() => {
-                        setDeleteTarget(ward.id);
+                        setDeleteTarget(constituency.id);
                         setShowDeleteConfirm(true);
                       }}
                       className="text-red-600 hover:text-red-700"
@@ -529,8 +548,8 @@ export default function WardsList() {
         <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredWards.length)} of{' '}
-              {filteredWards.length} wards
+              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredConstituencies.length)} of{' '}
+              {filteredConstituencies.length} constituencies
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -563,12 +582,12 @@ export default function WardsList() {
       </div>
 
       {/* Edit Modal */}
-      {showEditModal && editingWard && (
+      {showEditModal && editingConstituency && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Edit Ward</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Edit Constituency</h2>
                 <button onClick={() => setShowEditModal(false)} className="text-gray-600 hover:text-gray-900">
                   <Close className="w-6 h-6" />
                 </button>
@@ -577,44 +596,56 @@ export default function WardsList() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ward Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
                     <input
-                      type="number"
-                      value={editingWard.ward_number || ''}
-                      onChange={e => setEditingWard({ ...editingWard, ward_number: parseInt(e.target.value) || 0 })}
+                      type="text"
+                      value={editingConstituency.code || ''}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, code: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ward Code</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                     <input
                       type="text"
-                      value={editingWard.code || ''}
-                      onChange={e => setEditingWard({ ...editingWard, code: e.target.value })}
+                      value={editingConstituency.name || ''}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ward Name</label>
-                  <input
-                    type="text"
-                    value={editingWard.name || ''}
-                    onChange={e => setEditingWard({ ...editingWard, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Constituency</label>
-                  <input
-                    type="text"
-                    value={editingWard.constituency?.name || ''}
-                    disabled
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Constituency cannot be changed here</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select
+                      value={editingConstituency.type}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, type: e.target.value as ConstituencyType })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="assembly">Assembly</option>
+                      <option value="parliamentary">Parliamentary</option>
+                      <option value="local">Local</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                    <input
+                      type="text"
+                      value={editingConstituency.state || ''}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, state: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
+                    <input
+                      type="text"
+                      value={editingConstituency.district || ''}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, district: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -622,8 +653,8 @@ export default function WardsList() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Population</label>
                     <input
                       type="number"
-                      value={editingWard.population || 0}
-                      onChange={e => setEditingWard({ ...editingWard, population: parseInt(e.target.value) || 0 })}
+                      value={editingConstituency.population || 0}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, population: parseInt(e.target.value) || 0 })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                     />
                   </div>
@@ -631,11 +662,43 @@ export default function WardsList() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Voter Count</label>
                     <input
                       type="number"
-                      value={editingWard.voter_count || 0}
-                      onChange={e => setEditingWard({ ...editingWard, voter_count: parseInt(e.target.value) || 0 })}
+                      value={editingConstituency.voter_count || 0}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, voter_count: parseInt(e.target.value) || 0 })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Representative</label>
+                    <input
+                      type="text"
+                      value={editingConstituency.current_representative || ''}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, current_representative: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Party</label>
+                    <input
+                      type="text"
+                      value={editingConstituency.current_party || ''}
+                      onChange={e => setEditingConstituency({ ...editingConstituency, current_party: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reserved Category</label>
+                  <input
+                    type="text"
+                    value={editingConstituency.reserved_category || ''}
+                    onChange={e => setEditingConstituency({ ...editingConstituency, reserved_category: e.target.value })}
+                    placeholder="e.g., SC, ST, General"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                  />
                 </div>
               </div>
 
@@ -665,7 +728,7 @@ export default function WardsList() {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Delete</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this ward? This action cannot be undone.
+              Are you sure you want to delete this constituency? This action cannot be undone.
             </p>
             <div className="flex items-center justify-end gap-3">
               <button
@@ -681,7 +744,7 @@ export default function WardsList() {
                 onClick={() => handleDelete(deleteTarget)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
-                Delete Ward
+                Delete Constituency
               </button>
             </div>
           </div>
