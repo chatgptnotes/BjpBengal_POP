@@ -182,6 +182,12 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       badge: 'New'
     },
     {
+      name: "Leader's Analysis",
+      href: '/leaders-analysis',
+      icon: PeopleIcon,
+      badge: 'New'
+    },
+    {
       name: 'Advanced Charts',
       href: '/advanced-charts',
       icon: AssessmentIcon

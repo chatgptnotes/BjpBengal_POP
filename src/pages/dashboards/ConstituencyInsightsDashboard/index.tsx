@@ -17,6 +17,8 @@ import RightSidebar from './components/RightSidebar';
 import LiveNewsTicker from './components/LiveNewsTicker';
 import SocialMediaFeed, { generateMockSocialPosts } from './components/SocialMediaFeed';
 import SentimentTimeline, { generateSentimentTimelineData } from './components/SentimentTimeline';
+// Import Leader Analysis Section
+import LeaderAnalysisSection from './components/LeaderAnalysisSection';
 
 /* -------------------------------------------------------------------------
    GEMINI API UTILITIES
@@ -500,10 +502,6 @@ export default function PulseDashboard() {
   const [loadingNews, setLoadingNews] = useState(false);
   const [lastNewsUpdate, setLastNewsUpdate] = useState<string>('');
 
-  // Refs for horizontal scroll
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const middleSectionRef = useRef<HTMLDivElement>(null);
-
   // Load Data Effect
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -574,29 +572,6 @@ export default function PulseDashboard() {
 
     loadDashboardData();
   }, [selectedId, timeRangeIdx]);
-
-  // Auto-scroll to middle section when data loads
-  useEffect(() => {
-    if (data && middleSectionRef.current && scrollContainerRef.current) {
-      // Wait for layout to complete
-      const timer = setTimeout(() => {
-        if (middleSectionRef.current && scrollContainerRef.current) {
-          // Calculate scroll position to center the middle section
-          const container = scrollContainerRef.current;
-          const middle = middleSectionRef.current;
-
-          const scrollLeft = middle.offsetLeft - (container.clientWidth / 2) + (middle.clientWidth / 2);
-
-          container.scrollTo({
-            left: scrollLeft,
-            behavior: 'smooth'
-          });
-        }
-      }, 300); // Wait 300ms for components to render
-
-      return () => clearTimeout(timer);
-    }
-  }, [data]);
 
   // Manual refresh function
   const handleRefreshNews = async () => {
@@ -763,56 +738,25 @@ export default function PulseDashboard() {
           {/* AI Strategist Inject */}
           <PulseAIStrategist data={data} />
 
-          {/* NEW: HORIZONTAL SCROLLING LAYOUT */}
-          <div className="relative">
-            {/* Horizontal scroll container */}
-            <div
-              ref={scrollContainerRef}
-              className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800/50"
-              style={{ scrollSnapType: 'x mandatory' }}
-            >
-              <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
-                {/* LEFT SIDEBAR */}
-                <div
-                  className="flex-shrink-0 w-[400px]"
-                  style={{ scrollSnapAlign: 'center' }}
-                >
-                  <LeftSidebar topIssues={data.top_issues} />
-                </div>
-
-                {/* MIDDLE SECTION - Strategic Intelligence Unit */}
-                <div
-                  ref={middleSectionRef}
-                  className="flex-shrink-0 w-[700px]"
-                  style={{ scrollSnapAlign: 'center' }}
-                >
-                  {data.strategy && <StrategicDeepDive strategy={data.strategy} lastUpdate={lastNewsUpdate} />}
-                </div>
-
-                {/* RIGHT SIDEBAR */}
-                <div
-                  className="flex-shrink-0 w-[400px]"
-                  style={{ scrollSnapAlign: 'center' }}
-                >
-                  <RightSidebar selectedConstituency={data.constituency_name} />
-                </div>
-              </div>
+          {/* THREE COLUMN GRID LAYOUT */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* LEFT SIDEBAR - Issues & Trends */}
+            <div className="lg:col-span-3">
+              <LeftSidebar topIssues={data.top_issues} />
             </div>
 
-            {/* Scroll indicators */}
-            <div className="flex justify-center gap-2 mt-4">
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <div className="w-2 h-2 rounded-full bg-slate-500"></div>
-                <span>Left</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                <span>Strategic Intelligence</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <div className="w-2 h-2 rounded-full bg-slate-500"></div>
-                <span>Right</span>
-              </div>
+            {/* MIDDLE SECTION - Leader Analysis + Strategic Intelligence */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Leader Analysis Section */}
+              <LeaderAnalysisSection selectedConstituency={data.constituency_name} />
+
+              {/* Strategic Intelligence Unit */}
+              {data.strategy && <StrategicDeepDive strategy={data.strategy} lastUpdate={lastNewsUpdate} />}
+            </div>
+
+            {/* RIGHT SIDEBAR - Key Leaders, Media, Campaign */}
+            <div className="lg:col-span-4">
+              <RightSidebar selectedConstituency={data.constituency_name} />
             </div>
           </div>
 

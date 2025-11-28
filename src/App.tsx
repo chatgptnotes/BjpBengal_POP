@@ -96,6 +96,7 @@ import BoothsMap from './pages/BoothsMap'
 import WardsBoothsAnalytics from './pages/WardsBoothsAnalytics'
 import ConstituenciesList from './pages/ConstituenciesList'
 import ConstituencyInsightsDashboard from './pages/dashboards/ConstituencyInsightsDashboard'
+import LeadersAnalysisDashboard from './pages/dashboards/LeadersAnalysisDashboard'
 
 // Inner component that uses auth context
 function AppRoutes() {
@@ -614,6 +615,15 @@ function AppRoutes() {
                 <ProtectedRoute>
                   <Layout>
                     <AnalyticsDashboard />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+
+              {/* Leader's Analysis Dashboard */}
+              <Route path="/leaders-analysis" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LeadersAnalysisDashboard />
                   </Layout>
                 </ProtectedRoute>
               } />
