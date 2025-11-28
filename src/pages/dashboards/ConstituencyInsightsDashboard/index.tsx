@@ -665,7 +665,7 @@ export default function PulseDashboard() {
 
       {/* 1. STICKY HEADER */}
       <nav className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="w-full px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">P</div>
             <div>
@@ -713,7 +713,7 @@ export default function PulseDashboard() {
 
       {/* 2. TIMELINE SLIDER (Full Width) */}
       <div className="bg-slate-900 text-white pt-6 pb-8 px-4 rounded-b-[2.5rem] shadow-lg mb-8">
-        <div className="max-w-5xl mx-auto">
+        <div className="w-full px-4">
           <div className="flex justify-between items-end mb-6">
             <div>
               <h2 className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-1">Time Window</h2>
@@ -753,12 +753,12 @@ export default function PulseDashboard() {
 
       {/* 3. MAIN DASHBOARD CONTENT */}
       {loading || !data ? (
-        <div className="max-w-5xl mx-auto px-4 h-64 flex flex-col items-center justify-center text-slate-400">
+        <div className="w-full px-4 h-64 flex flex-col items-center justify-center text-slate-400">
            <Activity className="animate-spin mb-3 text-blue-500" size={32} />
            <p className="text-sm font-medium animate-pulse">Analyzing constituency data...</p>
         </div>
       ) : (
-        <div className="max-w-7xl mx-auto px-4 space-y-6">
+        <div className="w-full px-4 space-y-6">
 
           {/* AI Strategist Inject */}
           <PulseAIStrategist data={data} />

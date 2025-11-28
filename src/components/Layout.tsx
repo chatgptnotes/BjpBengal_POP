@@ -16,7 +16,7 @@ export default function Layout({ children }: LayoutProps) {
     <DualSidebarLayout>
       <main className="flex-1">
         <div className="py-8 sm:py-10">
-          <div className="max-w-7xl mx-auto px-6 sm:px-8 md:px-10 lg:px-12">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="md:hidden mb-6">
               <RealTimeIndicator />
             </div>
