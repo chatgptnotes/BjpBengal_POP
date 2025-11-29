@@ -173,6 +173,170 @@ const NEWS_SOURCES = [
     rss: 'https://bengali.oneindia.com/rss/feeds/oneindia-bengali-fb.xml',
     baseUrl: 'https://bengali.oneindia.com',
     credibility: 0.74
+  },
+  // ================== DISTRICT-SPECIFIC GOOGLE NEWS FEEDS ==================
+  // These feeds search for election/BJP news specific to each district
+  {
+    id: 'google-kolkata-bjp',
+    name: 'Google News - Kolkata BJP',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Kolkata+BJP+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Kolkata'
+  },
+  {
+    id: 'google-howrah-election',
+    name: 'Google News - Howrah Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Howrah+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Howrah'
+  },
+  {
+    id: 'google-siliguri-bjp',
+    name: 'Google News - Siliguri BJP',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Siliguri+BJP+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Darjeeling'
+  },
+  {
+    id: 'google-barrackpore-election',
+    name: 'Google News - Barrackpore Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Barrackpore+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'North 24 Parganas'
+  },
+  {
+    id: 'google-diamond-harbour',
+    name: 'Google News - Diamond Harbour',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Diamond+Harbour+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'South 24 Parganas'
+  },
+  {
+    id: 'google-malda-election',
+    name: 'Google News - Malda Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Malda+BJP+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Malda'
+  },
+  {
+    id: 'google-murshidabad-bjp',
+    name: 'Google News - Murshidabad BJP',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Murshidabad+BJP+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Murshidabad'
+  },
+  {
+    id: 'google-hooghly-election',
+    name: 'Google News - Hooghly Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Hooghly+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Hooghly'
+  },
+  {
+    id: 'google-asansol-bjp',
+    name: 'Google News - Asansol BJP',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Asansol+BJP+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Purba Bardhaman'
+  },
+  {
+    id: 'google-durgapur-election',
+    name: 'Google News - Durgapur Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Durgapur+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Purba Bardhaman'
+  },
+  {
+    id: 'google-nadia-bjp',
+    name: 'Google News - Nadia BJP',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Nadia+BJP+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Nadia'
+  },
+  {
+    id: 'google-jalpaiguri-election',
+    name: 'Google News - Jalpaiguri Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Jalpaiguri+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Jalpaiguri'
+  },
+  {
+    id: 'google-coochbehar-bjp',
+    name: 'Google News - Cooch Behar BJP',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Cooch+Behar+BJP+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Cooch Behar'
+  },
+  {
+    id: 'google-bankura-election',
+    name: 'Google News - Bankura Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Bankura+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Bankura'
+  },
+  {
+    id: 'google-purulia-bjp',
+    name: 'Google News - Purulia BJP',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Purulia+BJP+election&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Purulia'
+  },
+  {
+    id: 'google-birbhum-election',
+    name: 'Google News - Birbhum Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Birbhum+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Birbhum'
+  },
+  {
+    id: 'google-medinipur-bjp',
+    name: 'Google News - Medinipur BJP',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Medinipur+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Paschim Medinipur'
+  },
+  {
+    id: 'google-bardhaman-election',
+    name: 'Google News - Bardhaman Election',
+    language: 'en',
+    rss: 'https://news.google.com/rss/search?q=Bardhaman+election+BJP&hl=en-IN&gl=IN&ceid=IN:en',
+    baseUrl: 'https://news.google.com',
+    credibility: 0.80,
+    district: 'Purba Bardhaman'
   }
 ];
 
@@ -465,7 +629,10 @@ async function scrapeRSSFeed(source) {
 
         // Metadata
         language: source.language,
-        credibility_score: source.credibility
+        credibility_score: source.credibility,
+
+        // District tag (from district-specific feeds)
+        district_name: source.district || null
       });
 
       // Rate limiting

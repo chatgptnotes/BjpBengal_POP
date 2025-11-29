@@ -27,11 +27,20 @@ import {
   Users,
   MessageSquare,
   Bookmark,
-  ExternalLink
+  ExternalLink,
+  ChevronDown
 } from 'lucide-react';
 import { MobileCard, ResponsiveGrid, MobileButton, MobileTabs } from '../components/MobileResponsive';
 import { useNewsSentiment } from '../hooks/useNewsSentiment';
 import { NewsArticle as DBNewsArticle } from '../services/newsService';
+import constituenciesDataRaw from '../data/wb_constituencies_50.json';
+
+// Transform constituency data
+const CONSTITUENCIES = constituenciesDataRaw.map((c: any) => ({
+  id: c.id,
+  name: c.name,
+  district: c.district
+}));
 
 interface NewsSource {
   id: string;
@@ -64,6 +73,8 @@ interface NewsArticle {
   isBreaking: boolean;
   priority: 'high' | 'medium' | 'low';
   verified: boolean;
+  constituency?: string;
+  district?: string;
 }
 
 interface TrendingTopic {
@@ -99,6 +110,58 @@ function isBJPArticle(article: NewsArticle): boolean {
   return BJP_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
 }
 
+// District keywords for auto-detection (including common variations)
+// Note: Keywords must match district names in wb_constituencies_50.json
+const DISTRICT_KEYWORDS: Record<string, string[]> = {
+  'Kolkata': ['Kolkata', 'Calcutta', 'কলকাতা', 'कोलकाता', 'Bhowanipore', 'Beleghata', 'Entally', 'Ballygunge', 'Chowringhee', 'Rashbehari', 'Tollygunge', 'Jadavpur', 'Kasba', 'Behala'],
+  'Howrah': ['Howrah', 'হাওড়া', 'हावड़ा', 'Shibpur', 'Bally', 'Uttarpara'],
+  'North 24 Parganas': ['North 24 Parganas', 'North Parganas', 'Barrackpore', 'Dum Dum', 'Barasat', 'Bidhannagar', 'Salt Lake', 'New Town', 'Rajarhat', 'Madhyamgram', 'উত্তর ২৪ পরগনা'],
+  'South 24 Parganas': ['South 24 Parganas', 'South Parganas', 'Diamond Harbour', 'Sonarpur', 'Budge Budge', 'দক্ষিণ ২৪ পরগনা'],
+  'Darjeeling': ['Darjeeling', 'Siliguri', 'দার্জিলিং', 'শিলিগুড়ি'],
+  'Jalpaiguri': ['Jalpaiguri', 'জলপাইগুড়ি'],
+  'Cooch Behar': ['Cooch Behar', 'কোচবিহার'],
+  'Malda': ['Malda', 'English Bazar', 'মালদা'],
+  'Murshidabad': ['Murshidabad', 'Berhampore', 'মুর্শিদাবাদ'],
+  'Nadia': ['Nadia', 'Krishnanagar', 'Ranaghat', 'নদিয়া', 'Kaliganj'],
+  'Hooghly': ['Hooghly', 'Serampore', 'Chandannagar', 'Chinsurah', 'হুগলি', 'Arambag'],
+  'Purba Bardhaman': ['Bardhaman', 'Burdwan', 'বর্ধমান', 'Asansol', 'Durgapur', 'আসানসোল', 'দুর্গাপুর', 'Purba Bardhaman'],
+  'Paschim Bardhaman': ['Paschim Bardhaman', 'Pandaveswar'],
+  'Purba Medinipur': ['Purba Medinipur', 'Tamluk', 'Haldia', 'তমলুক', 'হলদিয়া'],
+  'Paschim Medinipur': ['Paschim Medinipur', 'Midnapore', 'Kharagpur', 'মেদিনীপুর'],
+  'Bankura': ['Bankura', 'বাঁকুড়া'],
+  'Purulia': ['Purulia', 'পুরুলিয়া'],
+  'Birbhum': ['Birbhum', 'Bolpur', 'Suri', 'বীরভূম', 'শান্তিনিকেতন']
+};
+
+// Auto-detect constituency/district from article content
+function detectConstituencyFromContent(title: string, summary: string): { constituency?: string; district: string } {
+  const text = (title + ' ' + (summary || '')).toLowerCase();
+
+  // First try to match specific constituency names
+  for (const constituency of CONSTITUENCIES) {
+    if (text.includes(constituency.name.toLowerCase())) {
+      return { constituency: constituency.name, district: constituency.district };
+    }
+  }
+
+  // Then try to match district keywords
+  for (const [district, keywords] of Object.entries(DISTRICT_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (text.includes(keyword.toLowerCase())) {
+        // Find a constituency in this district
+        const matchedConstituency = CONSTITUENCIES.find(c => c.district === district);
+        return {
+          constituency: matchedConstituency?.name,
+          district: district
+        };
+      }
+    }
+  }
+
+  // Default to West Bengal (state-level) if no match
+  return { constituency: undefined, district: 'West Bengal' };
+}
+
 // Helper function to map database articles to component interface
 function mapDBArticleToComponent(dbArticle: DBNewsArticle): NewsArticle {
   // Extract topics from tags or create from category
@@ -119,10 +182,27 @@ function mapDBArticleToComponent(dbArticle: DBNewsArticle): NewsArticle {
     mentions.push(...capitalizedWords.slice(0, 3));
   }
 
+  // Get district from database or auto-detect from content
+  const articleSummary = dbArticle.summary || dbArticle.content.substring(0, 300) + '...';
+  const dbDistrict = (dbArticle as any).district_name;
+
+  // Always try to auto-detect from content first for more accurate constituency matching
+  const detected = detectConstituencyFromContent(dbArticle.title, articleSummary);
+
+  // Use database district if available, otherwise use auto-detected or default to 'West Bengal'
+  let district = dbDistrict || detected.district || 'West Bengal';
+  let constituency: string | undefined = detected.constituency;
+
+  // If we have a dbDistrict but no constituency from content detection, find one in that district
+  if (dbDistrict && !constituency) {
+    const matchedConstituency = CONSTITUENCIES.find(c => c.district === dbDistrict);
+    constituency = matchedConstituency?.name;
+  }
+
   return {
     id: dbArticle.id || Math.random().toString(),
     title: dbArticle.title,
-    summary: dbArticle.summary || dbArticle.content.substring(0, 300) + '...',
+    summary: articleSummary,
     source: dbArticle.source,
     timestamp: new Date(dbArticle.published_at || dbArticle.created_at || new Date()),
     sentiment,
@@ -131,12 +211,15 @@ function mapDBArticleToComponent(dbArticle: DBNewsArticle): NewsArticle {
     engagement,
     topics,
     mentions,
-    region: 'West Bengal', // Default, can be enhanced with state/district lookup
+    region: 'West Bengal',
     language: dbArticle.language || 'en',
     url: dbArticle.url || '#',
     isBreaking: dbArticle.is_breaking || false,
     priority: (dbArticle.priority || 'medium') as 'high' | 'medium' | 'low',
-    verified: dbArticle.is_verified || false
+    verified: dbArticle.is_verified || false,
+    // Use database district or auto-detected location
+    constituency,
+    district
   };
 }
 
@@ -228,62 +311,554 @@ const newsSources: NewsSource[] = [
 ];
 
 const mockArticles: NewsArticle[] = [
+  // Bhowanipore - Kolkata
   {
     id: '1',
-    title: 'West Bengal Budget 2026: Focus on Education and Healthcare Infrastructure',
-    summary: 'State government announces major allocation for educational reforms and healthcare modernization across all districts.',
-    source: 'Malayala Manorama',
-    timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
+    title: 'BJP announces strong candidate for Bhowanipore constituency',
+    summary: 'BJP Bengal unit finalizes candidate for prestigious Bhowanipore seat, aims to challenge TMC stronghold in upcoming elections.',
+    source: 'ABP Ananda',
+    timestamp: new Date(Date.now() - 1800000),
     sentiment: 'positive',
-    sentimentScore: 0.72,
-    credibilityScore: 92,
-    engagement: 1245,
-    topics: ['Budget', 'Education', 'Healthcare', 'Infrastructure'],
-    mentions: ['Chief Minister', 'Finance Minister', 'Education Department'],
+    sentimentScore: 0.78,
+    credibilityScore: 85,
+    engagement: 2456,
+    topics: ['BJP', 'Bhowanipore', 'Elections', 'Candidate'],
+    mentions: ['BJP Bengal', 'Bhowanipore', 'Assembly Elections'],
     region: 'West Bengal',
-    language: 'Tamil',
+    language: 'Bengali',
     url: '#',
     isBreaking: true,
     priority: 'high',
-    verified: true
+    verified: true,
+    constituency: 'Bhowanipore',
+    district: 'Kolkata'
   },
   {
     id: '2',
-    title: 'Public Opinion Poll Shows Shift in Voter Preferences',
-    summary: 'Latest survey reveals changing political landscape with emerging issues taking center stage.',
-    source: 'The Hindu',
-    timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-    sentiment: 'neutral',
-    sentimentScore: 0.05,
-    credibilityScore: 94,
-    engagement: 892,
-    topics: ['Election', 'Polling', 'Politics', 'Survey'],
-    mentions: ['Opposition Leader', 'Political Parties', 'Voters'],
+    title: 'BJP holds booth-level meeting in Bhowanipore ahead of polls',
+    summary: 'Party workers discuss election strategy and voter outreach programs for Bhowanipore assembly constituency.',
+    source: 'Anandabazar Patrika',
+    timestamp: new Date(Date.now() - 3600000),
+    sentiment: 'positive',
+    sentimentScore: 0.65,
+    credibilityScore: 88,
+    engagement: 1876,
+    topics: ['BJP', 'Booth Meeting', 'Bhowanipore', 'Strategy'],
+    mentions: ['BJP', 'Booth Workers', 'Bhowanipore'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'high',
+    verified: true,
+    constituency: 'Bhowanipore',
+    district: 'Kolkata'
+  },
+  // Beleghata - Kolkata
+  {
+    id: '3',
+    title: 'BJP promises metro extension to Beleghata in election manifesto',
+    summary: 'Party leaders announce infrastructure development plans including metro connectivity for Beleghata constituency residents.',
+    source: 'Ei Samay',
+    timestamp: new Date(Date.now() - 7200000),
+    sentiment: 'positive',
+    sentimentScore: 0.72,
+    credibilityScore: 84,
+    engagement: 1654,
+    topics: ['BJP', 'Metro', 'Beleghata', 'Infrastructure'],
+    mentions: ['BJP', 'Metro Extension', 'Beleghata', 'Development'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Beleghata',
+    district: 'Kolkata'
+  },
+  // Entally - Kolkata
+  {
+    id: '4',
+    title: 'BJP youth wing conducts rally in Entally constituency',
+    summary: 'BJYM organizes youth engagement program highlighting employment opportunities and skill development initiatives.',
+    source: 'The Telegraph',
+    timestamp: new Date(Date.now() - 10800000),
+    sentiment: 'positive',
+    sentimentScore: 0.58,
+    credibilityScore: 86,
+    engagement: 1432,
+    topics: ['BJYM', 'Youth Rally', 'Entally', 'Employment'],
+    mentions: ['BJP Youth', 'Entally', 'Skill Development'],
     region: 'West Bengal',
     language: 'English',
     url: '#',
     isBreaking: false,
-    priority: 'high',
-    verified: true
+    priority: 'medium',
+    verified: true,
+    constituency: 'Entally',
+    district: 'Kolkata'
   },
+  // Howrah Uttar - Howrah
   {
-    id: '3',
-    title: 'Infrastructure Development Projects Face Delays',
-    summary: 'Several key infrastructure projects across the state experiencing timeline extensions due to various challenges.',
-    source: 'Mathrubhumi',
-    timestamp: new Date(Date.now() - 7200000), // 2 hours ago
-    sentiment: 'negative',
-    sentimentScore: -0.58,
-    credibilityScore: 89,
-    engagement: 654,
-    topics: ['Infrastructure', 'Development', 'Government', 'Projects'],
-    mentions: ['PWD', 'Contractors', 'Local Bodies'],
+    id: '5',
+    title: 'BJP leaders address workers convention in Howrah Uttar',
+    summary: 'Senior BJP leaders motivate party cadre for upcoming elections, discuss development agenda for Howrah district.',
+    source: 'Zee 24 Ghanta',
+    timestamp: new Date(Date.now() - 14400000),
+    sentiment: 'positive',
+    sentimentScore: 0.68,
+    credibilityScore: 78,
+    engagement: 2087,
+    topics: ['BJP', 'Workers Convention', 'Howrah', 'Elections'],
+    mentions: ['BJP', 'Howrah Uttar', 'Party Workers'],
     region: 'West Bengal',
-    language: 'Tamil',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'high',
+    verified: true,
+    constituency: 'Howrah Uttar',
+    district: 'Howrah'
+  },
+  // Shibpur - Howrah
+  {
+    id: '6',
+    title: 'BJP candidate begins door-to-door campaign in Shibpur',
+    summary: 'BJP candidate meets voters in Shibpur constituency, promises to address local issues including water supply and road repair.',
+    source: 'Sangbad Pratidin',
+    timestamp: new Date(Date.now() - 18000000),
+    sentiment: 'positive',
+    sentimentScore: 0.55,
+    credibilityScore: 80,
+    engagement: 1234,
+    topics: ['BJP', 'Campaign', 'Shibpur', 'Local Issues'],
+    mentions: ['BJP Candidate', 'Shibpur', 'Door-to-door'],
+    region: 'West Bengal',
+    language: 'Bengali',
     url: '#',
     isBreaking: false,
     priority: 'medium',
-    verified: true
+    verified: true,
+    constituency: 'Shibpur',
+    district: 'Howrah'
+  },
+  // Barrackpore - North 24 Parganas
+  {
+    id: '7',
+    title: 'BJP holds massive rally in Barrackpore ahead of elections',
+    summary: 'Thousands gather at BJP rally in Barrackpore as party gears up for crucial North 24 Parganas constituencies.',
+    source: 'ABP Ananda',
+    timestamp: new Date(Date.now() - 21600000),
+    sentiment: 'positive',
+    sentimentScore: 0.75,
+    credibilityScore: 85,
+    engagement: 3245,
+    topics: ['BJP', 'Rally', 'Barrackpore', 'North 24 Parganas'],
+    mentions: ['BJP', 'Barrackpore', 'Mass Rally'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'high',
+    verified: true,
+    constituency: 'Barrackpore',
+    district: 'North 24 Parganas'
+  },
+  // Dum Dum - North 24 Parganas
+  {
+    id: '8',
+    title: 'BJP announces development plan for Dum Dum constituency',
+    summary: 'Party unveils comprehensive development blueprint including airport area connectivity and industrial growth.',
+    source: 'The Telegraph',
+    timestamp: new Date(Date.now() - 25200000),
+    sentiment: 'positive',
+    sentimentScore: 0.62,
+    credibilityScore: 86,
+    engagement: 1567,
+    topics: ['BJP', 'Development', 'Dum Dum', 'Infrastructure'],
+    mentions: ['BJP', 'Dum Dum', 'Airport', 'Development Plan'],
+    region: 'West Bengal',
+    language: 'English',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Dum Dum',
+    district: 'North 24 Parganas'
+  },
+  // Ballygunge - Kolkata
+  {
+    id: '9',
+    title: 'BJP focuses on urban development issues in Ballygunge',
+    summary: 'Party leaders address concerns of Ballygunge residents including traffic congestion, parking, and civic amenities.',
+    source: 'Anandabazar Patrika',
+    timestamp: new Date(Date.now() - 28800000),
+    sentiment: 'neutral',
+    sentimentScore: 0.35,
+    credibilityScore: 88,
+    engagement: 1876,
+    topics: ['BJP', 'Urban Development', 'Ballygunge', 'Civic Issues'],
+    mentions: ['BJP', 'Ballygunge', 'Traffic', 'Civic Amenities'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Ballygunge',
+    district: 'Kolkata'
+  },
+  // Jadavpur - Kolkata
+  {
+    id: '10',
+    title: 'BJP student wing active in Jadavpur university area',
+    summary: 'ABVP organizes awareness programs about BJP policies among students in Jadavpur constituency.',
+    source: 'Ei Samay',
+    timestamp: new Date(Date.now() - 32400000),
+    sentiment: 'neutral',
+    sentimentScore: 0.28,
+    credibilityScore: 84,
+    engagement: 987,
+    topics: ['ABVP', 'Students', 'Jadavpur', 'University'],
+    mentions: ['ABVP', 'Jadavpur University', 'Students', 'BJP'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'low',
+    verified: true,
+    constituency: 'Jadavpur',
+    district: 'Kolkata'
+  },
+  // Siliguri - Darjeeling
+  {
+    id: '11',
+    title: 'BJP promises special economic zone for Siliguri',
+    summary: 'Party leaders announce plans for SEZ in Siliguri to boost trade with Nepal, Bhutan and Bangladesh.',
+    source: 'Zee 24 Ghanta',
+    timestamp: new Date(Date.now() - 36000000),
+    sentiment: 'positive',
+    sentimentScore: 0.70,
+    credibilityScore: 78,
+    engagement: 2134,
+    topics: ['BJP', 'SEZ', 'Siliguri', 'Trade'],
+    mentions: ['BJP', 'Siliguri', 'Special Economic Zone', 'Border Trade'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'high',
+    verified: true,
+    constituency: 'Siliguri',
+    district: 'Darjeeling'
+  },
+  // Asansol Uttar - Paschim Bardhaman
+  {
+    id: '12',
+    title: 'BJP MP addresses coal belt issues in Asansol',
+    summary: 'BJP MP highlights employment concerns in coal mining sector, promises policy interventions for Asansol workers.',
+    source: 'Sangbad Pratidin',
+    timestamp: new Date(Date.now() - 39600000),
+    sentiment: 'positive',
+    sentimentScore: 0.52,
+    credibilityScore: 80,
+    engagement: 1654,
+    topics: ['BJP', 'Coal', 'Asansol', 'Employment'],
+    mentions: ['BJP MP', 'Asansol', 'Coal Workers', 'Employment'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Asansol Uttar',
+    district: 'Paschim Bardhaman'
+  },
+  // Diamond Harbour - South 24 Parganas
+  {
+    id: '13',
+    title: 'BJP expands presence in Diamond Harbour constituency',
+    summary: 'BJP leaders conduct massive membership drive in Diamond Harbour, targeting rural voters with development agenda.',
+    source: 'ABP Ananda',
+    timestamp: new Date(Date.now() - 43200000),
+    sentiment: 'positive',
+    sentimentScore: 0.62,
+    credibilityScore: 85,
+    engagement: 1876,
+    topics: ['BJP', 'Diamond Harbour', 'Membership', 'Elections'],
+    mentions: ['BJP', 'Diamond Harbour', 'South 24 Parganas'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Diamond Harbour',
+    district: 'South 24 Parganas'
+  },
+  // Berhampore - Murshidabad
+  {
+    id: '14',
+    title: 'BJP targets Murshidabad district for major electoral gains',
+    summary: 'Party leadership focuses on Berhampore and surrounding areas with promises of industrial development.',
+    source: 'Anandabazar Patrika',
+    timestamp: new Date(Date.now() - 46800000),
+    sentiment: 'positive',
+    sentimentScore: 0.58,
+    credibilityScore: 88,
+    engagement: 2134,
+    topics: ['BJP', 'Murshidabad', 'Elections', 'Development'],
+    mentions: ['BJP', 'Berhampore', 'Murshidabad', 'Industry'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'high',
+    verified: true,
+    constituency: 'Berhampore',
+    district: 'Murshidabad'
+  },
+  // Krishnanagar - Nadia
+  {
+    id: '15',
+    title: 'BJP holds farmers meet in Nadia district',
+    summary: 'Party organizes kisan sammelan in Krishnanagar, discusses agricultural reforms and MSP issues.',
+    source: 'Ei Samay',
+    timestamp: new Date(Date.now() - 50400000),
+    sentiment: 'positive',
+    sentimentScore: 0.65,
+    credibilityScore: 84,
+    engagement: 1567,
+    topics: ['BJP', 'Farmers', 'Nadia', 'Agriculture'],
+    mentions: ['BJP', 'Krishnanagar', 'Farmers', 'MSP'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Krishnanagar',
+    district: 'Nadia'
+  },
+  // Chinsurah - Hooghly
+  {
+    id: '16',
+    title: 'BJP launches election campaign in Hooghly district',
+    summary: 'Senior leaders address public meeting in Chinsurah, highlight infrastructure projects.',
+    source: 'Zee 24 Ghanta',
+    timestamp: new Date(Date.now() - 54000000),
+    sentiment: 'positive',
+    sentimentScore: 0.55,
+    credibilityScore: 78,
+    engagement: 1432,
+    topics: ['BJP', 'Hooghly', 'Campaign', 'Infrastructure'],
+    mentions: ['BJP', 'Chinsurah', 'Hooghly', 'Development'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Chinsurah',
+    district: 'Hooghly'
+  },
+  // Bardhaman Dakshin - Purba Bardhaman
+  {
+    id: '17',
+    title: 'BJP promises industrial revival in Bardhaman',
+    summary: 'Party leaders announce plans for reviving closed industries and creating employment in Purba Bardhaman.',
+    source: 'The Telegraph',
+    timestamp: new Date(Date.now() - 57600000),
+    sentiment: 'positive',
+    sentimentScore: 0.60,
+    credibilityScore: 86,
+    engagement: 1654,
+    topics: ['BJP', 'Industry', 'Bardhaman', 'Employment'],
+    mentions: ['BJP', 'Bardhaman', 'Industry Revival', 'Jobs'],
+    region: 'West Bengal',
+    language: 'English',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Bardhaman Dakshin',
+    district: 'Purba Bardhaman'
+  },
+  // Tamluk - Purba Medinipur
+  {
+    id: '18',
+    title: 'BJP strengthens organization in Purba Medinipur',
+    summary: 'Party conducts organizational meetings across Tamluk constituency ahead of elections.',
+    source: 'Sangbad Pratidin',
+    timestamp: new Date(Date.now() - 61200000),
+    sentiment: 'neutral',
+    sentimentScore: 0.35,
+    credibilityScore: 80,
+    engagement: 987,
+    topics: ['BJP', 'Organization', 'Tamluk', 'Elections'],
+    mentions: ['BJP', 'Tamluk', 'Purba Medinipur'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'low',
+    verified: true,
+    constituency: 'Tamluk',
+    district: 'Purba Medinipur'
+  },
+  // Kharagpur - Paschim Medinipur
+  {
+    id: '19',
+    title: 'BJP focuses on Kharagpur industrial corridor development',
+    summary: 'Party announces plans for industrial growth along Kharagpur-Haldia corridor in election manifesto.',
+    source: 'ABP Ananda',
+    timestamp: new Date(Date.now() - 64800000),
+    sentiment: 'positive',
+    sentimentScore: 0.68,
+    credibilityScore: 85,
+    engagement: 1876,
+    topics: ['BJP', 'Kharagpur', 'Industry', 'Development'],
+    mentions: ['BJP', 'Kharagpur', 'Industrial Corridor', 'Haldia'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Kharagpur',
+    district: 'Paschim Medinipur'
+  },
+  // Bankura - Bankura
+  {
+    id: '20',
+    title: 'BJP addresses tribal welfare in Bankura district',
+    summary: 'Party leaders meet tribal communities, discuss welfare schemes and forest rights.',
+    source: 'Ei Samay',
+    timestamp: new Date(Date.now() - 68400000),
+    sentiment: 'positive',
+    sentimentScore: 0.58,
+    credibilityScore: 84,
+    engagement: 1234,
+    topics: ['BJP', 'Tribal', 'Bankura', 'Welfare'],
+    mentions: ['BJP', 'Bankura', 'Tribal Welfare', 'Forest Rights'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Bankura',
+    district: 'Bankura'
+  },
+  // Purulia - Purulia
+  {
+    id: '21',
+    title: 'BJP promises irrigation projects for drought-prone Purulia',
+    summary: 'Party announces water conservation and irrigation schemes for farmers in Purulia district.',
+    source: 'Anandabazar Patrika',
+    timestamp: new Date(Date.now() - 72000000),
+    sentiment: 'positive',
+    sentimentScore: 0.72,
+    credibilityScore: 88,
+    engagement: 1543,
+    topics: ['BJP', 'Irrigation', 'Purulia', 'Farmers'],
+    mentions: ['BJP', 'Purulia', 'Water', 'Irrigation'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Purulia',
+    district: 'Purulia'
+  },
+  // Suri - Birbhum
+  {
+    id: '22',
+    title: 'BJP highlights law and order issues in Birbhum',
+    summary: 'Party leaders demand action on violence cases, promise peaceful governance in Birbhum district.',
+    source: 'Zee 24 Ghanta',
+    timestamp: new Date(Date.now() - 75600000),
+    sentiment: 'negative',
+    sentimentScore: -0.45,
+    credibilityScore: 78,
+    engagement: 2345,
+    topics: ['BJP', 'Law Order', 'Birbhum', 'Violence'],
+    mentions: ['BJP', 'Suri', 'Birbhum', 'Law and Order'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'high',
+    verified: true,
+    constituency: 'Suri',
+    district: 'Birbhum'
+  },
+  // Malda - Malda
+  {
+    id: '23',
+    title: 'BJP expands base in Malda with youth outreach',
+    summary: 'Party organizes youth convention in Malda, focuses on employment and education.',
+    source: 'The Telegraph',
+    timestamp: new Date(Date.now() - 79200000),
+    sentiment: 'positive',
+    sentimentScore: 0.55,
+    credibilityScore: 86,
+    engagement: 1678,
+    topics: ['BJP', 'Youth', 'Malda', 'Employment'],
+    mentions: ['BJP', 'Malda', 'Youth Convention', 'Education'],
+    region: 'West Bengal',
+    language: 'English',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Malda',
+    district: 'Malda'
+  },
+  // Jalpaiguri - Jalpaiguri
+  {
+    id: '24',
+    title: 'BJP addresses tea garden workers issues in Jalpaiguri',
+    summary: 'Party leaders meet tea workers, promise better wages and working conditions.',
+    source: 'ABP Ananda',
+    timestamp: new Date(Date.now() - 82800000),
+    sentiment: 'positive',
+    sentimentScore: 0.62,
+    credibilityScore: 85,
+    engagement: 1987,
+    topics: ['BJP', 'Tea Gardens', 'Jalpaiguri', 'Workers'],
+    mentions: ['BJP', 'Jalpaiguri', 'Tea Workers', 'Wages'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'medium',
+    verified: true,
+    constituency: 'Jalpaiguri',
+    district: 'Jalpaiguri'
+  },
+  // Cooch Behar - Cooch Behar
+  {
+    id: '25',
+    title: 'BJP raises border security concerns in Cooch Behar',
+    summary: 'Party demands enhanced border security and development of enclave areas in Cooch Behar.',
+    source: 'Sangbad Pratidin',
+    timestamp: new Date(Date.now() - 86400000),
+    sentiment: 'neutral',
+    sentimentScore: 0.28,
+    credibilityScore: 80,
+    engagement: 1456,
+    topics: ['BJP', 'Border', 'Cooch Behar', 'Security'],
+    mentions: ['BJP', 'Cooch Behar', 'Border Security', 'Enclave'],
+    region: 'West Bengal',
+    language: 'Bengali',
+    url: '#',
+    isBreaking: false,
+    priority: 'high',
+    verified: true,
+    constituency: 'Cooch Behar',
+    district: 'Cooch Behar'
   }
 ];
 
@@ -306,11 +881,18 @@ export default function PressMediaMonitoring() {
     [dbArticles]
   );
 
-  // Fallback to mock data if no real articles available (memoized to prevent infinite re-renders)
-  const articlesSource = useMemo(() =>
-    realArticles.length > 0 ? realArticles : mockArticles,
-    [realArticles]
-  );
+  // Use real articles from database, with fallback to mock if empty
+  const articlesSource = useMemo(() => {
+    // Prefer real articles from database
+    if (realArticles && realArticles.length > 0) {
+      return realArticles;
+    }
+    // Fallback to mock articles if no real data available
+    return mockArticles;
+  }, [realArticles]);
+
+  // Constituency filter state (must be declared before useMemo hooks that use it)
+  const [selectedConstituency, setSelectedConstituency] = useState('all');
 
   // BJP Work Categories with sentiment tracking
   const BJP_WORK_CATEGORIES = [
@@ -322,12 +904,24 @@ export default function PressMediaMonitoring() {
     { name: 'Development Work', keywords: ['development', 'scheme', 'project', 'infrastructure', 'welfare'] }
   ];
 
-  // Calculate BJP work categories with sentiment from real articles
+  // Calculate BJP work categories with sentiment from constituency-filtered articles
   const trendingTopics: TrendingTopic[] = useMemo(() => {
-    // Analyze all articles for BJP work categories
+    // First apply constituency filter to get relevant articles
+    let relevantArticles = articlesSource;
+    if (selectedConstituency && selectedConstituency !== 'all') {
+      const selectedConst = CONSTITUENCIES.find(c => c.id === selectedConstituency);
+      if (selectedConst) {
+        relevantArticles = articlesSource.filter(article =>
+          article.constituency === selectedConst.name ||
+          article.district === selectedConst.district
+        );
+      }
+    }
+
+    // Analyze filtered articles for BJP work categories
     const categoryStats = BJP_WORK_CATEGORIES.map((category, index) => {
       // Find articles matching this category
-      const matchingArticles = articlesSource.filter(article => {
+      const matchingArticles = relevantArticles.filter(article => {
         const text = (article.title + ' ' + (article.summary || '')).toLowerCase();
         return category.keywords.some(kw => text.includes(kw.toLowerCase()));
       });
@@ -362,15 +956,27 @@ export default function PressMediaMonitoring() {
     return categoryStats
       .filter(cat => cat.mentions > 0 || true) // Show all categories even with 0
       .sort((a, b) => b.mentions - a.mentions);
-  }, [articlesSource]);
+  }, [articlesSource, selectedConstituency]);
 
-  // Calculate language distribution from real articles
+  // Calculate language distribution from constituency-filtered articles
   const languageDistribution = useMemo(() => {
-    if (articlesSource.length === 0) {
+    // First apply constituency filter
+    let relevantArticles = articlesSource;
+    if (selectedConstituency && selectedConstituency !== 'all') {
+      const selectedConst = CONSTITUENCIES.find(c => c.id === selectedConstituency);
+      if (selectedConst) {
+        relevantArticles = articlesSource.filter(article =>
+          article.constituency === selectedConst.name ||
+          article.district === selectedConst.district
+        );
+      }
+    }
+
+    if (relevantArticles.length === 0) {
       return { bengali: 0, english: 0, hindi: 0, other: 0 };
     }
 
-    const counts = articlesSource.reduce((acc, article) => {
+    const counts = relevantArticles.reduce((acc, article) => {
       const lang = article.language?.toLowerCase() || 'other';
       if (lang.includes('bengali') || lang.includes('bangla') || lang === 'bn') acc.bengali++;
       else if (lang.includes('english') || lang === 'en') acc.english++;
@@ -379,19 +985,31 @@ export default function PressMediaMonitoring() {
       return acc;
     }, { bengali: 0, english: 0, hindi: 0, other: 0 });
 
-    const total = articlesSource.length;
+    const total = relevantArticles.length;
     return {
       bengali: Math.round((counts.bengali / total) * 100),
       english: Math.round((counts.english / total) * 100),
       hindi: Math.round((counts.hindi / total) * 100),
       other: Math.round((counts.other / total) * 100)
     };
-  }, [articlesSource]);
+  }, [articlesSource, selectedConstituency]);
 
-  // Calculate BJP sentiment per source from real articles
+  // Calculate BJP sentiment per source from constituency-filtered articles
   const sourcePerformance = useMemo(() => {
-    // Filter only BJP-related articles
-    const bjpArticles = articlesSource.filter(a => isBJPArticle(a));
+    // First apply constituency filter
+    let relevantArticles = articlesSource;
+    if (selectedConstituency && selectedConstituency !== 'all') {
+      const selectedConst = CONSTITUENCIES.find(c => c.id === selectedConstituency);
+      if (selectedConst) {
+        relevantArticles = articlesSource.filter(article =>
+          article.constituency === selectedConst.name ||
+          article.district === selectedConst.district
+        );
+      }
+    }
+
+    // Filter only BJP-related articles from constituency-filtered set
+    const bjpArticles = relevantArticles.filter(a => isBJPArticle(a));
 
     const sourceStats = bjpArticles.reduce((acc, article) => {
       const source = article.source;
@@ -420,7 +1038,7 @@ export default function PressMediaMonitoring() {
         articleCount: stats.count
       };
     }).sort((a, b) => b.bjpArticleCount - a.bjpArticleCount);
-  }, [articlesSource]);
+  }, [articlesSource, selectedConstituency]);
 
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedTimeframe, setSelectedTimeframe] = useState('24h');
@@ -466,17 +1084,28 @@ export default function PressMediaMonitoring() {
       filtered = filtered.filter(article => article.language === selectedLanguage);
     }
 
+    // Filter by constituency (only if specific constituency selected)
+    if (selectedConstituency && selectedConstituency !== 'all') {
+      const selectedConst = CONSTITUENCIES.find(c => c.id === selectedConstituency);
+      if (selectedConst) {
+        filtered = filtered.filter(article =>
+          article.constituency === selectedConst.name ||
+          article.district === selectedConst.district
+        );
+      }
+    }
+
     setFilteredArticles(filtered);
 
-    // Update analytics based on real data
-    if (articlesSource.length > 0) {
-      // Filter BJP-related articles
-      const bjpArticles = articlesSource.filter(a => isBJPArticle(a));
+    // Update analytics based on constituency-filtered data
+    if (filtered.length > 0) {
+      // Filter BJP-related articles from filtered (constituency-specific) articles
+      const bjpArticles = filtered.filter(a => isBJPArticle(a));
 
-      // All articles sentiment
-      const positive = articlesSource.filter(a => a.sentiment === 'positive').length;
-      const negative = articlesSource.filter(a => a.sentiment === 'negative').length;
-      const neutral = articlesSource.filter(a => a.sentiment === 'neutral').length;
+      // All filtered articles sentiment
+      const positive = filtered.filter(a => a.sentiment === 'positive').length;
+      const negative = filtered.filter(a => a.sentiment === 'negative').length;
+      const neutral = filtered.filter(a => a.sentiment === 'neutral').length;
 
       // BJP articles sentiment
       const bjpPositive = bjpArticles.filter(a => a.sentiment === 'positive').length;
@@ -484,17 +1113,17 @@ export default function PressMediaMonitoring() {
       const bjpNeutral = bjpArticles.filter(a => a.sentiment === 'neutral').length;
 
       const breaking = bjpArticles.filter(a => a.isBreaking).length;
-      const avgCred = articlesSource.reduce((sum, a) => sum + a.credibilityScore, 0) / articlesSource.length;
+      const avgCred = filtered.reduce((sum, a) => sum + a.credibilityScore, 0) / filtered.length;
 
-      // Count total BJP mentions across all articles
+      // Count total BJP mentions across filtered articles
       const bjpMentionCount = bjpArticles.length;
 
       setAnalytics({
-        totalArticles: articlesSource.length,
+        totalArticles: filtered.length,
         bjpArticles: bjpArticles.length,
-        positivesentiment: articlesSource.length > 0 ? Math.round((positive / articlesSource.length) * 100) : 0,
-        negativeSentiment: articlesSource.length > 0 ? Math.round((negative / articlesSource.length) * 100) : 0,
-        neutralSentiment: articlesSource.length > 0 ? Math.round((neutral / articlesSource.length) * 100) : 0,
+        positivesentiment: filtered.length > 0 ? Math.round((positive / filtered.length) * 100) : 0,
+        negativeSentiment: filtered.length > 0 ? Math.round((negative / filtered.length) * 100) : 0,
+        neutralSentiment: filtered.length > 0 ? Math.round((neutral / filtered.length) * 100) : 0,
         bjpPositive: bjpArticles.length > 0 ? Math.round((bjpPositive / bjpArticles.length) * 100) : 0,
         bjpNegative: bjpArticles.length > 0 ? Math.round((bjpNegative / bjpArticles.length) * 100) : 0,
         bjpNeutral: bjpArticles.length > 0 ? Math.round((bjpNeutral / bjpArticles.length) * 100) : 0,
@@ -503,8 +1132,24 @@ export default function PressMediaMonitoring() {
         avgCredibility: Math.round(avgCred),
         bjpMentions: bjpMentionCount
       });
+    } else {
+      // Reset analytics when no articles match the filter
+      setAnalytics({
+        totalArticles: 0,
+        bjpArticles: 0,
+        positivesentiment: 0,
+        negativeSentiment: 0,
+        neutralSentiment: 0,
+        bjpPositive: 0,
+        bjpNegative: 0,
+        bjpNeutral: 0,
+        breakingNews: 0,
+        verifiedSources: newsSources.filter(s => s.active).length,
+        avgCredibility: 0,
+        bjpMentions: 0
+      });
     }
-  }, [searchQuery, selectedRegion, selectedLanguage, articlesSource]);
+  }, [searchQuery, selectedRegion, selectedLanguage, selectedConstituency, articlesSource]);
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -577,6 +1222,21 @@ export default function PressMediaMonitoring() {
               {isMonitoring ? <Pause className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />}
               {isMonitoring ? 'Pause' : 'Resume'}
             </MobileButton>
+
+            {/* Constituency Dropdown */}
+            <div className="relative">
+              <select
+                className="flex items-center gap-2 bg-orange-100 hover:bg-orange-200 px-3 py-1.5 rounded-full text-sm font-semibold transition-colors cursor-pointer appearance-none pr-8 border border-orange-200 text-orange-800"
+                value={selectedConstituency}
+                onChange={(e) => setSelectedConstituency(e.target.value)}
+              >
+                <option value="all">All Constituencies</option>
+                {CONSTITUENCIES.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} - {c.district}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="text-orange-600 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
         </div>
 
@@ -991,7 +1651,13 @@ export default function PressMediaMonitoring() {
                         <span className="text-xs text-gray-500">{article.source}</span>
                         <Clock className="w-3 h-3 text-gray-400" />
                         <span className="text-xs text-gray-500">
-                          {new Date(article.timestamp).toLocaleTimeString()}
+                          {new Date(article.timestamp).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </span>
                         {article.verified && (
                           <CheckCircle className="w-3 h-3 text-green-500" />
