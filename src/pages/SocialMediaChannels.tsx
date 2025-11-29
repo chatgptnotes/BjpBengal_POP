@@ -48,10 +48,13 @@ import {
   getTwitterConfig,
   getRemainingAPICalls,
   isAPILimitReached,
+  getDailyQuotaInfo,
+  isDailyQuotaReached,
   BJP_BENGAL_CONFIG,
   type Tweet,
   type BJPBengalFeed
 } from '../services/twitterScraper';
+import TweetCommentsModal from '../components/TweetCommentsModal';
 
 interface SocialPlatform {
   id: string;
@@ -371,8 +374,23 @@ export default function SocialMediaChannels() {
     remainingCalls: 1500,
     limitReached: false,
     fromCache: false,
-    lastFetch: null as Date | null
+    lastFetch: null as Date | null,
+    dailyQuota: { used: 0, limit: 50, remaining: 50, date: '' }
   });
+
+  // Tweet comments modal state
+  const [selectedTweetForComments, setSelectedTweetForComments] = useState<Tweet | null>(null);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+
+  const handleOpenComments = (tweet: Tweet) => {
+    setSelectedTweetForComments(tweet);
+    setShowCommentsModal(true);
+  };
+
+  const handleCloseComments = () => {
+    setShowCommentsModal(false);
+    setSelectedTweetForComments(null);
+  };
 
   // Fetch real posts from Supabase
   useEffect(() => {
@@ -388,11 +406,13 @@ export default function SocialMediaChannels() {
       const unsubscribe = subscribeToUpdates((data) => {
         if (data.data) {
           setBjpBengalTweets(data.data);
+          const quotaInfo = getDailyQuotaInfo();
           setTwitterApiStatus({
             remainingCalls: getRemainingAPICalls(),
             limitReached: isAPILimitReached(),
             fromCache: data.fromCache || false,
-            lastFetch: new Date()
+            lastFetch: new Date(),
+            dailyQuota: quotaInfo
           });
         }
         if (data.error) {
@@ -414,18 +434,22 @@ export default function SocialMediaChannels() {
     setBjpBengalLoading(true);
     setBjpBengalError(null);
     try {
-      const data = await fetchBJPBengalFeed(20);
+      // Fetch 50 tweets (daily quota)
+      const data = await fetchBJPBengalFeed(50);
       if (data.data) {
         setBjpBengalTweets(data.data);
       }
       if (data.error) {
         setBjpBengalError(data.error);
       }
+      // Update status with daily quota info
+      const quotaInfo = getDailyQuotaInfo();
       setTwitterApiStatus({
         remainingCalls: getRemainingAPICalls(),
         limitReached: isAPILimitReached(),
         fromCache: data.fromCache || false,
-        lastFetch: new Date()
+        lastFetch: new Date(),
+        dailyQuota: quotaInfo
       });
     } catch (error: any) {
       setBjpBengalError(error.message || 'Failed to fetch BJP Bengal tweets');
@@ -765,22 +789,41 @@ export default function SocialMediaChannels() {
         {/* BJP Bengal Tab */}
         {activeTab === 'bjp-bengal' && (
           <div className="space-responsive">
-            {/* API Status Bar */}
-            <MobileCard padding="compact" className={`${twitterApiStatus.limitReached ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+            {/* API Status Bar with Daily Quota */}
+            <MobileCard padding="compact" className={`${twitterApiStatus.dailyQuota.remaining <= 0 ? 'bg-red-50 border-red-200' : twitterApiStatus.limitReached ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center space-x-3">
-                  <div className={`w-3 h-3 rounded-full ${twitterApiStatus.limitReached ? 'bg-yellow-500' : 'bg-green-500 animate-pulse'}`} />
+                  <div className={`w-3 h-3 rounded-full ${twitterApiStatus.dailyQuota.remaining <= 0 ? 'bg-red-500' : twitterApiStatus.limitReached ? 'bg-yellow-500' : 'bg-green-500 animate-pulse'}`} />
                   <span className="text-responsive-sm font-medium">
-                    {twitterApiStatus.limitReached ? 'API Limit Reached - Using Cached Data' : 'Twitter API Connected'}
+                    {twitterApiStatus.dailyQuota.remaining <= 0
+                      ? 'Daily Quota Reached (50/day) - Showing Cached Data'
+                      : twitterApiStatus.limitReached
+                        ? 'API Limit Reached - Using Cached Data'
+                        : 'Twitter API Connected'}
                   </span>
                 </div>
                 <div className="flex items-center space-x-4 text-xs text-gray-600">
-                  <span>API Calls: {twitterApiStatus.remainingCalls}/1500</span>
+                  {/* Daily Quota Indicator */}
+                  <div className={`flex items-center space-x-1 px-2 py-1 rounded ${
+                    twitterApiStatus.dailyQuota.remaining <= 0
+                      ? 'bg-red-100 text-red-700'
+                      : twitterApiStatus.dailyQuota.remaining <= 10
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-green-100 text-green-700'
+                  }`}>
+                    <span className="font-medium">Today: {twitterApiStatus.dailyQuota.used}/{twitterApiStatus.dailyQuota.limit}</span>
+                  </div>
+                  <span>Monthly: {twitterApiStatus.remainingCalls}/1500</span>
                   {twitterApiStatus.fromCache && <span className="text-blue-600">From Cache</span>}
                   {twitterApiStatus.lastFetch && (
                     <span>Last: {twitterApiStatus.lastFetch.toLocaleTimeString()}</span>
                   )}
-                  <MobileButton variant="outline" size="small" onClick={fetchBJPBengalData}>
+                  <MobileButton
+                    variant="outline"
+                    size="small"
+                    onClick={fetchBJPBengalData}
+                    disabled={twitterApiStatus.dailyQuota.remaining <= 0}
+                  >
                     <RefreshCw className={`w-4 h-4 ${bjpBengalLoading ? 'animate-spin' : ''}`} />
                   </MobileButton>
                 </div>
@@ -898,10 +941,14 @@ export default function SocialMediaChannels() {
 
                         {/* Engagement Metrics */}
                         <div className="flex items-center space-x-6 text-gray-500">
-                          <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => handleOpenComments(tweet)}
+                            className="flex items-center space-x-1 hover:text-blue-600 transition-colors cursor-pointer"
+                            title="View comments"
+                          >
                             <MessageCircle className="w-4 h-4" />
                             <span className="text-xs">{tweet.public_metrics?.reply_count || 0}</span>
-                          </div>
+                          </button>
                           <div className="flex items-center space-x-1">
                             <Share2 className="w-4 h-4" />
                             <span className="text-xs">{tweet.public_metrics?.retweet_count || 0}</span>
@@ -1407,6 +1454,13 @@ export default function SocialMediaChannels() {
           </div>
         )}
       </div>
+
+      {/* Tweet Comments Modal */}
+      <TweetCommentsModal
+        isOpen={showCommentsModal}
+        onClose={handleCloseComments}
+        tweet={selectedTweetForComments}
+      />
     </div>
   );
 }

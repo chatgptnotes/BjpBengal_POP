@@ -3,7 +3,7 @@
  * Fetches tweets, hashtags, and mentions related to BJP West Bengal
  */
 
-import { supabase } from '../lib/supabase';
+import { supabaseService } from '../lib/supabaseService';
 
 // Configuration
 const TWITTER_PROXY_URL = import.meta.env.VITE_TWITTER_PROXY_URL || '';
@@ -56,6 +56,8 @@ export interface Tweet {
   created_at: string;
   author_id: string;
   lang?: string;
+  conversation_id?: string;
+  in_reply_to_user_id?: string;
   public_metrics?: {
     retweet_count: number;
     reply_count: number;
@@ -69,6 +71,21 @@ export interface Tweet {
     urls?: Array<{ url: string; expanded_url: string }>;
   };
   author?: TwitterUser;
+}
+
+export interface TweetRepliesResponse {
+  success?: boolean;
+  data?: Tweet[];
+  includes?: {
+    users?: TwitterUser[];
+  };
+  meta?: {
+    result_count: number;
+  };
+  tweetId?: string;
+  error?: string;
+  rateLimited?: boolean;
+  fromCache?: boolean;
 }
 
 export interface TwitterResponse {
@@ -94,11 +111,79 @@ export interface BJPBengalFeed extends TwitterResponse {
   fetchedAt?: string;
 }
 
-// API Usage tracking
+// API Usage tracking (Monthly)
 interface APIUsage {
   count: number;
   resetDate: string;
   lastFetch: string;
+}
+
+// Daily Tweet Quota tracking
+const DAILY_QUOTA_KEY = 'twitter_daily_quota';
+const DAILY_TWEET_LIMIT = 50;
+
+interface DailyQuota {
+  date: string; // YYYY-MM-DD format
+  tweetsFetched: number;
+  lastFetchTime: string;
+}
+
+function getTodayDateString(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+export function getDailyQuota(): DailyQuota {
+  const stored = localStorage.getItem(DAILY_QUOTA_KEY);
+  const today = getTodayDateString();
+
+  if (stored) {
+    const quota = JSON.parse(stored);
+    // Reset if it's a new day
+    if (quota.date !== today) {
+      const newQuota: DailyQuota = {
+        date: today,
+        tweetsFetched: 0,
+        lastFetchTime: ''
+      };
+      localStorage.setItem(DAILY_QUOTA_KEY, JSON.stringify(newQuota));
+      return newQuota;
+    }
+    return quota;
+  }
+
+  const newQuota: DailyQuota = {
+    date: today,
+    tweetsFetched: 0,
+    lastFetchTime: ''
+  };
+  localStorage.setItem(DAILY_QUOTA_KEY, JSON.stringify(newQuota));
+  return newQuota;
+}
+
+export function updateDailyQuota(tweetsCount: number): void {
+  const quota = getDailyQuota();
+  quota.tweetsFetched += tweetsCount;
+  quota.lastFetchTime = new Date().toISOString();
+  localStorage.setItem(DAILY_QUOTA_KEY, JSON.stringify(quota));
+}
+
+export function getRemainingDailyQuota(): number {
+  const quota = getDailyQuota();
+  return Math.max(0, DAILY_TWEET_LIMIT - quota.tweetsFetched);
+}
+
+export function isDailyQuotaReached(): boolean {
+  return getRemainingDailyQuota() <= 0;
+}
+
+export function getDailyQuotaInfo(): { used: number; limit: number; remaining: number; date: string } {
+  const quota = getDailyQuota();
+  return {
+    used: quota.tweetsFetched,
+    limit: DAILY_TWEET_LIMIT,
+    remaining: Math.max(0, DAILY_TWEET_LIMIT - quota.tweetsFetched),
+    date: quota.date
+  };
 }
 
 function getAPIUsage(): APIUsage {
@@ -241,8 +326,9 @@ function generateMockTweets(): Tweet[] {
 
 /**
  * Fetch BJP Bengal combined feed (tweets, hashtags, mentions)
+ * Default: 50 tweets per day quota
  */
-export async function fetchBJPBengalFeed(maxResults: number = 20): Promise<BJPBengalFeed> {
+export async function fetchBJPBengalFeed(maxResults: number = 50): Promise<BJPBengalFeed> {
   // Check cache first
   const cached = getFromCache();
   if (cached) {
@@ -250,49 +336,73 @@ export async function fetchBJPBengalFeed(maxResults: number = 20): Promise<BJPBe
     return cached;
   }
 
-  // If no proxy configured, use mock data (demo mode)
+  // If no proxy configured, return empty (no mock data)
   if (USE_MOCK_DATA) {
-    console.log('[TwitterScraper] Proxy not configured, using demo data');
-    const mockData: BJPBengalFeed = {
-      data: generateMockTweets(),
-      meta: { result_count: 3 },
+    console.log('[TwitterScraper] Proxy not configured, returning empty data');
+    return {
+      data: [],
+      meta: { result_count: 0 },
       fromCache: false,
       fetchedAt: new Date().toISOString(),
       hashtags: BJP_BENGAL_CONFIG.hashtags,
       keywords: BJP_BENGAL_CONFIG.keywords,
-      accounts: BJP_BENGAL_CONFIG.accounts
+      accounts: BJP_BENGAL_CONFIG.accounts,
+      error: 'Twitter proxy not configured. Please configure VITE_TWITTER_PROXY_URL.'
     };
-    setToCache(mockData);
-    return mockData;
   }
 
-  // Check API limit
-  if (isAPILimitReached()) {
-    console.warn('[TwitterScraper] API limit reached, returning mock data');
+  // Check daily quota limit (50 tweets/day)
+  if (isDailyQuotaReached()) {
+    console.warn('[TwitterScraper] Daily quota reached (50 tweets/day), returning cached data');
+    const staleCache = localStorage.getItem(CACHE_KEY);
+    if (staleCache) {
+      return { ...JSON.parse(staleCache), fromCache: true, quotaReached: true };
+    }
     return {
-      data: generateMockTweets(),
-      meta: { result_count: 3 },
+      data: [],
+      meta: { result_count: 0 },
       fromCache: false,
       rateLimited: true,
-      fetchedAt: new Date().toISOString()
+      fetchedAt: new Date().toISOString(),
+      error: 'Daily quota of 50 tweets reached. Data will reset tomorrow.'
     };
   }
 
+  // Check monthly API limit
+  if (isAPILimitReached()) {
+    console.warn('[TwitterScraper] Monthly API limit reached, returning empty data');
+    return {
+      data: [],
+      meta: { result_count: 0 },
+      fromCache: false,
+      rateLimited: true,
+      fetchedAt: new Date().toISOString(),
+      error: 'Monthly API limit of 1500 calls reached.'
+    };
+  }
+
+  // Calculate how many tweets we can still fetch today
+  const remainingQuota = getRemainingDailyQuota();
+  const tweetsToFetch = Math.min(maxResults, remainingQuota);
+
+  console.log(`[TwitterScraper] Daily quota: ${remainingQuota} remaining, fetching ${tweetsToFetch} tweets`);
+
   try {
-    const response = await fetch(`${TWITTER_PROXY_URL}/api/twitter/bjp-bengal?max_results=${maxResults}`);
+    const response = await fetch(`${TWITTER_PROXY_URL}/api/twitter/bjp-bengal?max_results=${tweetsToFetch}`);
     const data: BJPBengalFeed = await response.json();
 
     // Check if API returned error (rate limited or other error)
     if (!data.success && data.rateLimited) {
-      console.warn('[TwitterScraper] API rate limited, using mock data');
+      console.warn('[TwitterScraper] API rate limited, returning empty data');
       return {
-        data: generateMockTweets(),
-        meta: { result_count: 3 },
+        data: [],
+        meta: { result_count: 0 },
         fromCache: false,
         rateLimited: true,
         fetchedAt: new Date().toISOString(),
         hashtags: BJP_BENGAL_CONFIG.hashtags,
-        keywords: BJP_BENGAL_CONFIG.keywords
+        keywords: BJP_BENGAL_CONFIG.keywords,
+        error: 'Twitter API rate limited. Please try again later.'
       };
     }
 
@@ -301,6 +411,11 @@ export async function fetchBJPBengalFeed(maxResults: number = 20): Promise<BJPBe
     }
 
     incrementAPIUsage();
+
+    // Update daily quota with fetched tweets count
+    const fetchedCount = data.data?.length || 0;
+    updateDailyQuota(fetchedCount);
+    console.log(`[TwitterScraper] Updated daily quota: fetched ${fetchedCount} tweets`);
 
     // Enrich with author data
     if (data.data && data.includes?.users) {
@@ -315,6 +430,7 @@ export async function fetchBJPBengalFeed(maxResults: number = 20): Promise<BJPBe
 
     // Save to database
     await saveTweetsToDatabase(data.data || []);
+    console.log(`[TwitterScraper] Saved ${fetchedCount} tweets to database`);
 
     return data;
   } catch (error: any) {
@@ -326,13 +442,14 @@ export async function fetchBJPBengalFeed(maxResults: number = 20): Promise<BJPBe
       return { ...JSON.parse(staleCache), fromCache: true, error: error.message };
     }
 
-    // Return mock data as last resort (no error shown to user)
-    console.log('[TwitterScraper] Falling back to demo data');
+    // Return empty data with error (NO mock data)
+    console.log('[TwitterScraper] No data available, returning empty');
     return {
-      data: generateMockTweets(),
-      meta: { result_count: 3 },
+      data: [],
+      meta: { result_count: 0 },
       fromCache: false,
-      fetchedAt: new Date().toISOString()
+      fetchedAt: new Date().toISOString(),
+      error: error.message || 'Failed to fetch tweets. Please try again.'
     };
   }
 }
@@ -342,7 +459,7 @@ export async function fetchBJPBengalFeed(maxResults: number = 20): Promise<BJPBe
  */
 export async function fetchBJPBengalTweets(maxResults: number = 10): Promise<TwitterResponse> {
   if (isAPILimitReached()) {
-    return { data: generateMockTweets().slice(0, 1), rateLimited: true };
+    return { data: [], rateLimited: true, error: 'API limit reached' };
   }
 
   try {
@@ -362,7 +479,7 @@ export async function fetchBJPBengalTweets(maxResults: number = 10): Promise<Twi
  */
 export async function searchHashtag(hashtag: string, maxResults: number = 10): Promise<TwitterResponse> {
   if (isAPILimitReached()) {
-    return { data: generateMockTweets().slice(0, 1), rateLimited: true };
+    return { data: [], rateLimited: true, error: 'API limit reached' };
   }
 
   try {
@@ -382,7 +499,7 @@ export async function searchHashtag(hashtag: string, maxResults: number = 10): P
  */
 export async function fetchMentions(maxResults: number = 10): Promise<TwitterResponse> {
   if (isAPILimitReached()) {
-    return { data: generateMockTweets().slice(0, 1), rateLimited: true };
+    return { data: [], rateLimited: true, error: 'API limit reached' };
   }
 
   try {
@@ -402,7 +519,7 @@ export async function fetchMentions(maxResults: number = 10): Promise<TwitterRes
  */
 export async function searchTweets(query: string, maxResults: number = 10): Promise<TwitterResponse> {
   if (isAPILimitReached()) {
-    return { data: generateMockTweets().slice(0, 1), rateLimited: true };
+    return { data: [], rateLimited: true, error: 'API limit reached' };
   }
 
   try {
@@ -419,39 +536,70 @@ export async function searchTweets(query: string, maxResults: number = 10): Prom
 
 // Save tweets to Supabase database
 async function saveTweetsToDatabase(tweets: Tweet[]): Promise<void> {
-  if (!tweets || tweets.length === 0) return;
+  if (!tweets || tweets.length === 0) {
+    console.log('[TwitterScraper] No tweets to save');
+    return;
+  }
+
+  // Skip mock tweets (they have 'mock_' prefix in ID)
+  const realTweets = tweets.filter(t => !t.id.startsWith('mock_'));
+  if (realTweets.length === 0) {
+    console.log('[TwitterScraper] Only mock tweets found, skipping database save');
+    return;
+  }
+
+  console.log(`[TwitterScraper] Attempting to save ${realTweets.length} real tweets to database`);
 
   try {
-    const postsToInsert = tweets.map(tweet => ({
-      platform: 'twitter',
-      post_id: tweet.id,
-      post_content: tweet.text,
-      post_url: `https://twitter.com/i/status/${tweet.id}`,
-      posted_at: tweet.created_at,
-      likes: tweet.public_metrics?.like_count || 0,
-      shares: tweet.public_metrics?.retweet_count || 0,
-      comments_count: tweet.public_metrics?.reply_count || 0,
-      engagement_count:
-        (tweet.public_metrics?.like_count || 0) +
-        (tweet.public_metrics?.retweet_count || 0) +
-        (tweet.public_metrics?.reply_count || 0),
-      reach: tweet.public_metrics?.impression_count || 0,
-      hashtags: tweet.entities?.hashtags?.map(h => h.tag) || [],
-      mentions: tweet.entities?.mentions?.map(m => m.username) || [],
-      is_published: true,
-      sentiment_score: 0.5 // Will be updated by sentiment analysis
-    }));
+    // Insert tweets one by one to handle duplicates gracefully
+    let savedCount = 0;
+    let skippedCount = 0;
 
-    // Upsert to avoid duplicates
-    const { error } = await supabase
-      .from('social_media_posts')
-      .upsert(postsToInsert, { onConflict: 'post_id' });
+    for (const tweet of realTweets) {
+      // Check if tweet already exists
+      const { data: existing } = await supabaseService
+        .from('social_media_posts')
+        .select('id')
+        .eq('post_id', tweet.id)
+        .single();
 
-    if (error) {
-      console.error('[TwitterScraper] Database save error:', error);
-    } else {
-      console.log(`[TwitterScraper] Saved ${postsToInsert.length} tweets to database`);
+      if (existing) {
+        skippedCount++;
+        continue; // Skip duplicate
+      }
+
+      const postData = {
+        platform: 'twitter',
+        post_id: tweet.id,
+        post_content: tweet.text,
+        post_url: `https://twitter.com/i/status/${tweet.id}`,
+        posted_at: tweet.created_at,
+        likes: tweet.public_metrics?.like_count || 0,
+        shares: tweet.public_metrics?.retweet_count || 0,
+        comments_count: tweet.public_metrics?.reply_count || 0,
+        engagement_count:
+          (tweet.public_metrics?.like_count || 0) +
+          (tweet.public_metrics?.retweet_count || 0) +
+          (tweet.public_metrics?.reply_count || 0),
+        reach: tweet.public_metrics?.impression_count || 0,
+        hashtags: tweet.entities?.hashtags?.map(h => h.tag) || [],
+        mentions: tweet.entities?.mentions?.map(m => m.username) || [],
+        is_published: true,
+        sentiment_score: 0.5
+      };
+
+      const { error } = await supabaseService
+        .from('social_media_posts')
+        .insert(postData);
+
+      if (error) {
+        console.error(`[TwitterScraper] Error saving tweet ${tweet.id}:`, error.message);
+      } else {
+        savedCount++;
+      }
     }
+
+    console.log(`[TwitterScraper] Database save complete: ${savedCount} new, ${skippedCount} duplicates skipped`);
   } catch (error) {
     console.error('[TwitterScraper] Failed to save tweets:', error);
   }
@@ -519,4 +667,173 @@ export function getTwitterConfig() {
     remainingCalls: getRemainingAPICalls(),
     isLimitReached: isAPILimitReached()
   };
+}
+
+// Cache key for replies
+const REPLIES_CACHE_PREFIX = 'tweet_replies_';
+
+// Generate mock replies for demo mode
+function generateMockReplies(tweetId: string): Tweet[] {
+  const now = new Date();
+  return [
+    {
+      id: `reply_${tweetId}_1`,
+      text: 'Great initiative by BJP Bengal! Keep up the good work.',
+      created_at: new Date(now.getTime() - 10 * 60000).toISOString(),
+      author_id: 'reply_author_1',
+      conversation_id: tweetId,
+      public_metrics: {
+        retweet_count: Math.floor(Math.random() * 10),
+        reply_count: Math.floor(Math.random() * 5),
+        like_count: Math.floor(Math.random() * 50),
+        quote_count: 0
+      },
+      author: {
+        id: 'reply_author_1',
+        name: 'Bengal Supporter',
+        username: 'bengal_supporter1',
+        verified: false
+      }
+    },
+    {
+      id: `reply_${tweetId}_2`,
+      text: 'This is what Bengal needs. Development and progress!',
+      created_at: new Date(now.getTime() - 25 * 60000).toISOString(),
+      author_id: 'reply_author_2',
+      conversation_id: tweetId,
+      public_metrics: {
+        retweet_count: Math.floor(Math.random() * 8),
+        reply_count: Math.floor(Math.random() * 3),
+        like_count: Math.floor(Math.random() * 30),
+        quote_count: 0
+      },
+      author: {
+        id: 'reply_author_2',
+        name: 'Kolkata Citizen',
+        username: 'kolkata_citizen',
+        verified: false
+      }
+    },
+    {
+      id: `reply_${tweetId}_3`,
+      text: 'Very informative. Thanks for sharing!',
+      created_at: new Date(now.getTime() - 45 * 60000).toISOString(),
+      author_id: 'reply_author_3',
+      conversation_id: tweetId,
+      public_metrics: {
+        retweet_count: Math.floor(Math.random() * 5),
+        reply_count: Math.floor(Math.random() * 2),
+        like_count: Math.floor(Math.random() * 20),
+        quote_count: 0
+      },
+      author: {
+        id: 'reply_author_3',
+        name: 'Political Observer',
+        username: 'pol_observer_wb',
+        verified: false
+      }
+    }
+  ];
+}
+
+/**
+ * Fetch replies/comments for a specific tweet
+ */
+export async function fetchTweetReplies(tweetId: string, maxResults: number = 20): Promise<TweetRepliesResponse> {
+  // Check cache first
+  const cacheKey = `${REPLIES_CACHE_PREFIX}${tweetId}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    try {
+      const data = JSON.parse(cached);
+      const cacheTime = new Date(data.fetchedAt || 0).getTime();
+      if (Date.now() - cacheTime < REFRESH_INTERVAL) {
+        return { ...data, fromCache: true };
+      }
+    } catch {
+      // Invalid cache, continue to fetch
+    }
+  }
+
+  // If no proxy configured, return empty (no mock data)
+  if (USE_MOCK_DATA) {
+    console.log('[TwitterScraper] Proxy not configured, returning empty replies');
+    return {
+      success: false,
+      data: [],
+      meta: { result_count: 0 },
+      tweetId: tweetId,
+      fromCache: false,
+      error: 'Twitter proxy not configured'
+    };
+  }
+
+  // Check API limit
+  if (isAPILimitReached()) {
+    console.warn('[TwitterScraper] API limit reached, returning empty replies');
+    return {
+      success: false,
+      data: [],
+      meta: { result_count: 0 },
+      tweetId: tweetId,
+      rateLimited: true,
+      fromCache: false
+    };
+  }
+
+  try {
+    const response = await fetch(`${TWITTER_PROXY_URL}/api/twitter/replies/${tweetId}?max_results=${maxResults}`);
+    const data: TweetRepliesResponse = await response.json();
+
+    // Check if API returned error (rate limited or other error)
+    if (!data.success && data.rateLimited) {
+      console.warn('[TwitterScraper] API rate limited, returning empty replies');
+      return {
+        success: false,
+        data: [],
+        meta: { result_count: 0 },
+        tweetId: tweetId,
+        rateLimited: true,
+        fromCache: false,
+        error: 'API rate limited'
+      };
+    }
+
+    if (!data.success) {
+      throw new Error(data.error || 'API error');
+    }
+
+    incrementAPIUsage();
+
+    // Enrich with author data
+    if (data.data && data.includes?.users) {
+      const userMap = new Map(data.includes.users.map(u => [u.id, u]));
+      data.data = data.data.map(reply => ({
+        ...reply,
+        author: userMap.get(reply.author_id)
+      }));
+    }
+
+    // Cache the response
+    localStorage.setItem(cacheKey, JSON.stringify({ ...data, fetchedAt: new Date().toISOString() }));
+
+    return data;
+  } catch (error: any) {
+    console.error('[TwitterScraper] Error fetching replies:', error);
+
+    // Return cached data if available (even if stale)
+    if (cached) {
+      return { ...JSON.parse(cached), fromCache: true, error: error.message };
+    }
+
+    // Return empty data with error (NO mock data)
+    return {
+      success: false,
+      data: [],
+      meta: { result_count: 0 },
+      tweetId: tweetId,
+      fromCache: false,
+      error: error.message || 'Failed to fetch replies'
+    };
+  }
 }
