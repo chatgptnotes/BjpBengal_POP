@@ -43,9 +43,21 @@ import {
 import {
   getLeaderIntelligence,
   refreshLeaderNews,
+  refreshAllNews,
   generateDailyBriefing,
+  getAIAttackPoints,
   type LeaderIntelligence,
 } from '@/services/leaderIntelligence';
+import { fetchNewsForConstituency } from '@/services/leaderIntelligence/newsIntelligenceService';
+
+// Refresh progress state
+interface RefreshProgress {
+  stage: 'idle' | 'english' | 'bengali' | 'analyzing' | 'scoring' | 'done';
+  englishCount: number;
+  bengaliCount: number;
+  attackPoints: number;
+  newScore: number;
+}
 
 // Party colors
 const PARTY_COLORS: Record<string, string> = {
@@ -92,6 +104,14 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
   const [briefing, setBriefing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState<RefreshProgress>({
+    stage: 'idle',
+    englishCount: 0,
+    bengaliCount: 0,
+    attackPoints: 0,
+    newScore: 0,
+  });
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   useEffect(() => {
     loadIntelligence();
@@ -117,13 +137,47 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
   const handleRefreshNews = async () => {
     if (!intel) return;
     setRefreshing(true);
+    setRefreshProgress({ stage: 'english', englishCount: 0, bengaliCount: 0, attackPoints: 0, newScore: 0 });
+
     try {
-      await refreshLeaderNews(intel.current_mla_name);
+      // Enhanced refresh: English + Bengali + AI analysis
+      const result = await refreshAllNews(intel.constituency_id);
+
+      setRefreshProgress({
+        stage: 'done',
+        englishCount: result.englishStored,
+        bengaliCount: result.bengaliStored,
+        attackPoints: result.attackPointsGenerated,
+        newScore: result.newVulnerabilityScore,
+      });
+
+      console.log(`[LeaderDeepDive] Enhanced refresh: EN=${result.englishStored}, BN=${result.bengaliStored}, AP=${result.attackPointsGenerated}, VS=${result.newVulnerabilityScore}`);
+
+      setLastRefresh(new Date());
       await loadIntelligence();
+
+      // Reset progress after 3 seconds
+      setTimeout(() => {
+        setRefreshProgress({ stage: 'idle', englishCount: 0, bengaliCount: 0, attackPoints: 0, newScore: 0 });
+      }, 3000);
     } catch (error) {
       console.error('[LeaderDeepDive] Refresh error:', error);
+      setRefreshProgress({ stage: 'idle', englishCount: 0, bengaliCount: 0, attackPoints: 0, newScore: 0 });
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // Get refresh stage label
+  const getRefreshLabel = () => {
+    switch (refreshProgress.stage) {
+      case 'english': return 'Fetching English news...';
+      case 'bengali': return 'Fetching Bengali news...';
+      case 'analyzing': return 'Analyzing & generating attack points...';
+      case 'scoring': return 'Calculating vulnerability score...';
+      case 'done':
+        return `Done: ${refreshProgress.englishCount + refreshProgress.bengaliCount} articles, ${refreshProgress.attackPoints} attack points`;
+      default: return 'Refresh News';
     }
   };
 
@@ -190,10 +244,12 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
             <button
               onClick={handleRefreshNews}
               disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
+                refreshProgress.stage === 'done' ? 'bg-emerald-600' : 'bg-indigo-600 hover:bg-indigo-500'
+              }`}
             >
               <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-              {refreshing ? 'Fetching...' : 'Refresh News'}
+              {getRefreshLabel()}
             </button>
             <div className={`px-2 py-1 rounded text-xs font-bold ${
               intel.vulnerability_score >= 70 ? 'bg-rose-500/20 text-rose-400' :

@@ -4,7 +4,9 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { getRecentNews, getNewsSummary, getSentimentTrend, fetchNewsForLeader } from './newsIntelligenceService';
+import { getRecentNews, getNewsSummary, getSentimentTrend, fetchNewsForLeader, fetchNewsForConstituency } from './newsIntelligenceService';
+import { fetchBengaliNewsForConstituency, analyzeAndStoreBengaliNews, fetchAllBengaliNews } from './bengaliNewsService';
+import { hfNewsAnalysisService } from './hfNewsAnalysisService';
 
 // Types
 export interface WinFactor {
@@ -443,10 +445,355 @@ export async function generateDailyBriefing(constituencyId: string): Promise<{
   };
 }
 
+/**
+ * Enhanced news refresh with Bengali support
+ * Fetches from both English and Bengali sources
+ */
+export async function refreshAllNews(constituencyId: string): Promise<{
+  success: boolean;
+  englishFetched: number;
+  englishStored: number;
+  bengaliFetched: number;
+  bengaliStored: number;
+  attackPointsGenerated: number;
+  newVulnerabilityScore: number;
+}> {
+  try {
+    // Get constituency info
+    const { data: leader } = await supabase
+      .from('constituency_leaders')
+      .select('constituency_name, district, current_mla_name, current_mla_party')
+      .eq('constituency_id', constituencyId)
+      .single();
+
+    if (!leader) {
+      throw new Error('Constituency not found');
+    }
+
+    console.log(`[LeaderIntel] Starting enhanced refresh for ${leader.constituency_name}`);
+
+    // Fetch English news
+    const englishResult = await fetchNewsForConstituency(
+      constituencyId,
+      leader.constituency_name,
+      leader.current_mla_name,
+      leader.district,
+      leader.current_mla_party
+    );
+
+    // Fetch Bengali news
+    const bengaliResult = await fetchBengaliNewsForConstituency(
+      constituencyId,
+      leader.constituency_name,
+      leader.current_mla_name,
+      leader.district,
+      leader.current_mla_party
+    );
+
+    // Generate attack points from new news
+    const attackPointsCount = await generateAttackPointsFromNews(constituencyId);
+
+    // Calculate new vulnerability score
+    const newScore = await calculateDynamicVulnerabilityScore(constituencyId);
+
+    console.log(`[LeaderIntel] Refresh complete: EN=${englishResult.stored}, BN=${bengaliResult.stored}, AP=${attackPointsCount}, VS=${newScore}`);
+
+    return {
+      success: true,
+      englishFetched: englishResult.fetched,
+      englishStored: englishResult.stored,
+      bengaliFetched: bengaliResult.fetched,
+      bengaliStored: bengaliResult.stored,
+      attackPointsGenerated: attackPointsCount,
+      newVulnerabilityScore: newScore,
+    };
+  } catch (error) {
+    console.error('[LeaderIntel] Enhanced refresh error:', error);
+    return {
+      success: false,
+      englishFetched: 0,
+      englishStored: 0,
+      bengaliFetched: 0,
+      bengaliStored: 0,
+      attackPointsGenerated: 0,
+      newVulnerabilityScore: 50,
+    };
+  }
+}
+
+/**
+ * Generate attack points from recent news
+ */
+export async function generateAttackPointsFromNews(constituencyId: string): Promise<number> {
+  try {
+    // Get recent negative news
+    const { data: negativeNews } = await supabase
+      .from('leader_news_intelligence')
+      .select('id, headline, summary, full_content, leader_name, is_controversy, controversy_severity, sentiment, language')
+      .eq('constituency_id', constituencyId)
+      .eq('sentiment', 'negative')
+      .gte('published_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      .order('published_at', { ascending: false })
+      .limit(20);
+
+    if (!negativeNews || negativeNews.length === 0) {
+      return 0;
+    }
+
+    // Get leader info
+    const { data: leader } = await supabase
+      .from('constituency_leaders')
+      .select('current_mla_name, current_mla_party')
+      .eq('constituency_id', constituencyId)
+      .single();
+
+    if (!leader) return 0;
+
+    let generatedCount = 0;
+
+    for (const news of negativeNews) {
+      // Use HF service to analyze and generate attack point
+      const analysis = hfNewsAnalysisService.generateAttackPoint(
+        news.headline,
+        news.full_content || news.summary,
+        news.leader_name
+      );
+
+      if (analysis) {
+        // Check if similar attack point already exists
+        const { data: existing } = await supabase
+          .from('ai_generated_attack_points')
+          .select('id')
+          .eq('constituency_id', constituencyId)
+          .eq('attack_type', analysis.type)
+          .eq('is_active', true)
+          .single();
+
+        if (!existing) {
+          // Insert new attack point
+          const { error } = await supabase
+            .from('ai_generated_attack_points')
+            .insert({
+              constituency_id: constituencyId,
+              target_leader: leader.current_mla_name,
+              target_party: leader.current_mla_party,
+              attack_point: analysis.point,
+              evidence: analysis.evidence,
+              attack_type: analysis.type,
+              impact_level: analysis.impact,
+              source_news_ids: [news.id],
+              source_headlines: [news.headline],
+              is_active: true,
+            });
+
+          if (!error) {
+            generatedCount++;
+          }
+        } else {
+          // Update existing attack point with new source
+          await supabase
+            .from('ai_generated_attack_points')
+            .update({
+              source_news_ids: supabase.rpc('array_append_unique', {
+                arr: existing.id,
+                val: news.id,
+              }),
+            })
+            .eq('id', existing.id);
+        }
+      }
+    }
+
+    return generatedCount;
+  } catch (error) {
+    console.error('[LeaderIntel] Attack point generation error:', error);
+    return 0;
+  }
+}
+
+/**
+ * Calculate dynamic vulnerability score based on recent data
+ */
+export async function calculateDynamicVulnerabilityScore(constituencyId: string): Promise<number> {
+  try {
+    // Try to use database function first
+    const { data: result, error } = await supabase
+      .rpc('calculate_vulnerability_score', {
+        p_constituency_id: constituencyId,
+        p_days: 30,
+      });
+
+    if (!error && result) {
+      const scoreData = result as {
+        score: number;
+        breakdown: any;
+        trend: string;
+        previous_score: number;
+        score_change: number;
+        metrics: any;
+      };
+
+      // Store in history
+      await supabase
+        .from('vulnerability_score_history')
+        .insert({
+          constituency_id: constituencyId,
+          score: scoreData.score,
+          previous_score: scoreData.previous_score,
+          score_change: scoreData.score_change,
+          score_breakdown: scoreData.breakdown,
+          news_analyzed: scoreData.metrics?.news_analyzed || 0,
+          controversies_found: scoreData.metrics?.controversies || 0,
+          trend: scoreData.trend,
+        });
+
+      // Update opposition_intelligence table
+      await supabase
+        .from('opposition_intelligence')
+        .update({
+          vulnerability_score: scoreData.score,
+          last_updated: new Date().toISOString(),
+        })
+        .eq('constituency_id', constituencyId);
+
+      return scoreData.score;
+    }
+
+    // Fallback: Calculate manually if DB function fails
+    return await calculateVulnerabilityScoreFallback(constituencyId);
+  } catch (error) {
+    console.error('[LeaderIntel] Vulnerability score calculation error:', error);
+    return 50; // Default score
+  }
+}
+
+/**
+ * Fallback vulnerability score calculation
+ */
+async function calculateVulnerabilityScoreFallback(constituencyId: string): Promise<number> {
+  // Get news metrics (last 30 days)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: newsStats } = await supabase
+    .from('leader_news_intelligence')
+    .select('sentiment, is_controversy')
+    .eq('constituency_id', constituencyId)
+    .gte('published_at', thirtyDaysAgo);
+
+  const totalNews = newsStats?.length || 0;
+  const negativeNews = newsStats?.filter(n => n.sentiment === 'negative').length || 0;
+  const controversies = newsStats?.filter(n => n.is_controversy).length || 0;
+
+  // Get grievance count
+  const { count: grievanceCount } = await supabase
+    .from('constituency_issues')
+    .select('*', { count: 'exact', head: true })
+    .eq('constituency_id', constituencyId)
+    .in('severity', ['high', 'critical']);
+
+  // Get margin data
+  const { data: leader } = await supabase
+    .from('constituency_leaders')
+    .select('current_mla_margin, total_voters_2021')
+    .eq('constituency_id', constituencyId)
+    .single();
+
+  const marginPct = leader ? Math.abs(leader.current_mla_margin) / (leader.total_voters_2021 || 1) * 100 : 10;
+
+  // Calculate component scores
+  const newsImpact = totalNews > 0 ? Math.min(30, (negativeNews / totalNews) * 30) : 0;
+  const controversyImpact = Math.min(30, controversies * 10);
+  const grievanceImpact = Math.min(20, (grievanceCount || 0) * 4);
+  const marginRisk = marginPct < 5 ? 20 : marginPct < 10 ? 15 : marginPct < 15 ? 10 : 5;
+
+  const score = Math.min(100, Math.max(0, Math.round(newsImpact + controversyImpact + grievanceImpact + marginRisk)));
+
+  // Store in history
+  await supabase
+    .from('vulnerability_score_history')
+    .insert({
+      constituency_id: constituencyId,
+      score,
+      score_breakdown: {
+        news_impact: Math.round(newsImpact),
+        controversy_impact: Math.round(controversyImpact),
+        grievance_impact: Math.round(grievanceImpact),
+        margin_risk: Math.round(marginRisk),
+      },
+      news_analyzed: totalNews,
+      controversies_found: controversies,
+      trend: 'stable',
+    });
+
+  // Update opposition_intelligence
+  await supabase
+    .from('opposition_intelligence')
+    .update({
+      vulnerability_score: score,
+      last_updated: new Date().toISOString(),
+    })
+    .eq('constituency_id', constituencyId);
+
+  return score;
+}
+
+/**
+ * Get AI-generated attack points for a constituency
+ */
+export async function getAIAttackPoints(constituencyId: string): Promise<AttackPoint[]> {
+  const { data } = await supabase
+    .from('ai_generated_attack_points')
+    .select('*')
+    .eq('constituency_id', constituencyId)
+    .eq('is_active', true)
+    .order('impact_level', { ascending: true }) // critical first
+    .limit(10);
+
+  if (!data) return [];
+
+  return data.map(ap => ({
+    point: ap.attack_point,
+    evidence: ap.evidence || '',
+    impact: ap.impact_level,
+    voter_groups: ap.affected_voter_groups || [],
+  }));
+}
+
+/**
+ * Get vulnerability score history for trend analysis
+ */
+export async function getVulnerabilityHistory(constituencyId: string, days: number = 30): Promise<{
+  date: string;
+  score: number;
+  trend: string;
+}[]> {
+  const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data } = await supabase
+    .from('vulnerability_score_history')
+    .select('score, trend, calculated_at')
+    .eq('constituency_id', constituencyId)
+    .gte('calculated_at', startDate)
+    .order('calculated_at', { ascending: true });
+
+  if (!data) return [];
+
+  return data.map(h => ({
+    date: new Date(h.calculated_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+    score: h.score,
+    trend: h.trend,
+  }));
+}
+
 export default {
   getLeaderIntelligence,
   refreshLeaderNews,
+  refreshAllNews,
   getAllConstituenciesIntel,
   getVulnerableConstituencies,
   generateDailyBriefing,
+  generateAttackPointsFromNews,
+  calculateDynamicVulnerabilityScore,
+  getAIAttackPoints,
+  getVulnerabilityHistory,
 };

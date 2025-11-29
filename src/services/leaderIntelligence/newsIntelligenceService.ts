@@ -1,7 +1,7 @@
 /**
  * News Intelligence Service
  * Fetches and analyzes news for political leaders
- * Uses NewsAPI + keyword-based sentiment analysis
+ * Uses Google News RSS (FREE) + keyword-based sentiment analysis
  */
 
 import { supabase } from '@/lib/supabase';
@@ -182,7 +182,7 @@ function generateContentHash(title: string, source: string): string {
 }
 
 /**
- * Fetch news from NewsAPI for a specific search term
+ * Fetch news from NewsAPI for a specific search term (LEGACY - requires paid plan)
  */
 export async function fetchNewsFromAPI(searchTerm: string): Promise<NewsArticle[]> {
   const apiKey = import.meta.env.VITE_NEWSAPI_KEY;
@@ -207,6 +207,100 @@ export async function fetchNewsFromAPI(searchTerm: string): Promise<NewsArticle[
     console.error('[NewsIntel] Fetch error:', error);
     return [];
   }
+}
+
+/**
+ * Fetch news from Google News using RSS2JSON service (handles CORS)
+ */
+export async function fetchNewsFromGoogleRSS(searchTerm: string): Promise<NewsArticle[]> {
+  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(searchTerm)}&hl=en-IN&gl=IN&ceid=IN:en`;
+
+  // Use RSS2JSON - free service that converts RSS to JSON and handles CORS
+  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+
+  try {
+    console.log(`[NewsIntel] Fetching Google News for: ${searchTerm}`);
+
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+
+    if (data.status !== 'ok') {
+      console.error('[NewsIntel] RSS2JSON error:', data.message);
+      return [];
+    }
+
+    const articles: NewsArticle[] = (data.items || []).slice(0, 15).map((item: any) => {
+      // Clean HTML from description
+      const cleanDesc = (item.description || '').replace(/<[^>]*>/g, '').trim();
+
+      return {
+        title: item.title || '',
+        description: cleanDesc,
+        content: cleanDesc,
+        url: item.link || '',
+        source: { name: item.author || data.feed?.title || 'Google News' },
+        publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+      };
+    });
+
+    console.log(`[NewsIntel] Found ${articles.length} articles for: ${searchTerm}`);
+    return articles;
+  } catch (error) {
+    console.error('[NewsIntel] Google RSS fetch error:', error);
+    return [];
+  }
+}
+
+/**
+ * Get search terms for a constituency
+ */
+function getConstituencySearchTerms(
+  constituencyName: string,
+  leaderName: string,
+  district: string
+): string[] {
+  return [
+    `${constituencyName} West Bengal news`,
+    `${leaderName} ${district}`,
+    `${constituencyName} ${district} news`,
+    `${leaderName} MLA news`,
+    `${district} political news`,
+  ];
+}
+
+/**
+ * Fetch news for a constituency (uses Google News RSS)
+ */
+export async function fetchNewsForConstituency(
+  constituencyId: string,
+  constituencyName: string,
+  leaderName: string,
+  district: string,
+  party: string
+): Promise<{ fetched: number; stored: number }> {
+  const searchTerms = getConstituencySearchTerms(constituencyName, leaderName, district);
+
+  let totalFetched = 0;
+  let totalStored = 0;
+
+  for (const term of searchTerms) {
+    const articles = await fetchNewsFromGoogleRSS(term);
+    totalFetched += articles.length;
+
+    const stored = await analyzeAndStoreNews(
+      leaderName,
+      party,
+      constituencyId,
+      articles
+    );
+    totalStored += stored;
+
+    // Rate limit between searches
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  console.log(`[NewsIntel] Constituency ${constituencyName}: Fetched ${totalFetched}, Stored ${totalStored}`);
+  return { fetched: totalFetched, stored: totalStored };
 }
 
 /**
@@ -441,6 +535,8 @@ export async function getSentimentTrend(leaderName: string, days: number = 14): 
 
 export default {
   fetchNewsForLeader,
+  fetchNewsForConstituency,
+  fetchNewsFromGoogleRSS,
   getTodayNews,
   getRecentNews,
   getNewsSummary,
