@@ -17,6 +17,7 @@ import {
   ExternalLink,
   RefreshCw,
   User,
+  ChevronRight,
 } from 'lucide-react';
 import {
   LineChart,
@@ -200,9 +201,10 @@ const NewsCard = ({ news }: { news: LeaderNews }) => {
 
 interface Props {
   selectedConstituency?: string;
+  onLeaderClick?: (leader: ConstituencyLeader) => void;
 }
 
-export default function LeaderAnalysisSection({ selectedConstituency }: Props) {
+export default function LeaderAnalysisSection({ selectedConstituency, onLeaderClick }: Props) {
   const [activeTab, setActiveTab] = useState<'mla' | 'news' | 'trends' | 'history'>('mla');
   const [leader, setLeader] = useState<ConstituencyLeader | null>(null);
   const [news, setNews] = useState<LeaderNews[]>([]);
@@ -378,17 +380,51 @@ export default function LeaderAnalysisSection({ selectedConstituency }: Props) {
           <div className="space-y-3">
             {leader ? (
               <>
-                {/* Current MLA */}
-                <MLACard
-                  label="Current MLA (2021)"
-                  name={leader.current_mla_name}
-                  nameBengali={leader.current_mla_name_bengali}
-                  party={leader.current_mla_party}
-                  votes={leader.current_mla_votes}
-                  voteShare={leader.current_mla_vote_share}
-                  margin={leader.current_mla_margin}
-                  isCurrent
-                />
+                {/* Current MLA - Clickable */}
+                <div
+                  className={`bg-slate-900/50 rounded-xl p-3 border border-emerald-500/50 ${onLeaderClick ? 'cursor-pointer hover:border-emerald-400 hover:bg-slate-900/70 transition-all' : ''}`}
+                  onClick={() => onLeaderClick && onLeaderClick(leader)}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold">Current MLA (2021)</span>
+                    <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">CURRENT</span>
+                    {onLeaderClick && (
+                      <span className="ml-auto text-[10px] text-indigo-400 flex items-center gap-1">
+                        View Intelligence <ChevronRight size={10} />
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                      style={{ backgroundColor: getPartyColor(leader.current_mla_party) }}
+                    >
+                      {leader.current_mla_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-white truncate">{leader.current_mla_name}</h4>
+                      {leader.current_mla_name_bengali && <p className="text-[10px] text-slate-500">{leader.current_mla_name_bengali}</p>}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded font-bold"
+                          style={{
+                            backgroundColor: `${getPartyColor(leader.current_mla_party)}20`,
+                            color: getPartyColor(leader.current_mla_party)
+                          }}
+                        >
+                          {leader.current_mla_party}
+                        </span>
+                        {leader.current_mla_vote_share && (
+                          <span className="text-[10px] text-slate-400">{leader.current_mla_vote_share.toFixed(1)}%</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-700 pt-2">
+                    <span>{leader.current_mla_votes?.toLocaleString()} votes</span>
+                    <span className="text-emerald-400 font-bold">+{leader.current_mla_margin?.toLocaleString()} margin</span>
+                  </div>
+                </div>
 
                 {/* Previous MLA */}
                 {leader.previous_mla_name && (
