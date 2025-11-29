@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { getRecentNews, getNewsSummary, getSentimentTrend, fetchNewsForLeader, fetchNewsForConstituency } from './newsIntelligenceService';
 import { fetchBengaliNewsForConstituency, analyzeAndStoreBengaliNews, fetchAllBengaliNews } from './bengaliNewsService';
 import { hfNewsAnalysisService } from './hfNewsAnalysisService';
+import { extractIssuesForConstituency, getConstituencyIssues, getIssueSummary } from './issueExtractionService';
 
 // Types
 export interface WinFactor {
@@ -457,6 +458,8 @@ export async function refreshAllNews(constituencyId: string): Promise<{
   bengaliStored: number;
   attackPointsGenerated: number;
   newVulnerabilityScore: number;
+  issuesCreated: number;
+  issuesUpdated: number;
 }> {
   try {
     // Get constituency info
@@ -496,7 +499,10 @@ export async function refreshAllNews(constituencyId: string): Promise<{
     // Calculate new vulnerability score
     const newScore = await calculateDynamicVulnerabilityScore(constituencyId);
 
-    console.log(`[LeaderIntel] Refresh complete: EN=${englishResult.stored}, BN=${bengaliResult.stored}, AP=${attackPointsCount}, VS=${newScore}`);
+    // Extract constituency issues from news
+    const issueResult = await extractIssuesForConstituency(constituencyId, 7);
+
+    console.log(`[LeaderIntel] Refresh complete: EN=${englishResult.stored}, BN=${bengaliResult.stored}, AP=${attackPointsCount}, VS=${newScore}, Issues=${issueResult.created}+${issueResult.updated}`);
 
     return {
       success: true,
@@ -506,6 +512,8 @@ export async function refreshAllNews(constituencyId: string): Promise<{
       bengaliStored: bengaliResult.stored,
       attackPointsGenerated: attackPointsCount,
       newVulnerabilityScore: newScore,
+      issuesCreated: issueResult.created,
+      issuesUpdated: issueResult.updated,
     };
   } catch (error) {
     console.error('[LeaderIntel] Enhanced refresh error:', error);
@@ -517,6 +525,8 @@ export async function refreshAllNews(constituencyId: string): Promise<{
       bengaliStored: 0,
       attackPointsGenerated: 0,
       newVulnerabilityScore: 50,
+      issuesCreated: 0,
+      issuesUpdated: 0,
     };
   }
 }
