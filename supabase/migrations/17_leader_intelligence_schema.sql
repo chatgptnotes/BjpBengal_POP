@@ -839,7 +839,7 @@ INSERT INTO opposition_intelligence (
  78),
 
 -- Barrackpore - Medium-high vulnerability
-('wb_north_24_parganas_barrackpore', 2021, 'Raj Chakraborty', 'TMC',
+('wb_north_24_parganas_barrackpore', 'Raj Chakraborty', 'TMC',
  '[{"promise": "Jute mill revival", "date": "2021-03", "status": "unfulfilled", "public_anger": "high"},
    {"promise": "Employment for youth", "date": "2021-04", "status": "unfulfilled", "public_anger": "high"}]'::jsonb,
  '[{"type": "political", "title": "Outsider candidate criticism", "date": "2021-04", "severity": "medium"}]'::jsonb,

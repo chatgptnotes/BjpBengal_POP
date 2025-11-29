@@ -39,6 +39,7 @@ import {
   type LeaderNews,
 } from '@/services/leaderTracking';
 import { supabase } from '@/lib/supabase';
+import { fetchNewsForConstituency } from '@/services/leaderIntelligence/newsIntelligenceService';
 
 // Types
 interface PartyStrength {
@@ -210,6 +211,7 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
   const [news, setNews] = useState<LeaderNews[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchingNews, setFetchingNews] = useState(false);
 
   const partyStrength = getPartyStrengthData();
   const votingTrends = getVotingTrendData();
@@ -293,6 +295,51 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
       }
     }
     setRefreshing(false);
+  };
+
+  // Fetch news using Google News RSS
+  const handleFetchNews = async () => {
+    if (!leader) return;
+    setFetchingNews(true);
+    try {
+      console.log('[LeaderAnalysis] Fetching news for:', leader.constituency_name);
+      const result = await fetchNewsForConstituency(
+        leader.constituency_id,
+        leader.constituency_name,
+        leader.current_mla_name,
+        leader.district,
+        leader.current_mla_party
+      );
+      console.log(`[LeaderAnalysis] Fetched ${result.fetched} articles, stored ${result.stored}`);
+
+      // Refresh news from database
+      const { data: newsData } = await supabase
+        .from('leader_news_intelligence')
+        .select('*')
+        .eq('constituency_id', leader.constituency_id)
+        .order('published_at', { ascending: false })
+        .limit(10);
+
+      if (newsData && newsData.length > 0) {
+        // Map to LeaderNews format - matching NewsCard expected fields
+        setNews(newsData.map((n: any) => ({
+          id: n.id,
+          title: n.headline,  // NewsCard expects 'title'
+          summary: n.summary,
+          source: n.source_name,  // NewsCard expects 'source'
+          url: n.source_url,  // NewsCard expects 'url'
+          published_at: n.published_at,
+          sentiment: n.sentiment,
+          sentiment_score: n.sentiment_score,
+          key_topics: n.key_topics,
+          is_controversy: n.is_controversy,
+        })));
+      }
+    } catch (error) {
+      console.error('[LeaderAnalysis] Error fetching news:', error);
+    } finally {
+      setFetchingNews(false);
+    }
   };
 
   // Generate sentiment data from actual data or use placeholder
@@ -513,14 +560,36 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
         {activeTab === 'news' && (
           <div className="space-y-2">
             {news.length > 0 ? (
-              news.map((item) => (
-                <NewsCard key={item.id} news={item} />
-              ))
+              <>
+                {news.map((item) => (
+                  <NewsCard key={item.id} news={item} />
+                ))}
+                {leader && (
+                  <button
+                    onClick={handleFetchNews}
+                    disabled={fetchingNews}
+                    className="w-full py-2 mt-2 text-xs text-indigo-400 hover:text-indigo-300 hover:bg-slate-700/50 rounded transition-colors flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={12} className={fetchingNews ? 'animate-spin' : ''} />
+                    {fetchingNews ? 'Fetching...' : 'Fetch More News'}
+                  </button>
+                )}
+              </>
             ) : (
               <div className="text-center py-8 text-slate-400">
                 <Newspaper size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No recent news found</p>
-                <p className="text-xs text-slate-500 mt-1">News will appear once data is fetched</p>
+                <p className="text-xs text-slate-500 mt-1">Click below to fetch news from Google News</p>
+                {leader && (
+                  <button
+                    onClick={handleFetchNews}
+                    disabled={fetchingNews}
+                    className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 mx-auto"
+                  >
+                    <RefreshCw size={14} className={fetchingNews ? 'animate-spin' : ''} />
+                    {fetchingNews ? 'Fetching News...' : 'Fetch News'}
+                  </button>
+                )}
               </div>
             )}
           </div>
