@@ -1,0 +1,16 @@
+{
+  "name": "twitter-bjp-proxy",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker proxy for Twitter/X API - BJP Bengal data scraping",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.22.0"
+  }
+}

@@ -1,5 +1,14 @@
 import { SocialPost, MediaSource, SentimentData, AlertData } from '../types';
 import { sentimentEngine } from './sentimentAnalysis';
+import {
+  fetchBJPBengalFeed,
+  startAutoRefresh as startTwitterAutoRefresh,
+  stopAutoRefresh as stopTwitterAutoRefresh,
+  subscribeToUpdates as subscribeToTwitterUpdates,
+  BJP_BENGAL_CONFIG,
+  type BJPBengalFeed,
+  type Tweet
+} from './twitterScraper';
 
 export interface MonitoringConfig {
   platforms: string[];
@@ -532,21 +541,173 @@ export class SocialMediaMonitor {
 export const defaultMonitoringConfig: MonitoringConfig = {
   platforms: ['twitter', 'facebook', 'instagram', 'youtube', 'news'],
   keywords: [
-    'தமிழ்நாடு', 'West Bengal', 'சென்னை', 'Chennai', 'கோயம்புத்தூர்', 'Coimbatore',
-    'வேலைவாய்ப்பு', 'employment', 'jobs', 'கல்வி', 'education',
-    'சுகாதாரம்', 'health', 'தண்ணீர்', 'water', 'infrastructure', 'development'
+    'BJP', 'West Bengal', 'Kolkata', 'Bengal',
+    'Suvendu Adhikari', 'Dilip Ghosh', 'Sukanta Majumdar',
+    'BJP vs TMC', 'Bengal BJP', 'Modi Bengal',
+    ...BJP_BENGAL_CONFIG.keywords
   ],
   hashtags: [
-    '#WestBengal', '#Chennai', '#Coimbatore', '#Water', '#Development',
-    '#Education', '#Health', '#Jobs', '#Infrastructure'
+    ...BJP_BENGAL_CONFIG.hashtags,
+    '#BJP', '#BJPBengal', '#BJP4Bengal', '#WestBengal',
+    '#Kolkata', '#BengalPolitics', '#ModiInBengal'
   ],
   candidates: [
-    'candidate1', 'candidate2', 'party1', 'party2'
+    'Suvendu Adhikari', 'Dilip Ghosh', 'Sukanta Majumdar',
+    'BJP4Bengal', 'BJP4India'
   ],
-  refreshInterval: 30000, // 30 seconds
+  refreshInterval: 300000, // 5 minutes (changed from 30 seconds for Twitter rate limits)
   alertThresholds: {
     volume: 50,
     sentiment_change: 0.3,
     engagement: 1000
   }
 };
+
+// ============================================================================
+// BJP BENGAL TWITTER MONITOR
+// ============================================================================
+
+export class BJPBengalTwitterMonitor {
+  private isRunning: boolean = false;
+  private subscribers: Set<(data: BJPBengalFeed) => void> = new Set();
+  private unsubscribeFromTwitter: (() => void) | null = null;
+  private lastData: BJPBengalFeed | null = null;
+
+  /**
+   * Start monitoring BJP Bengal Twitter feed
+   * Auto-refreshes every 5 minutes
+   */
+  start(): void {
+    if (this.isRunning) {
+      console.log('[BJPBengalMonitor] Already running');
+      return;
+    }
+
+    console.log('[BJPBengalMonitor] Starting BJP Bengal Twitter monitoring...');
+    this.isRunning = true;
+
+    // Subscribe to Twitter updates
+    this.unsubscribeFromTwitter = subscribeToTwitterUpdates((data) => {
+      this.lastData = data;
+      this.notifySubscribers(data);
+    });
+
+    // Start auto-refresh
+    startTwitterAutoRefresh();
+  }
+
+  /**
+   * Stop monitoring
+   */
+  stop(): void {
+    if (!this.isRunning) return;
+
+    console.log('[BJPBengalMonitor] Stopping BJP Bengal Twitter monitoring...');
+    this.isRunning = false;
+
+    if (this.unsubscribeFromTwitter) {
+      this.unsubscribeFromTwitter();
+      this.unsubscribeFromTwitter = null;
+    }
+
+    stopTwitterAutoRefresh();
+  }
+
+  /**
+   * Subscribe to BJP Bengal feed updates
+   */
+  subscribe(callback: (data: BJPBengalFeed) => void): () => void {
+    this.subscribers.add(callback);
+
+    // Send last data immediately if available
+    if (this.lastData) {
+      callback(this.lastData);
+    }
+
+    return () => {
+      this.subscribers.delete(callback);
+    };
+  }
+
+  /**
+   * Manually fetch latest data
+   */
+  async fetchNow(): Promise<BJPBengalFeed> {
+    const data = await fetchBJPBengalFeed(20);
+    this.lastData = data;
+    this.notifySubscribers(data);
+    return data;
+  }
+
+  /**
+   * Get last fetched data
+   */
+  getLastData(): BJPBengalFeed | null {
+    return this.lastData;
+  }
+
+  /**
+   * Check if monitor is running
+   */
+  isMonitoring(): boolean {
+    return this.isRunning;
+  }
+
+  /**
+   * Convert Tweet to SocialPost format for compatibility
+   */
+  convertTweetToSocialPost(tweet: Tweet): SocialPost {
+    return {
+      id: tweet.id,
+      content: tweet.text,
+      language: tweet.lang || 'en',
+      sentiment: {
+        sentiment: 0.5, // Will be analyzed
+        score: 0.5,
+        label: 'neutral',
+        confidence: 0.8,
+        subjectivity: 0.5
+      } as SentimentData,
+      source: {
+        platform: 'twitter',
+        author: tweet.author?.username || 'unknown',
+        followers: tweet.author?.public_metrics?.followers_count || 0,
+        engagement: (tweet.public_metrics?.like_count || 0) +
+                    (tweet.public_metrics?.retweet_count || 0) +
+                    (tweet.public_metrics?.reply_count || 0),
+        verified: tweet.author?.verified || false
+      },
+      timestamp: new Date(tweet.created_at),
+      engagement_metrics: {
+        likes: tweet.public_metrics?.like_count || 0,
+        shares: tweet.public_metrics?.retweet_count || 0,
+        comments: tweet.public_metrics?.reply_count || 0,
+        reach: tweet.public_metrics?.impression_count || 0
+      },
+      hashtags: tweet.entities?.hashtags?.map(h => `#${h.tag}`) || [],
+      mentions: tweet.entities?.mentions?.map(m => `@${m.username}`) || [],
+      location: undefined
+    };
+  }
+
+  /**
+   * Get all tweets as SocialPost format
+   */
+  getTweetsAsSocialPosts(): SocialPost[] {
+    if (!this.lastData?.data) return [];
+    return this.lastData.data.map(tweet => this.convertTweetToSocialPost(tweet));
+  }
+
+  private notifySubscribers(data: BJPBengalFeed): void {
+    this.subscribers.forEach(callback => {
+      try {
+        callback(data);
+      } catch (error) {
+        console.error('[BJPBengalMonitor] Subscriber error:', error);
+      }
+    });
+  }
+}
+
+// Singleton instance
+export const bjpBengalMonitor = new BJPBengalTwitterMonitor();

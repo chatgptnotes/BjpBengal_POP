@@ -4,6 +4,19 @@
  */
 
 import axios from 'axios';
+import {
+  fetchBJPBengalFeed,
+  fetchBJPBengalTweets,
+  searchHashtag,
+  fetchMentions as fetchTwitterMentions,
+  searchTweets,
+  getTwitterConfig,
+  getRemainingAPICalls,
+  isAPILimitReached,
+  BJP_BENGAL_CONFIG,
+  type Tweet,
+  type BJPBengalFeed
+} from './twitterScraper';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -558,6 +571,76 @@ export const fetchAllSocialMediaData = async () => {
   }
 };
 
+// ============================================================================
+// BJP BENGAL TWITTER INTEGRATION (VIA PROXY)
+// ============================================================================
+
+/**
+ * Fetch BJP Bengal Twitter feed via Cloudflare proxy
+ * Uses the new twitterScraper service with proper rate limiting and caching
+ */
+export const fetchBJPBengalTwitterFeed = async (maxResults: number = 20): Promise<BJPBengalFeed> => {
+  return fetchBJPBengalFeed(maxResults);
+};
+
+/**
+ * Get official @BJP4Bengal tweets
+ */
+export const fetchOfficialBJPBengalTweets = async (maxResults: number = 10) => {
+  return fetchBJPBengalTweets(maxResults);
+};
+
+/**
+ * Search BJP Bengal related hashtags
+ */
+export const searchBJPHashtag = async (hashtag: string, maxResults: number = 10) => {
+  return searchHashtag(hashtag, maxResults);
+};
+
+/**
+ * Get mentions of BJP Bengal accounts
+ */
+export const fetchBJPMentions = async (maxResults: number = 10) => {
+  return fetchTwitterMentions(maxResults);
+};
+
+/**
+ * Search BJP Bengal related tweets
+ */
+export const searchBJPTweets = async (query: string, maxResults: number = 10) => {
+  return searchTweets(query, maxResults);
+};
+
+/**
+ * Get Twitter API status and configuration
+ */
+export const getTwitterAPIStatus = () => {
+  return {
+    ...getTwitterConfig(),
+    configured: isAPIConfigured('twitter'),
+    remainingCalls: getRemainingAPICalls(),
+    limitReached: isAPILimitReached()
+  };
+};
+
+/**
+ * Convert Twitter API tweets to PostData format
+ */
+export const convertTweetsToPostData = (tweets: Tweet[]): PostData[] => {
+  return tweets.map(tweet => ({
+    id: tweet.id,
+    platform: 'Twitter/X',
+    content: tweet.text,
+    timestamp: new Date(tweet.created_at),
+    likes: tweet.public_metrics?.like_count || 0,
+    shares: tweet.public_metrics?.retweet_count || 0,
+    comments: tweet.public_metrics?.reply_count || 0,
+    views: tweet.public_metrics?.impression_count,
+    mediaType: 'text' as const,
+    url: `https://twitter.com/i/status/${tweet.id}`
+  }));
+};
+
 export default {
   fetchFacebookMetrics,
   fetchFacebookPosts,
@@ -569,5 +652,14 @@ export default {
   fetchYouTubePosts,
   generateAggregatedMentions,
   fetchAllSocialMediaData,
-  isAPIConfigured
+  isAPIConfigured,
+  // BJP Bengal Twitter exports
+  fetchBJPBengalTwitterFeed,
+  fetchOfficialBJPBengalTweets,
+  searchBJPHashtag,
+  fetchBJPMentions,
+  searchBJPTweets,
+  getTwitterAPIStatus,
+  convertTweetsToPostData,
+  BJP_BENGAL_CONFIG
 };

@@ -40,6 +40,18 @@ import {
 import { MobileCard, ResponsiveGrid, MobileButton, MobileTabs } from '../components/MobileResponsive';
 import { socialMediaService, type SocialMediaPost as DBSocialMediaPost } from '../services/supabase/socialMedia.service';
 import { supabase } from '../lib/supabase';
+import {
+  fetchBJPBengalFeed,
+  startAutoRefresh,
+  stopAutoRefresh,
+  subscribeToUpdates,
+  getTwitterConfig,
+  getRemainingAPICalls,
+  isAPILimitReached,
+  BJP_BENGAL_CONFIG,
+  type Tweet,
+  type BJPBengalFeed
+} from '../services/twitterScraper';
 
 interface SocialPlatform {
   id: string;
@@ -351,10 +363,76 @@ export default function SocialMediaChannels() {
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
 
+  // BJP Bengal Twitter state
+  const [bjpBengalTweets, setBjpBengalTweets] = useState<Tweet[]>([]);
+  const [bjpBengalLoading, setBjpBengalLoading] = useState(false);
+  const [bjpBengalError, setBjpBengalError] = useState<string | null>(null);
+  const [twitterApiStatus, setTwitterApiStatus] = useState({
+    remainingCalls: 1500,
+    limitReached: false,
+    fromCache: false,
+    lastFetch: null as Date | null
+  });
+
   // Fetch real posts from Supabase
   useEffect(() => {
     fetchSocialPosts();
   }, []);
+
+  // BJP Bengal Twitter auto-refresh
+  useEffect(() => {
+    if (activeTab === 'bjp-bengal' && isMonitoring) {
+      fetchBJPBengalData();
+
+      // Subscribe to updates
+      const unsubscribe = subscribeToUpdates((data) => {
+        if (data.data) {
+          setBjpBengalTweets(data.data);
+          setTwitterApiStatus({
+            remainingCalls: getRemainingAPICalls(),
+            limitReached: isAPILimitReached(),
+            fromCache: data.fromCache || false,
+            lastFetch: new Date()
+          });
+        }
+        if (data.error) {
+          setBjpBengalError(data.error);
+        }
+      });
+
+      // Start auto-refresh (every 5 minutes)
+      startAutoRefresh();
+
+      return () => {
+        unsubscribe();
+        stopAutoRefresh();
+      };
+    }
+  }, [activeTab, isMonitoring]);
+
+  const fetchBJPBengalData = async () => {
+    setBjpBengalLoading(true);
+    setBjpBengalError(null);
+    try {
+      const data = await fetchBJPBengalFeed(20);
+      if (data.data) {
+        setBjpBengalTweets(data.data);
+      }
+      if (data.error) {
+        setBjpBengalError(data.error);
+      }
+      setTwitterApiStatus({
+        remainingCalls: getRemainingAPICalls(),
+        limitReached: isAPILimitReached(),
+        fromCache: data.fromCache || false,
+        lastFetch: new Date()
+      });
+    } catch (error: any) {
+      setBjpBengalError(error.message || 'Failed to fetch BJP Bengal tweets');
+    } finally {
+      setBjpBengalLoading(false);
+    }
+  };
 
   const fetchSocialPosts = async () => {
     try {
@@ -496,6 +574,7 @@ export default function SocialMediaChannels() {
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: BarChart3 },
+    { key: 'bjp-bengal', label: 'BJP Bengal', icon: Target },
     { key: 'platforms', label: 'Platforms', icon: Globe },
     { key: 'posts', label: 'Posts', icon: MessageCircle },
     { key: 'hashtags', label: 'Hashtags', icon: Hash },
@@ -680,6 +759,202 @@ export default function SocialMediaChannels() {
                 ))}
               </div>
             </MobileCard>
+          </div>
+        )}
+
+        {/* BJP Bengal Tab */}
+        {activeTab === 'bjp-bengal' && (
+          <div className="space-responsive">
+            {/* API Status Bar */}
+            <MobileCard padding="compact" className={`${twitterApiStatus.limitReached ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-3 h-3 rounded-full ${twitterApiStatus.limitReached ? 'bg-yellow-500' : 'bg-green-500 animate-pulse'}`} />
+                  <span className="text-responsive-sm font-medium">
+                    {twitterApiStatus.limitReached ? 'API Limit Reached - Using Cached Data' : 'Twitter API Connected'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-4 text-xs text-gray-600">
+                  <span>API Calls: {twitterApiStatus.remainingCalls}/1500</span>
+                  {twitterApiStatus.fromCache && <span className="text-blue-600">From Cache</span>}
+                  {twitterApiStatus.lastFetch && (
+                    <span>Last: {twitterApiStatus.lastFetch.toLocaleTimeString()}</span>
+                  )}
+                  <MobileButton variant="outline" size="small" onClick={fetchBJPBengalData}>
+                    <RefreshCw className={`w-4 h-4 ${bjpBengalLoading ? 'animate-spin' : ''}`} />
+                  </MobileButton>
+                </div>
+              </div>
+            </MobileCard>
+
+            {/* BJP Bengal Header */}
+            <MobileCard padding="default">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Target className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-responsive-lg font-semibold text-gray-900">BJP Bengal Twitter Feed</h3>
+                    <p className="text-responsive-sm text-gray-600">Real-time tweets about BJP West Bengal</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-responsive-xl font-bold text-gray-900">{bjpBengalTweets.length}</div>
+                  <div className="text-responsive-sm text-gray-600">Tweets</div>
+                </div>
+              </div>
+
+              {/* Tracked Hashtags */}
+              <div className="mb-4">
+                <h4 className="text-responsive-sm font-medium text-gray-700 mb-2">Tracked Hashtags</h4>
+                <div className="flex flex-wrap gap-2">
+                  {BJP_BENGAL_CONFIG.hashtags.slice(0, 8).map(tag => (
+                    <span key={tag} className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tracked Keywords */}
+              <div>
+                <h4 className="text-responsive-sm font-medium text-gray-700 mb-2">Tracked Keywords</h4>
+                <div className="flex flex-wrap gap-2">
+                  {BJP_BENGAL_CONFIG.keywords.slice(0, 6).map(keyword => (
+                    <span key={keyword} className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </MobileCard>
+
+            {/* Error Message */}
+            {bjpBengalError && (
+              <MobileCard padding="compact" className="bg-red-50 border-red-200">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <span className="text-responsive-sm text-red-700">{bjpBengalError}</span>
+                </div>
+              </MobileCard>
+            )}
+
+            {/* Loading State */}
+            {bjpBengalLoading && bjpBengalTweets.length === 0 && (
+              <MobileCard padding="default" className="text-center">
+                <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+                <p className="text-responsive-sm text-gray-600">Loading BJP Bengal tweets...</p>
+              </MobileCard>
+            )}
+
+            {/* Tweets Feed */}
+            {bjpBengalTweets.length > 0 && (
+              <div className="space-y-4">
+                {bjpBengalTweets.map(tweet => (
+                  <MobileCard key={tweet.id} padding="default" className="hover:shadow-md transition-shadow">
+                    <div className="flex items-start space-x-3">
+                      {/* Author Avatar */}
+                      <div className="flex-shrink-0">
+                        {tweet.author?.profile_image_url ? (
+                          <img
+                            src={tweet.author.profile_image_url}
+                            alt={tweet.author.name}
+                            className="w-12 h-12 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                            <Users className="w-6 h-6 text-gray-500" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tweet Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="font-semibold text-gray-900 truncate">
+                            {tweet.author?.name || 'Unknown'}
+                          </span>
+                          {tweet.author?.verified && (
+                            <CheckCircle className="w-4 h-4 text-blue-500" />
+                          )}
+                          <span className="text-gray-500">@{tweet.author?.username || 'unknown'}</span>
+                        </div>
+
+                        <p className="text-responsive-sm text-gray-800 mb-3 whitespace-pre-wrap">
+                          {tweet.text}
+                        </p>
+
+                        {/* Hashtags */}
+                        {tweet.entities?.hashtags && tweet.entities.hashtags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {tweet.entities.hashtags.map((h, idx) => (
+                              <span key={idx} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded">
+                                #{h.tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Engagement Metrics */}
+                        <div className="flex items-center space-x-6 text-gray-500">
+                          <div className="flex items-center space-x-1">
+                            <MessageCircle className="w-4 h-4" />
+                            <span className="text-xs">{tweet.public_metrics?.reply_count || 0}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Share2 className="w-4 h-4" />
+                            <span className="text-xs">{tweet.public_metrics?.retweet_count || 0}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Heart className="w-4 h-4" />
+                            <span className="text-xs">{tweet.public_metrics?.like_count || 0}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-xs">
+                              {new Date(tweet.created_at).toLocaleTimeString('en-IN', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                          {/* Hide View link for mock/demo tweets */}
+                          {tweet.id.startsWith('mock_') ? (
+                            <span className="flex items-center space-x-1 text-gray-400">
+                              <Star className="w-4 h-4" />
+                              <span className="text-xs">Demo</span>
+                            </span>
+                          ) : (
+                            <a
+                              href={`https://twitter.com/i/status/${tweet.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center space-x-1 text-blue-600 hover:text-blue-800"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              <span className="text-xs">View</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </MobileCard>
+                ))}
+              </div>
+            )}
+
+            {/* No Tweets */}
+            {!bjpBengalLoading && bjpBengalTweets.length === 0 && !bjpBengalError && (
+              <MobileCard padding="default" className="text-center">
+                <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-responsive-sm text-gray-600">No tweets found. Click refresh to fetch latest BJP Bengal tweets.</p>
+                <MobileButton variant="primary" size="small" onClick={fetchBJPBengalData} className="mt-4">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Fetch Tweets
+                </MobileButton>
+              </MobileCard>
+            )}
           </div>
         )}
 
