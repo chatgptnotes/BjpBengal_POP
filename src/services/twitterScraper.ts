@@ -72,6 +72,7 @@ export interface Tweet {
 }
 
 export interface TwitterResponse {
+  success?: boolean;
   data?: Tweet[];
   includes?: {
     users?: TwitterUser[];
@@ -279,12 +280,26 @@ export async function fetchBJPBengalFeed(maxResults: number = 20): Promise<BJPBe
 
   try {
     const response = await fetch(`${TWITTER_PROXY_URL}/api/twitter/bjp-bengal?max_results=${maxResults}`);
+    const data: BJPBengalFeed = await response.json();
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    // Check if API returned error (rate limited or other error)
+    if (!data.success && data.rateLimited) {
+      console.warn('[TwitterScraper] API rate limited, using mock data');
+      return {
+        data: generateMockTweets(),
+        meta: { result_count: 3 },
+        fromCache: false,
+        rateLimited: true,
+        fetchedAt: new Date().toISOString(),
+        hashtags: BJP_BENGAL_CONFIG.hashtags,
+        keywords: BJP_BENGAL_CONFIG.keywords
+      };
     }
 
-    const data: BJPBengalFeed = await response.json();
+    if (!data.success) {
+      throw new Error(data.error || 'API error');
+    }
+
     incrementAPIUsage();
 
     // Enrich with author data
@@ -486,8 +501,9 @@ export function subscribeToUpdates(callback: (data: BJPBengalFeed) => void): () 
 
 // Check proxy health
 export async function checkTwitterProxyHealth(): Promise<boolean> {
+  if (!TWITTER_PROXY_URL) return false;
   try {
-    const response = await fetch(`${TWITTER_PROXY_URL}/api/twitter/health`);
+    const response = await fetch(`${TWITTER_PROXY_URL}/health`);
     return response.ok;
   } catch {
     return false;
