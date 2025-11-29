@@ -11,9 +11,19 @@ import CampaignMetrics, { generateCampaignMetrics } from './CampaignMetrics';
 
 interface Props {
   selectedConstituency?: string;
+  constituencyLeaders?: Array<{
+    constituency_id: string;
+    constituency_name: string;
+    current_mla_party: string;
+    current_mla_margin?: number;
+    is_swing_constituency: boolean;
+  }>;
 }
 
-export default function RightSidebar({ selectedConstituency }: Props) {
+export default function RightSidebar({
+  selectedConstituency,
+  constituencyLeaders
+}: Props) {
   const mapData = generateMapData(selectedConstituency);
   const leaderData = generateLeaderData();
   const mediaData = generateMediaData();
@@ -21,7 +31,11 @@ export default function RightSidebar({ selectedConstituency }: Props) {
 
   return (
     <div className="space-y-6">
-      <GeographicHeatmap data={mapData} selectedConstituency={selectedConstituency} />
+      <GeographicHeatmap
+        data={mapData}
+        selectedConstituency={selectedConstituency}
+        constituencyLeaders={constituencyLeaders}
+      />
       <KeyLeaderPerformance data={leaderData} />
       <MediaCoverageAnalysis data={mediaData} />
       <CampaignMetrics data={campaignData} />

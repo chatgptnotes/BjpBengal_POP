@@ -21,7 +21,9 @@ import SentimentTimeline, { generateSentimentTimelineData } from './components/S
 import LeaderAnalysisSection from './components/LeaderAnalysisSection';
 // Import Leader Deep Dive for comprehensive intelligence view
 import LeaderDeepDive from './components/LeaderDeepDive';
-import { ConstituencyLeader } from '@/services/leaderTracking';
+import { ConstituencyLeader, constituencyLeaderService } from '@/services/leaderTracking';
+// Import seed function for auto-populating data
+import { seedConstituencyLeaders } from '@/utils/seedConstituencyData';
 
 /* -------------------------------------------------------------------------
    GEMINI API UTILITIES
@@ -506,11 +508,37 @@ export default function PulseDashboard() {
   const [lastNewsUpdate, setLastNewsUpdate] = useState<string>('');
   // State for Leader Deep Dive view
   const [selectedLeader, setSelectedLeader] = useState<ConstituencyLeader | null>(null);
+  // State for all constituency leaders (for real data in sidebars)
+  const [allConstituencyLeaders, setAllConstituencyLeaders] = useState<ConstituencyLeader[]>([]);
+  const [currentLeader, setCurrentLeader] = useState<ConstituencyLeader | null>(null);
+
+  // Auto-seed constituency leaders data on mount and fetch all leaders
+  useEffect(() => {
+    const autoSeed = async () => {
+      try {
+        console.log('[PulseDashboard] Auto-seeding constituency leaders data...');
+        const result = await seedConstituencyLeaders();
+        console.log('[PulseDashboard] Seed result:', result);
+
+        // Fetch all constituency leaders for real data in sidebars
+        const leaders = await constituencyLeaderService.getAllLeaders();
+        setAllConstituencyLeaders(leaders);
+        console.log('[PulseDashboard] Loaded', leaders.length, 'constituency leaders');
+      } catch (error) {
+        console.error('[PulseDashboard] Auto-seed error:', error);
+      }
+    };
+    autoSeed();
+  }, []);
 
   // Load Data Effect
   useEffect(() => {
     // Clear selected leader when constituency changes
     setSelectedLeader(null);
+
+    // Find and set current leader for the selected constituency
+    const leader = allConstituencyLeaders.find(l => l.constituency_id === selectedId);
+    setCurrentLeader(leader || null);
 
     const loadDashboardData = async () => {
       setLoading(true);
@@ -579,7 +607,7 @@ export default function PulseDashboard() {
     };
 
     loadDashboardData();
-  }, [selectedId, timeRangeIdx]);
+  }, [selectedId, timeRangeIdx, allConstituencyLeaders]);
 
   // Manual refresh function
   const handleRefreshNews = async () => {
@@ -750,7 +778,13 @@ export default function PulseDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* LEFT SIDEBAR - Issues & Trends */}
             <div className="lg:col-span-3">
-              <LeftSidebar topIssues={data.top_issues} />
+              <LeftSidebar
+                topIssues={data.top_issues}
+                constituencyId={selectedId}
+                party={currentLeader?.current_mla_party}
+                isSwing={currentLeader?.is_swing_constituency}
+                margin={currentLeader?.current_mla_margin}
+              />
             </div>
 
             {/* MIDDLE SECTION - Leader Analysis + Strategic Intelligence */}
@@ -784,7 +818,16 @@ export default function PulseDashboard() {
 
             {/* RIGHT SIDEBAR - Key Leaders, Media, Campaign */}
             <div className="lg:col-span-4">
-              <RightSidebar selectedConstituency={data.constituency_name} />
+              <RightSidebar
+                selectedConstituency={data.constituency_name}
+                constituencyLeaders={allConstituencyLeaders.map(l => ({
+                  constituency_id: l.constituency_id,
+                  constituency_name: l.constituency_name,
+                  current_mla_party: l.current_mla_party,
+                  current_mla_margin: l.current_mla_margin,
+                  is_swing_constituency: l.is_swing_constituency
+                }))}
+              />
             </div>
           </div>
 

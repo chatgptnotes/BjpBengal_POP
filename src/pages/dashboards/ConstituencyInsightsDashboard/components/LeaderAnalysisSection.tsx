@@ -257,14 +257,51 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
         } else {
           setLeader(leaderData);
 
-          // Fetch news if leader found
-          const { data: newsData } = await supabase
-            .from('leader_daily_news')
-            .select('*')
-            .eq('constituency_id', leaderData.constituency_id)
-            .order('published_at', { ascending: false })
-            .limit(5);
-          setNews(newsData || []);
+          // Fetch news from proxy server (Google News RSS)
+          try {
+            const proxyUrl = `http://localhost:3001/api/news/constituency/${leaderData.constituency_id}`;
+            console.log('[LeaderAnalysis] Fetching news from:', proxyUrl);
+            const response = await fetch(proxyUrl);
+            const result = await response.json();
+
+            if (result.success && result.articles?.length > 0) {
+              // Transform articles to match LeaderNews interface
+              const transformedNews = result.articles.map((article: any) => ({
+                id: article.id,
+                constituency_id: leaderData.constituency_id,
+                leader_name: leaderData.current_mla_name,
+                title: article.title,
+                description: article.description,
+                url: article.url,
+                source: article.source,
+                published_at: article.published_at,
+                sentiment: article.sentiment || 'neutral',
+                is_controversy: false
+              }));
+              console.log('[LeaderAnalysis] Loaded', transformedNews.length, 'news articles from Google News');
+              setNews(transformedNews);
+            } else {
+              console.log('[LeaderAnalysis] No news from proxy, trying database...');
+              // Fallback to database
+              const { data: newsData } = await supabase
+                .from('leader_daily_news')
+                .select('*')
+                .eq('constituency_id', leaderData.constituency_id)
+                .order('published_at', { ascending: false })
+                .limit(5);
+              setNews(newsData || []);
+            }
+          } catch (proxyError) {
+            console.error('[LeaderAnalysis] Proxy error, trying database:', proxyError);
+            // Fallback to database
+            const { data: newsData } = await supabase
+              .from('leader_daily_news')
+              .select('*')
+              .eq('constituency_id', leaderData.constituency_id)
+              .order('published_at', { ascending: false })
+              .limit(5);
+            setNews(newsData || []);
+          }
         }
       } catch (error) {
         console.error('[LeaderAnalysis] Error fetching leader data:', error);
@@ -280,16 +317,29 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Re-fetch data
+    // Re-fetch data from proxy
     if (leader) {
       try {
-        const { data: newsData } = await supabase
-          .from('leader_daily_news')
-          .select('*')
-          .eq('constituency_id', leader.constituency_id)
-          .order('published_at', { ascending: false })
-          .limit(5);
-        setNews(newsData || []);
+        const proxyUrl = `http://localhost:3001/api/news/constituency/${leader.constituency_id}`;
+        console.log('[LeaderAnalysis] Refreshing news from:', proxyUrl);
+        const response = await fetch(proxyUrl);
+        const result = await response.json();
+
+        if (result.success && result.articles?.length > 0) {
+          const transformedNews = result.articles.map((article: any) => ({
+            id: article.id,
+            constituency_id: leader.constituency_id,
+            leader_name: leader.current_mla_name,
+            title: article.title,
+            description: article.description,
+            url: article.url,
+            source: article.source,
+            published_at: article.published_at,
+            sentiment: article.sentiment || 'neutral',
+            is_controversy: false
+          }));
+          setNews(transformedNews);
+        }
       } catch (error) {
         console.error('Error refreshing news:', error);
       }
