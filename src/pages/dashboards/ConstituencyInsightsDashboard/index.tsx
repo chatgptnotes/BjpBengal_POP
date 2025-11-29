@@ -19,6 +19,9 @@ import SocialMediaFeed, { generateMockSocialPosts } from './components/SocialMed
 import SentimentTimeline, { generateSentimentTimelineData } from './components/SentimentTimeline';
 // Import Leader Analysis Section
 import LeaderAnalysisSection from './components/LeaderAnalysisSection';
+// Import Leader Deep Dive for comprehensive intelligence view
+import LeaderDeepDive from './components/LeaderDeepDive';
+import { ConstituencyLeader } from '@/services/leaderTracking';
 
 /* -------------------------------------------------------------------------
    GEMINI API UTILITIES
@@ -501,9 +504,14 @@ export default function PulseDashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
   const [lastNewsUpdate, setLastNewsUpdate] = useState<string>('');
+  // State for Leader Deep Dive view
+  const [selectedLeader, setSelectedLeader] = useState<ConstituencyLeader | null>(null);
 
   // Load Data Effect
   useEffect(() => {
+    // Clear selected leader when constituency changes
+    setSelectedLeader(null);
+
     const loadDashboardData = async () => {
       setLoading(true);
       try {
@@ -747,8 +755,28 @@ export default function PulseDashboard() {
 
             {/* MIDDLE SECTION - Leader Analysis + Strategic Intelligence */}
             <div className="lg:col-span-5 space-y-6">
-              {/* Leader Analysis Section */}
-              <LeaderAnalysisSection selectedConstituency={data.constituency_name} />
+              {/* Leader Deep Dive - shown when a leader is clicked */}
+              {selectedLeader && (
+                <div className="relative">
+                  <button
+                    onClick={() => setSelectedLeader(null)}
+                    className="absolute -top-2 -right-2 z-10 bg-slate-700 hover:bg-slate-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
+                    title="Close Leader Intelligence"
+                  >
+                    <X size={16} />
+                  </button>
+                  <LeaderDeepDive
+                    constituencyId={selectedLeader.constituency_id}
+                    constituencyName={selectedLeader.constituency_name}
+                  />
+                </div>
+              )}
+
+              {/* Leader Analysis Section - Basic MLA info with clickable leader */}
+              <LeaderAnalysisSection
+                selectedConstituency={data.constituency_name}
+                onLeaderClick={(leader) => setSelectedLeader(leader)}
+              />
 
               {/* Strategic Intelligence Unit */}
               {data.strategy && <StrategicDeepDive strategy={data.strategy} lastUpdate={lastNewsUpdate} />}
