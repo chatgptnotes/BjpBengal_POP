@@ -56,22 +56,27 @@ app.get('/health', (req, res) => {
   });
 });
 
-// BJP Bengal combined feed
+// BJP Bengal combined feed - Fetches up to 50 tweets per request
 app.get('/api/twitter/bjp-bengal', async (req, res) => {
   try {
+    const { max_results = 50 } = req.query;
+
     // Build search query for BJP Bengal
     const hashtagQuery = BJP_BENGAL_CONFIG.hashtags.slice(0, 5).join(' OR ');
     const query = `(${hashtagQuery}) -is:retweet lang:en`;
 
     console.log(`[BJP Bengal] Search query: ${query}`);
+    console.log(`[BJP Bengal] Requesting ${max_results} tweets`);
 
     const data = await twitterRequest('/tweets/search/recent', {
       query: query,
-      max_results: 10,
+      max_results: Math.min(parseInt(max_results), 100), // Twitter API max is 100
       'tweet.fields': 'created_at,public_metrics,author_id,entities',
       'user.fields': 'name,username,profile_image_url',
       'expansions': 'author_id'
     });
+
+    console.log(`[BJP Bengal] Fetched ${data.data?.length || 0} tweets`);
 
     res.json({
       success: true,
@@ -216,6 +221,48 @@ app.get('/api/twitter/mentions', async (req, res) => {
   } catch (error) {
     console.error('[Mentions] Error:', error.message);
     res.json({ success: false, error: error.message, rateLimited: error.message.includes('429'), data: [] });
+  }
+});
+
+// Get replies/comments for a specific tweet
+app.get('/api/twitter/replies/:tweet_id', async (req, res) => {
+  try {
+    const { tweet_id } = req.params;
+    const { max_results = 20 } = req.query;
+
+    if (!tweet_id) {
+      return res.status(400).json({ error: 'Tweet ID parameter required' });
+    }
+
+    console.log(`[Replies] Fetching replies for tweet: ${tweet_id}`);
+
+    // Search for tweets that are replies to this conversation
+    const query = `conversation_id:${tweet_id}`;
+
+    const data = await twitterRequest('/tweets/search/recent', {
+      query: query,
+      max_results: Math.min(parseInt(max_results), 100),
+      'tweet.fields': 'created_at,public_metrics,author_id,entities,in_reply_to_user_id,conversation_id',
+      'user.fields': 'name,username,profile_image_url,verified',
+      'expansions': 'author_id,in_reply_to_user_id'
+    });
+
+    res.json({
+      success: true,
+      data: data.data || [],
+      includes: data.includes || {},
+      meta: data.meta || {},
+      tweetId: tweet_id
+    });
+  } catch (error) {
+    console.error('[Replies] Error:', error.message);
+    res.json({
+      success: false,
+      error: error.message,
+      rateLimited: error.message.includes('429'),
+      data: [],
+      tweetId: req.params.tweet_id
+    });
   }
 });
 
