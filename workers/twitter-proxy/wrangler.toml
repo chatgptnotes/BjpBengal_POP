@@ -1,0 +1,16 @@
+name = "twitter-bjp-proxy"
+main = "index.ts"
+compatibility_date = "2024-01-01"
+
+# Production route (update with your domain)
+# route = { pattern = "api.yourdomain.com/twitter/*", zone_name = "yourdomain.com" }
+
+[vars]
+ENVIRONMENT = "production"
+
+# Secrets (set via: wrangler secret put SECRET_NAME)
+# TWITTER_BEARER_TOKEN - set this secret after deploy
+# TWITTER_API_KEY - set this secret after deploy
+# TWITTER_API_SECRET - set this secret after deploy
+# TWITTER_ACCESS_TOKEN - set this secret after deploy
+# TWITTER_ACCESS_TOKEN_SECRET - set this secret after deploy
