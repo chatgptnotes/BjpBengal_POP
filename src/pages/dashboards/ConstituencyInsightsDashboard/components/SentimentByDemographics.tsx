@@ -1,10 +1,12 @@
 /**
  * Sentiment by Demographics Component
  * Horizontal stacked bar chart showing sentiment distribution across voter segments
+ * Now uses real constituency data from constituencyExtendedData.ts
  */
 
 import React from 'react';
 import { Users } from 'lucide-react';
+import { getDemographicSentiment } from '@/utils/constituencyExtendedData';
 
 interface DemographicSentiment {
   category: string;
@@ -15,9 +17,24 @@ interface DemographicSentiment {
 
 interface Props {
   data: DemographicSentiment[];
+  constituencyId?: string;
+  party?: string;
+  isSwing?: boolean;
+  margin?: number;
 }
 
-export default function SentimentByDemographics({ data }: Props) {
+export default function SentimentByDemographics({
+  data,
+  constituencyId,
+  party,
+  isSwing,
+  margin
+}: Props) {
+  // Use real data if constituencyId is provided, otherwise use passed data
+  const demographicData = constituencyId && party !== undefined
+    ? getDemographicSentiment(constituencyId, party || 'TMC', isSwing || false, margin || 0)
+    : data;
+
   return (
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
       <div className="flex items-center gap-2 mb-5">
@@ -28,7 +45,7 @@ export default function SentimentByDemographics({ data }: Props) {
       </div>
 
       <div className="space-y-4">
-        {data.map((item, index) => (
+        {demographicData.map((item, index) => (
           <div key={index} className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-slate-300">

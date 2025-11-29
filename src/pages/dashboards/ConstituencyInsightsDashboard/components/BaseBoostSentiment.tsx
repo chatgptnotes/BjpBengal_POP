@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
+import { getIssueSentiment } from '@/utils/constituencyExtendedData';
 
 interface IssueData {
   issue: string;
@@ -16,9 +17,21 @@ interface IssueData {
 
 interface Props {
   data: IssueData[];
+  constituencyId?: string;
+  party?: string;
+  isSwing?: boolean;
 }
 
-export default function BaseBoostSentiment({ data }: Props) {
+export default function BaseBoostSentiment({
+  data,
+  constituencyId,
+  party,
+  isSwing
+}: Props) {
+  // Use real data if constituencyId is provided, otherwise use passed data
+  const issueData = constituencyId && party !== undefined
+    ? getIssueSentiment(constituencyId, party || 'TMC', isSwing || false)
+    : data;
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case 'positive': return 'bg-emerald-500';
@@ -54,7 +67,7 @@ export default function BaseBoostSentiment({ data }: Props) {
       </div>
 
       <div className="space-y-3">
-        {data.map((item, index) => (
+        {issueData.map((item, index) => (
           <div
             key={index}
             className="flex items-center justify-between p-3 rounded-lg bg-slate-900/50 hover:bg-slate-900 transition-colors border border-slate-700/50"
@@ -90,8 +103,8 @@ export default function BaseBoostSentiment({ data }: Props) {
 
       {/* Summary Footer */}
       <div className="mt-4 pt-4 border-t border-slate-700 flex justify-between text-xs text-slate-400">
-        <span>{data.filter(i => i.sentiment === 'negative').length} critical issues</span>
-        <span>{data.filter(i => i.trend === 'up').length} trending up</span>
+        <span>{issueData.filter(i => i.sentiment === 'negative').length} critical issues</span>
+        <span>{issueData.filter(i => i.trend === 'up').length} trending up</span>
       </div>
     </div>
   );
