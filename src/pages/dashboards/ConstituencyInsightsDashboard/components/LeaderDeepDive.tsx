@@ -27,6 +27,12 @@ import {
   ExternalLink,
   Lightbulb,
   AlertCircle,
+  UserCircle,
+  GraduationCap,
+  Briefcase,
+  Scale,
+  Wallet,
+  History,
 } from 'lucide-react';
 import {
   LineChart,
@@ -49,6 +55,7 @@ import {
   type LeaderIntelligence,
 } from '@/services/leaderIntelligence';
 import { fetchNewsForConstituency } from '@/services/leaderIntelligence/newsIntelligenceService';
+import { fetchMLAProfile, formatIndianCurrency, type MLAProfile } from '@/services/leaderIntelligence/mlaProfileService';
 
 // Refresh progress state
 interface RefreshProgress {
@@ -96,7 +103,7 @@ interface Props {
   constituencyName?: string;
 }
 
-type TabType = 'win' | 'opposition' | 'pulse' | 'runner' | 'issues';
+type TabType = 'win' | 'opposition' | 'pulse' | 'runner' | 'issues' | 'profile';
 
 export default function LeaderDeepDive({ constituencyId, constituencyName }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('win');
@@ -112,10 +119,39 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
     newScore: 0,
   });
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [mlaProfile, setMlaProfile] = useState<MLAProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     loadIntelligence();
   }, [constituencyId]);
+
+  // Load MLA profile when profile tab is selected
+  useEffect(() => {
+    if (activeTab === 'profile' && intel && !mlaProfile && !profileLoading) {
+      loadMlaProfile();
+    }
+  }, [activeTab, intel]);
+
+  const loadMlaProfile = async () => {
+    if (!intel) return;
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      const profile = await fetchMLAProfile(
+        intel.current_mla_name,
+        intel.constituency_name,
+        intel.current_mla_party
+      );
+      setMlaProfile(profile);
+    } catch (error) {
+      console.error('[LeaderDeepDive] Error loading profile:', error);
+      setProfileError('Failed to load profile. Please try again.');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const loadIntelligence = async () => {
     setLoading(true);
@@ -208,6 +244,7 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
     { id: 'pulse' as TabType, label: 'Daily Pulse', icon: Newspaper },
     { id: 'runner' as TabType, label: 'Runner-up Path', icon: Crosshair },
     { id: 'issues' as TabType, label: 'Issues', icon: FileWarning },
+    { id: 'profile' as TabType, label: 'MLA Profile', icon: UserCircle },
   ];
 
   return (
@@ -854,6 +891,268 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
+          <div className="space-y-4">
+            {profileLoading && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <RefreshCw size={32} className="animate-spin text-indigo-500 mb-4" />
+                <p className="text-slate-400 text-sm">Fetching profile from MyNeta & Wikipedia...</p>
+              </div>
+            )}
+
+            {profileError && !profileLoading && (
+              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-center">
+                <AlertCircle size={24} className="text-rose-400 mx-auto mb-2" />
+                <p className="text-rose-400 text-sm mb-3">{profileError}</p>
+                <button
+                  onClick={loadMlaProfile}
+                  className="px-4 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-sm hover:bg-rose-500/30 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {mlaProfile && !profileLoading && (
+              <>
+                {/* Criminal Records */}
+                <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                  <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Scale size={14} />
+                      Criminal Records
+                    </span>
+                    <span className={`text-[10px] px-2 py-1 rounded font-bold ${
+                      mlaProfile.criminal.total_cases > 0 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+                    }`}>
+                      {mlaProfile.criminal.total_cases} CASES
+                    </span>
+                  </h3>
+                  {mlaProfile.criminal.total_cases > 0 ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="bg-slate-800/50 rounded-lg p-2">
+                          <p className="text-lg font-bold text-rose-400">{mlaProfile.criminal.ipc_cases}</p>
+                          <p className="text-[10px] text-slate-500">IPC Cases</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-2">
+                          <p className="text-lg font-bold text-amber-400">{mlaProfile.criminal.pending_cases}</p>
+                          <p className="text-[10px] text-slate-500">Pending</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-2">
+                          <p className="text-lg font-bold text-white">{mlaProfile.criminal.convicted ? 'Yes' : 'No'}</p>
+                          <p className="text-[10px] text-slate-500">Convicted</p>
+                        </div>
+                      </div>
+                      {mlaProfile.criminal.case_details.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          {mlaProfile.criminal.case_details.map((c, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs p-2 bg-slate-800/30 rounded">
+                              <span className="text-rose-400 font-medium">{c.section}</span>
+                              <span className="text-slate-500 capitalize">{c.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-emerald-400 text-sm flex items-center gap-2">
+                      <CheckCircle size={14} /> No criminal cases declared
+                    </p>
+                  )}
+                </div>
+
+                {/* Assets & Liabilities */}
+                <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                  <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                    <Wallet size={14} />
+                    Assets & Liabilities ({mlaProfile.assets.declared_year})
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-800/50 rounded-lg p-3">
+                      <p className="text-[10px] text-slate-500 mb-1">Movable Assets</p>
+                      <p className="text-sm font-bold text-emerald-400">{formatIndianCurrency(mlaProfile.assets.movable)}</p>
+                    </div>
+                    <div className="bg-slate-800/50 rounded-lg p-3">
+                      <p className="text-[10px] text-slate-500 mb-1">Immovable Assets</p>
+                      <p className="text-sm font-bold text-emerald-400">{formatIndianCurrency(mlaProfile.assets.immovable)}</p>
+                    </div>
+                    <div className="bg-slate-800/50 rounded-lg p-3">
+                      <p className="text-[10px] text-slate-500 mb-1">Total Assets</p>
+                      <p className="text-sm font-bold text-white">{formatIndianCurrency(mlaProfile.assets.total)}</p>
+                    </div>
+                    <div className="bg-slate-800/50 rounded-lg p-3">
+                      <p className="text-[10px] text-slate-500 mb-1">Liabilities</p>
+                      <p className="text-sm font-bold text-rose-400">{formatIndianCurrency(mlaProfile.assets.liabilities)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                    <p className="text-[10px] text-indigo-400 mb-1">Net Worth</p>
+                    <p className="text-lg font-bold text-indigo-400">{formatIndianCurrency(mlaProfile.assets.net_worth)}</p>
+                  </div>
+                </div>
+
+                {/* Education & Personal */}
+                <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                  <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                    <GraduationCap size={14} />
+                    Education & Personal Info
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                      <span className="text-xs text-slate-500">Education</span>
+                      <span className="text-sm text-white">{mlaProfile.education.qualification}</span>
+                    </div>
+                    {mlaProfile.education.details && (
+                      <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                        <span className="text-xs text-slate-500">Details</span>
+                        <span className="text-sm text-slate-400">{mlaProfile.education.details}</span>
+                      </div>
+                    )}
+                    {mlaProfile.personal.age > 0 && (
+                      <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                        <span className="text-xs text-slate-500">Age</span>
+                        <span className="text-sm text-white">{mlaProfile.personal.age} years</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                      <span className="text-xs text-slate-500">Profession</span>
+                      <span className="text-sm text-white">{mlaProfile.personal.profession}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Biography (from Wikipedia) */}
+                {mlaProfile.biography.summary && (
+                  <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                      <User size={14} />
+                      Biography
+                    </h3>
+                    <div className="flex gap-4">
+                      {mlaProfile.biography.image_url && (
+                        <img
+                          src={mlaProfile.biography.image_url}
+                          alt={mlaProfile.name}
+                          className="w-20 h-20 rounded-lg object-cover"
+                        />
+                      )}
+                      <div className="flex-1">
+                        {mlaProfile.biography.birth_date && (
+                          <p className="text-xs text-slate-500 mb-1">
+                            Born: <span className="text-slate-400">{mlaProfile.biography.birth_date}</span>
+                            {mlaProfile.biography.birth_place && ` in ${mlaProfile.biography.birth_place}`}
+                          </p>
+                        )}
+                        <p className="text-sm text-slate-300 leading-relaxed line-clamp-4">
+                          {mlaProfile.biography.summary}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Political Career */}
+                {mlaProfile.political_career.positions.length > 0 && (
+                  <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                      <Briefcase size={14} />
+                      Political Career
+                    </h3>
+                    <div className="space-y-2">
+                      {mlaProfile.political_career.positions.map((pos, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                          <span className="text-sm text-white">{pos.title}</span>
+                          <span className="text-xs text-slate-500">{pos.period}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {mlaProfile.political_career.party_history.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-700/50">
+                        <p className="text-[10px] text-slate-500 mb-2">Party History</p>
+                        <div className="flex flex-wrap gap-2">
+                          {mlaProfile.political_career.party_history.map((p, i) => (
+                            <span key={i} className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded">
+                              {p.party}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Election History */}
+                {mlaProfile.elections.length > 0 && (
+                  <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                      <History size={14} />
+                      Election History
+                    </h3>
+                    <div className="space-y-2">
+                      {mlaProfile.elections.map((e, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                          <div>
+                            <span className="text-sm font-medium text-white">{e.year}</span>
+                            <span className="text-xs text-slate-500 ml-2">{e.constituency}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-400">{e.votes.toLocaleString()} votes</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                              e.result === 'won' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                            }`}>
+                              {e.result.toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Source Links */}
+                <div className="flex gap-3 pt-2">
+                  {mlaProfile.myneta_url && (
+                    <a
+                      href={mlaProfile.myneta_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors"
+                    >
+                      <ExternalLink size={12} />
+                      View on MyNeta.info
+                    </a>
+                  )}
+                  {mlaProfile.wikipedia_url && (
+                    <a
+                      href={mlaProfile.wikipedia_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors"
+                    >
+                      <ExternalLink size={12} />
+                      View on Wikipedia
+                    </a>
+                  )}
+                </div>
+
+                {/* Refresh Button */}
+                <button
+                  onClick={() => {
+                    setMlaProfile(null);
+                    loadMlaProfile();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs transition-colors"
+                >
+                  <RefreshCw size={12} />
+                  Refresh Profile
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

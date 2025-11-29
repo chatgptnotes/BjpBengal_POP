@@ -40,6 +40,7 @@ import {
 } from '@/services/leaderTracking';
 import { supabase } from '@/lib/supabase';
 import { fetchNewsForConstituency } from '@/services/leaderIntelligence/newsIntelligenceService';
+import { refreshAllNews } from '@/services/leaderIntelligence/leaderIntelligenceService';
 
 // Types
 interface PartyStrength {
@@ -347,20 +348,17 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
     setRefreshing(false);
   };
 
-  // Fetch news using Google News RSS
+  // Fetch news using enhanced refresh (English + Bengali + Issue Extraction)
   const handleFetchNews = async () => {
     if (!leader) return;
     setFetchingNews(true);
     try {
       console.log('[LeaderAnalysis] Fetching news for:', leader.constituency_name);
-      const result = await fetchNewsForConstituency(
-        leader.constituency_id,
-        leader.constituency_name,
-        leader.current_mla_name,
-        leader.district,
-        leader.current_mla_party
-      );
-      console.log(`[LeaderAnalysis] Fetched ${result.fetched} articles, stored ${result.stored}`);
+
+      // Use enhanced refresh that includes issue extraction
+      const result = await refreshAllNews(leader.constituency_id);
+
+      console.log(`[LeaderAnalysis] Refresh complete: EN=${result.englishStored}, BN=${result.bengaliStored}, Issues=${result.issuesCreated}+${result.issuesUpdated}`);
 
       // Refresh news from database
       const { data: newsData } = await supabase
