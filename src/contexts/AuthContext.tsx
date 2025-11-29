@@ -83,6 +83,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem('force_login');
       localStorage.removeItem('mock_user');
 
+      // Check for persisted demo user first
+      const savedDemoUser = localStorage.getItem('demo_user');
+      if (savedDemoUser) {
+        try {
+          const demoUser = JSON.parse(savedDemoUser);
+          console.log('[AuthContext] ✅ Restored demo user from localStorage:', demoUser.name);
+          setUser(demoUser);
+          setIsInitializing(false);
+          return;
+        } catch (e) {
+          console.error('[AuthContext] Failed to parse demo user, clearing...');
+          localStorage.removeItem('demo_user');
+        }
+      }
+
       // Check for existing Supabase session (no timeout for auth check)
       console.log('[AuthContext] 🔄 Step 1/2: Fetching auth session...');
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -310,6 +325,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           };
 
           setUser(demoUserData);
+          // Persist demo user to localStorage for refresh persistence
+          localStorage.setItem('demo_user', JSON.stringify(demoUserData));
           setIsLoading(false);
           console.log('[AuthContext] ✅ Demo user set:', demoUserData.name, demoUserData.role);
           return true;
@@ -467,11 +484,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = async () => {
     try {
       console.log('[AuthContext] 🚪 Logging out...');
+      // Clear demo user from localStorage
+      localStorage.removeItem('demo_user');
       await supabase.auth.signOut();
       setUser(null);
       console.log('[AuthContext] ✅ Logged out successfully');
     } catch (error) {
       console.error('[AuthContext] ❌ Logout error:', error);
+      localStorage.removeItem('demo_user');
       setUser(null);
     }
   };

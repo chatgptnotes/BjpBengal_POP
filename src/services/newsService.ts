@@ -157,27 +157,43 @@ export interface ArticleFilters {
 export const BJP_KEYWORDS = {
   party_names: [
     'BJP',
-    'தமிழக வெற்றி கழகம்',
-    'Tamilaga Vettri Kazhagam',
-    'தவக',
-    'தமிழக வெற்றிக் கழகம்'
+    'bjp',
+    'Bharatiya Janata Party',
+    'Bharatiya Janata',
+    'Bhartiya Janta Party',
+    // Bengali
+    'বিজেপি',
+    'ভারতীয় জনতা পার্টি',
+    'ভারতীয় জনতা দল',
+    // Hindi
+    'भाजपा',
+    'भारतीय जनता पार्टी'
   ],
   leader_names: [
-    'Vijay',
-    'விஜய்',
-    'Thalapathy',
-    'தளபதி',
-    'Thalapathy Vijay',
-    'தளபதி விஜய்',
-    'Joseph Vijay',
-    'Actor Vijay'
+    // National leaders
+    'Narendra Modi', 'Modi', 'PM Modi', 'নরেন্দ্র মোদী', 'মোদী', 'नरेंद्र मोदी', 'मोदी',
+    'Amit Shah', 'অমিত শাহ', 'अमित शाह',
+    'J.P. Nadda', 'JP Nadda', 'জে.পি. নাড্ডা', 'जे.पी. नड्डा',
+    // West Bengal BJP leaders
+    'Sukanta Majumdar', 'সুকান্ত মজুমদার',
+    'Dilip Ghosh', 'দিলীপ ঘোষ',
+    'Suvendu Adhikari', 'শুভেন্দু অধিকারী',
+    'Agnimitra Paul', 'অগ্নিমিত্র পাল',
+    'Locket Chatterjee', 'লকেট চ্যাটার্জি',
+    'Babul Supriyo', 'বাবুল সুপ্রিয়'
   ],
   related_terms: [
-    'BJP party',
-    'Vijay party',
-    'விஜய் கட்சி',
-    'தமிழக அரசியல்',
-    'West Bengal politics'
+    'NDA',
+    'saffron party',
+    'lotus party',
+    'কমল দল',
+    'গেরুয়া দল',
+    'West Bengal BJP',
+    'পশ্চিমবঙ্গ বিজেপি',
+    'Bengal BJP',
+    'বাংলা বিজেপি',
+    'West Bengal politics',
+    'পশ্চিমবঙ্গ রাজনীতি'
   ]
 };
 
