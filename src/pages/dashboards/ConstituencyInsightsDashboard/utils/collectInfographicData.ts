@@ -1,8 +1,10 @@
 /**
  * Collect and aggregate all constituency data for infographic generation
+ * Uses real election data from database when available
  */
 
 import { constituencyDemographicsService } from '@/services/supabase/constituencyDemographics.service';
+import { getElectionHistory, getPartyStrength } from '@/services/supabase/electionResults.service';
 import type { ConstituencyLeader } from '@/services/leaderTracking/constituencyLeaderService';
 import type { InfographicData } from '@/services/geminiImageService';
 
@@ -61,8 +63,15 @@ export async function collectInfographicData(
   dashboardData: DashboardData,
   currentLeader: ConstituencyLeader | null
 ): Promise<InfographicData> {
-  // Fetch demographics from database
-  let demographics = await constituencyDemographicsService.getByConstituencyId(constituencyId);
+  // Fetch demographics and election data from database in parallel
+  const [demographics, electionHistory, partyStrength] = await Promise.all([
+    constituencyDemographicsService.getByConstituencyId(constituencyId),
+    getElectionHistory(constituencyId),
+    getPartyStrength(constituencyId)
+  ]);
+
+  console.log('[collectInfographicData] Election History:', electionHistory);
+  console.log('[collectInfographicData] Party Strength:', partyStrength);
 
   // Default demographics if not found
   const defaultDemographics = {
@@ -126,17 +135,18 @@ export async function collectInfographicData(
         others: demo.others_percentage || 3,
       },
     },
+    // Use real election data from DB if available, otherwise fall back to dashboardData
     electionHistory: {
       year2021: {
-        winner: dashboardData.history.last.winner,
-        party: dashboardData.history.last.party,
-        margin: dashboardData.history.last.margin,
-        voteShare: currentLeader?.current_mla_vote_share,
+        winner: electionHistory?.year2021.winner || dashboardData.history.last.winner,
+        party: electionHistory?.year2021.party || dashboardData.history.last.party,
+        margin: electionHistory?.year2021.margin || dashboardData.history.last.margin,
+        voteShare: electionHistory?.year2021.voteShare || currentLeader?.current_mla_vote_share,
       },
       year2016: {
-        winner: dashboardData.history.prev.winner,
-        party: dashboardData.history.prev.party,
-        margin: dashboardData.history.prev.margin,
+        winner: electionHistory?.year2016.winner || dashboardData.history.prev.winner,
+        party: electionHistory?.year2016.party || dashboardData.history.prev.party,
+        margin: electionHistory?.year2016.margin || dashboardData.history.prev.margin,
       },
     },
     currentMLA: {
@@ -152,7 +162,8 @@ export async function collectInfographicData(
     } : undefined,
     topIssues: dashboardData.top_issues.slice(0, 5),
     segmentSentiments: dashboardData.segments,
-    partyStrength: dashboardData.party_strength,
+    // Use real party strength from DB if available
+    partyStrength: partyStrength && partyStrength.length > 0 ? partyStrength : dashboardData.party_strength,
     infrastructure: {
       wards: dashboardData.infra.wards,
       booths: dashboardData.infra.booths,

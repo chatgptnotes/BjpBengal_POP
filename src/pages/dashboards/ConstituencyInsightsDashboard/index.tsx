@@ -28,6 +28,8 @@ import { seedConstituencyLeaders } from '@/utils/seedConstituencyData';
 import ConstituencyDemographics from './components/ConstituencyDemographics';
 // Import Infographic Generator component
 import InfographicGenerator from './components/InfographicGenerator';
+// Import Election Results Service for real historical data
+import { getElectionHistory, getPartyStrength, type ElectionHistory, type PartyStrength } from '@/services/supabase/electionResults.service';
 
 /* -------------------------------------------------------------------------
    GEMINI API UTILITIES
@@ -128,16 +130,54 @@ interface DashboardData {
   party_strength: Array<{ name: string; val: number; color: string }>;
 }
 
-const generateDashboardData = (constituencyId: string, timeRangeVal: string): DashboardData => {
+/**
+ * Generate dashboard data with optional real election data
+ * If electionHistory and partyStrength are provided, use real data
+ * Otherwise fall back to mock data
+ */
+const generateDashboardData = (
+  constituencyId: string,
+  timeRangeVal: string,
+  electionHistory?: ElectionHistory | null,
+  partyStrength?: PartyStrength[] | null
+): DashboardData => {
   const isHistoric = timeRangeVal === '4y' || timeRangeVal === '8y';
   const constituency = MOCK_CONSTITUENCIES.find(c => c.id === constituencyId);
   const cName = constituency?.name || "Unknown";
+
+  // Use real election history if available, otherwise use mock data
+  const historyData = electionHistory ? {
+    last: {
+      year: 2021,
+      winner: electionHistory.year2021.winner,
+      party: electionHistory.year2021.party,
+      margin: electionHistory.year2021.margin
+    },
+    prev: {
+      year: 2016,
+      winner: electionHistory.year2016.winner,
+      party: electionHistory.year2016.party,
+      margin: electionHistory.year2016.margin
+    }
+  } : {
+    // Fallback mock data
+    last: { year: 2021, winner: "Unknown", party: "Unknown", margin: "N/A" },
+    prev: { year: 2016, winner: "Unknown", party: "Unknown", margin: "N/A" }
+  };
+
+  // Use real party strength if available, otherwise use mock data
+  const partyStrengthData = partyStrength && partyStrength.length > 0 ? partyStrength : [
+    { name: "TMC", val: 50, color: "bg-green-500" },
+    { name: "BJP", val: 30, color: "bg-orange-500" },
+    { name: "CPI(M)", val: 15, color: "bg-red-600" },
+    { name: "Others", val: 5, color: "bg-gray-500" }
+  ];
 
   return {
     constituency_name: cName,
     summary: {
       text: isHistoric
-        ? `In ${timeRangeVal === '4y' ? '2021' : '2016'}, ${cName} witnessed a polarized contest. The narrative was dominated by state-level welfare schemes versus anti-incumbency factors. Voter turnout was exceptionally high at 78%.`
+        ? `In ${timeRangeVal === '4y' ? '2021' : '2016'}, ${cName} witnessed a polarized contest. ${historyData.last.winner} (${historyData.last.party}) won by ${historyData.last.margin}. Voter turnout was exceptionally high at 78%.`
         : `Current sentiment in ${cName} is cautiously optimistic but fragile. Recent infrastructure announcements have boosted engagement, but inflation remains a critical pain point across middle-class segments.`,
       sentiment: isHistoric ? "High Engagement" : "Mixed / Volatile",
       confidence: "89%"
@@ -196,22 +236,16 @@ const generateDashboardData = (constituencyId: string, timeRangeVal: string): Da
       { channel: "Republic Bangla", show: "Jabab Chai", date: "4d ago", summary: "Discussion on upcoming cultural festival funding.", stance: "Positive" },
       { channel: "ABP Ananda", show: "Ghanta Khanek", date: "5d ago", summary: "Panel on waterlogging issues in low-lying wards.", stance: "Neutral" }
     ],
-    history: {
-      last: { year: 2021, winner: "A. Ray", party: "TMC", margin: "+28k" },
-      prev: { year: 2016, winner: "S. Chattopadhyay", party: "TMC", margin: "+24k" }
-    },
+    history: historyData,
     infra: {
       wards: 12,
       booths: 245,
       sensitive: 14,
-      voters: "2.1L"
+      voters: constituency?.total_voters
+        ? `${(constituency.total_voters / 100000).toFixed(1)}L`
+        : "2.1L"
     },
-    party_strength: [
-      { name: "TMC", val: 65, color: "bg-green-500" },
-      { name: "BJP", val: 25, color: "bg-orange-500" },
-      { name: "CPI(M)", val: 8, color: "bg-red-600" },
-      { name: "INC", val: 2, color: "bg-blue-500" }
-    ]
+    party_strength: partyStrengthData
   };
 };
 
@@ -550,8 +584,22 @@ export default function PulseDashboard() {
         const constituency = MOCK_CONSTITUENCIES.find(c => c.id === selectedId);
         if (!constituency) return;
 
-        // Generate base dashboard data
-        const baseData = generateDashboardData(selectedId, TIME_RANGES[timeRangeIdx].value);
+        // Fetch real election data from database
+        const [electionHistory, partyStrength] = await Promise.all([
+          getElectionHistory(selectedId),
+          getPartyStrength(selectedId)
+        ]);
+
+        console.log('[PulseDashboard] Election History:', electionHistory);
+        console.log('[PulseDashboard] Party Strength:', partyStrength);
+
+        // Generate base dashboard data with real election data
+        const baseData = generateDashboardData(
+          selectedId,
+          TIME_RANGES[timeRangeIdx].value,
+          electionHistory,
+          partyStrength
+        );
 
         // Fetch real-time news for current time ranges only
         if (timeRangeIdx <= 2) { // Live, 7D, 30D only
