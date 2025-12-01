@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
@@ -10,6 +10,9 @@ import MessageIcon from '@mui/icons-material/Message';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import InfoIcon from '@mui/icons-material/Info';
+import NewspaperIcon from '@mui/icons-material/Newspaper';
+import TwitterIcon from '@mui/icons-material/Twitter';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import {
@@ -23,6 +26,7 @@ import {
   type CompetitorCampaign,
   type CompetitorAlert
 } from '../services/competitorService';
+import { syncCompetitorNewsData } from '../services/competitorNewsService';
 
 interface CompetitorTrackingProps {
   dateRange?: '1d' | '7d' | '30d';
@@ -119,10 +123,35 @@ export default function CompetitorTracking({
   const [alerts, setAlerts] = useState<CompetitorAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncSource, setSyncSource] = useState<'news' | 'twitter' | 'all' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<'1d' | '7d' | '30d'>(propDateRange || '7d');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  // Auto-refresh disabled - manual sync only via "Sync Data" button
+  const [showSyncDropdown, setShowSyncDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside - only when dropdown is open
+  useEffect(() => {
+    if (!showSyncDropdown) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        console.log('[Dropdown] Clicked outside, closing');
+        setShowSyncDropdown(false);
+      }
+    }
+    // Use setTimeout to prevent immediate closing on the same click that opened it
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showSyncDropdown]);
+
+  // Auto-refresh disabled - manual sync only via dropdown button
   useEffect(() => {
     loadAllData();
   }, [dateRange]);
@@ -158,16 +187,48 @@ export default function CompetitorTracking({
     }
   }
 
-  async function handleSync() {
+  async function handleSync(source: 'news' | 'twitter' | 'all') {
     setSyncing(true);
+    setSyncSource(source);
+    setShowSyncDropdown(false);
+    setError(null);
+
     try {
-      await syncCompetitorDataFromTwitter();
+      let newsResult = null;
+      let twitterResult = null;
+
+      if (source === 'news' || source === 'all') {
+        console.log('[Sync] Syncing from NewsAPI...');
+        newsResult = await syncCompetitorNewsData();
+        console.log('[Sync] News result:', newsResult);
+      }
+
+      if (source === 'twitter' || source === 'all') {
+        console.log('[Sync] Syncing from Twitter...');
+        twitterResult = await syncCompetitorDataFromTwitter();
+        console.log('[Sync] Twitter result:', twitterResult);
+      }
+
       await loadAllData();
+
+      // Show success/error messages
+      const messages: string[] = [];
+      if (newsResult) {
+        messages.push(`News: ${newsResult.count} articles`);
+      }
+      if (twitterResult) {
+        messages.push(`Twitter: ${twitterResult.count} posts`);
+      }
+
+      if (messages.length > 0) {
+        console.log(`[Sync] Complete: ${messages.join(', ')}`);
+      }
     } catch (err) {
       console.error('Error syncing data:', err);
-      setError('Failed to sync data from Twitter.');
+      setError(`Failed to sync data from ${source === 'all' ? 'sources' : source}.`);
     } finally {
       setSyncing(false);
+      setSyncSource(null);
     }
   }
 
@@ -256,26 +317,40 @@ export default function CompetitorTracking({
     <div className="space-y-6">
       {/* No Data Warning Banner */}
       {hasNoData && (
-        <div className="glass-card p-4 border-l-4 border-red-500 bg-red-50/50 animate-fadeInUp">
+        <div className="glass-card p-4 border-l-4 border-amber-500 bg-amber-50/50 animate-fadeInUp">
           <div className="flex items-start gap-3">
-            <InfoIcon className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-red-800 mb-1">Twitter API Monthly Limit Reached</h4>
-              <p className="text-sm text-red-700 mb-2">
-                Twitter Free API has a <strong>monthly cap of ~1500 tweets</strong>. This limit resets at the start of each month.
+            <InfoIcon className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-amber-800 mb-2">No Competitor Data Available</h4>
+              <p className="text-sm text-amber-700 mb-3">
+                Click <strong>"Sync Data"</strong> to fetch competitor analysis data from available sources:
               </p>
-              <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
-                <li>Free tier limit has been exhausted for this month</li>
-                <li>Options: Wait until next month OR upgrade to Twitter Basic API ($100/month)</li>
-                <li>Consider using alternative data sources for competitor analysis</li>
-              </ul>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 p-2 bg-white/60 rounded-lg">
+                  <NewspaperIcon className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">NewsAPI</div>
+                    <div className="text-xs text-green-600">Available (100 req/day)</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 p-2 bg-white/60 rounded-lg">
+                  <TwitterIcon className="w-5 h-5 text-sky-500" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">Twitter API</div>
+                    <div className="text-xs text-red-500">Monthly limit reached</div>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-amber-600 mt-3">
+                Tip: Use "Sync from News" for reliable data while Twitter limit is exhausted.
+              </p>
             </div>
           </div>
         </div>
       )}
 
       {/* Header with filters */}
-      <div className="flex flex-wrap items-center justify-between gap-4 animate-fadeInUp">
+      <div className="flex flex-wrap items-center justify-between gap-4 animate-fadeInUp relative" style={{ zIndex: 40 }}>
         <div className="flex items-center gap-2">
           <FilterListIcon className="w-5 h-5 text-gray-500" />
           <div className="flex rounded-xl border border-gray-200 overflow-hidden backdrop-blur-sm bg-white/50">
@@ -303,14 +378,63 @@ export default function CompetitorTracking({
               </span>
             )}
           </div>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            <RefreshIcon className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync Data'}
-          </button>
+          {/* Dropdown Sync Button */}
+          <div className="relative" ref={dropdownRef} style={{ zIndex: 50 }}>
+            <button
+              onClick={() => setShowSyncDropdown(prev => !prev)}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <RefreshIcon className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? (
+                <span>Syncing {syncSource === 'news' ? 'News' : syncSource === 'twitter' ? 'Twitter' : 'All'}...</span>
+              ) : (
+                <>
+                  <span>Sync Data</span>
+                  <KeyboardArrowDownIcon className={`w-4 h-4 ml-1 transition-transform ${showSyncDropdown ? 'rotate-180' : ''}`} />
+                </>
+              )}
+            </button>
+
+            {/* Dropdown Menu */}
+            {showSyncDropdown && !syncing && (
+              <div
+                className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-200"
+                style={{ zIndex: 99999 }}
+              >
+                <button
+                  onClick={() => handleSync('news')}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-orange-50 transition-colors rounded-t-xl"
+                >
+                  <NewspaperIcon className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <div className="font-medium text-gray-800">Sync from News</div>
+                    <div className="text-xs text-gray-500">NewsAPI (100 req/day)</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleSync('twitter')}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-orange-50 transition-colors border-t border-gray-100"
+                >
+                  <TwitterIcon className="w-5 h-5 text-sky-500" />
+                  <div>
+                    <div className="font-medium text-gray-800">Sync from Twitter</div>
+                    <div className="text-xs text-red-500">Monthly limit reached</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleSync('all')}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-orange-50 transition-colors border-t border-gray-100 rounded-b-xl"
+                >
+                  <RefreshIcon className="w-5 h-5 text-green-600" />
+                  <div>
+                    <div className="font-medium text-gray-800">Sync All Sources</div>
+                    <div className="text-xs text-gray-500">News + Twitter</div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

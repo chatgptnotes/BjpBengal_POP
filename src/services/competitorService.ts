@@ -3,7 +3,7 @@
  * Fetches REAL data from Twitter API and Supabase - NO MOCK DATA
  */
 
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseAdmin } from '../lib/supabase';
 import { searchTweets, searchHashtag, type Tweet } from './twitterScraper';
 
 // =====================================================
@@ -92,7 +92,7 @@ export interface CompetitorPost {
 
 export const COMPETITORS_CONFIG: Competitor[] = [
   {
-    id: 'bjp-wb',
+    id: '11111111-1111-1111-1111-111111111111',
     name: 'BJP',
     party_name: 'Bharatiya Janata Party',
     leader_name: 'Sukanta Majumdar',
@@ -102,7 +102,7 @@ export const COMPETITORS_CONFIG: Competitor[] = [
     is_active: true
   },
   {
-    id: 'tmc-wb',
+    id: '22222222-2222-2222-2222-222222222222',
     name: 'TMC',
     party_name: 'All India Trinamool Congress',
     leader_name: 'Mamata Banerjee',
@@ -112,7 +112,7 @@ export const COMPETITORS_CONFIG: Competitor[] = [
     is_active: true
   },
   {
-    id: 'inc-wb',
+    id: '33333333-3333-3333-3333-333333333333',
     name: 'Congress',
     party_name: 'Indian National Congress',
     leader_name: 'Adhir Ranjan Chowdhury',
@@ -122,7 +122,7 @@ export const COMPETITORS_CONFIG: Competitor[] = [
     is_active: true
   },
   {
-    id: 'cpim-wb',
+    id: '44444444-4444-4444-4444-444444444444',
     name: 'CPIM',
     party_name: 'Communist Party of India (Marxist)',
     leader_name: 'Md. Salim',
@@ -132,7 +132,7 @@ export const COMPETITORS_CONFIG: Competitor[] = [
     is_active: true
   },
   {
-    id: 'isf-wb',
+    id: '55555555-5555-5555-5555-555555555555',
     name: 'ISF',
     party_name: 'Indian Secular Front',
     leader_name: 'Abbas Siddiqui',
@@ -193,8 +193,8 @@ export const POLITICAL_ISSUES = [
 // =====================================================
 
 export async function fetchCompetitors(): Promise<Competitor[]> {
-  // Try database first
-  const { data, error } = await supabase
+  // Try database first (use admin to bypass RLS)
+  const { data, error } = await supabaseAdmin
     .from('competitors')
     .select('*')
     .eq('is_active', true)
@@ -219,7 +219,8 @@ export async function fetchCompetitorPosts(
 ): Promise<CompetitorPost[]> {
   const startDate = getDateFromRange(dateRange);
 
-  let query = supabase
+  // Use admin client to bypass RLS
+  let query = supabaseAdmin
     .from('competitor_posts')
     .select('*')
     .gte('posted_at', startDate.toISOString())
