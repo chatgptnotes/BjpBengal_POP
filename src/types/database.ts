@@ -165,6 +165,40 @@ export interface AuditLog {
 }
 
 // ============================================================================
+// DEMOGRAPHIC SENTIMENT TABLE TYPE
+// ============================================================================
+
+export interface DemographicSentimentRow {
+  id: string;
+  constituency_id: string;
+  youth_positive: number;
+  youth_neutral: number;
+  youth_negative: number;
+  women_positive: number;
+  women_neutral: number;
+  women_negative: number;
+  urban_middle_class_positive: number;
+  urban_middle_class_neutral: number;
+  urban_middle_class_negative: number;
+  rural_voters_positive: number;
+  rural_voters_neutral: number;
+  rural_voters_negative: number;
+  small_traders_positive: number;
+  small_traders_neutral: number;
+  small_traders_negative: number;
+  updated_at: string;
+  created_at: string;
+}
+
+export type DemographicSentimentInsert = Omit<DemographicSentimentRow, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type DemographicSentimentUpdate = Partial<Omit<DemographicSentimentRow, 'id' | 'created_at'>>;
+
+// ============================================================================
 // PHASE 2: GEOGRAPHY & TERRITORY TABLE TYPES
 // ============================================================================
 

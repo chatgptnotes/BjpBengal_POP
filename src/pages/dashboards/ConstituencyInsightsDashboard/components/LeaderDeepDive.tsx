@@ -55,7 +55,13 @@ import {
   type LeaderIntelligence,
 } from '@/services/leaderIntelligence';
 import { fetchNewsForConstituency } from '@/services/leaderIntelligence/newsIntelligenceService';
-import { fetchMLAProfile, formatIndianCurrency, type MLAProfile } from '@/services/leaderIntelligence/mlaProfileService';
+import { type MLAProfile } from '@/services/leaderIntelligence/mlaProfileService';
+import {
+  getLeaderProfileWithBio,
+  formatIndianCurrency,
+  type LeaderProfile,
+  type ParsedBiography,
+} from '@/services/supabase/leaderProfiles.service';
 
 // Refresh progress state
 interface RefreshProgress {
@@ -119,7 +125,8 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
     newScore: 0,
   });
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const [mlaProfile, setMlaProfile] = useState<MLAProfile | null>(null);
+  const [mlaProfile, setMlaProfile] = useState<LeaderProfile | null>(null);
+  const [mlaBiography, setMlaBiography] = useState<ParsedBiography | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -139,12 +146,14 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
     setProfileLoading(true);
     setProfileError(null);
     try {
-      const profile = await fetchMLAProfile(
-        intel.current_mla_name,
-        intel.constituency_name,
-        intel.current_mla_party
-      );
+      // Fetch from Supabase (cached data from scraper)
+      const { profile, biography } = await getLeaderProfileWithBio(intel.constituency_id);
       setMlaProfile(profile);
+      setMlaBiography(biography);
+
+      if (!profile) {
+        setProfileError('Profile data not available. Run the MLA scraper to populate data.');
+      }
     } catch (error) {
       console.error('[LeaderDeepDive] Error loading profile:', error);
       setProfileError('Failed to load profile. Please try again.');
@@ -900,19 +909,22 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
             {profileLoading && (
               <div className="flex flex-col items-center justify-center py-12">
                 <RefreshCw size={32} className="animate-spin text-indigo-500 mb-4" />
-                <p className="text-slate-400 text-sm">Fetching profile from MyNeta & Wikipedia...</p>
+                <p className="text-slate-400 text-sm">Loading profile from database...</p>
               </div>
             )}
 
             {profileError && !profileLoading && (
-              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-center">
-                <AlertCircle size={24} className="text-rose-400 mx-auto mb-2" />
-                <p className="text-rose-400 text-sm mb-3">{profileError}</p>
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-center">
+                <AlertCircle size={24} className="text-amber-400 mx-auto mb-2" />
+                <p className="text-amber-400 text-sm mb-3">{profileError}</p>
+                <p className="text-slate-500 text-xs mb-3">
+                  Run <code className="bg-slate-800 px-1 rounded">npm run scrape:mlas</code> to populate MLA data
+                </p>
                 <button
                   onClick={loadMlaProfile}
-                  className="px-4 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-sm hover:bg-rose-500/30 transition-colors"
+                  className="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm hover:bg-amber-500/30 transition-colors"
                 >
-                  Try Again
+                  Retry
                 </button>
               </div>
             )}
@@ -927,37 +939,23 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                       Criminal Records
                     </span>
                     <span className={`text-[10px] px-2 py-1 rounded font-bold ${
-                      mlaProfile.criminal.total_cases > 0 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+                      mlaProfile.criminal_cases > 0 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
                     }`}>
-                      {mlaProfile.criminal.total_cases} CASES
+                      {mlaProfile.criminal_cases} CASES
                     </span>
                   </h3>
-                  {mlaProfile.criminal.total_cases > 0 ? (
+                  {mlaProfile.criminal_cases > 0 ? (
                     <div className="space-y-2">
-                      <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="grid grid-cols-2 gap-2 text-center">
                         <div className="bg-slate-800/50 rounded-lg p-2">
-                          <p className="text-lg font-bold text-rose-400">{mlaProfile.criminal.ipc_cases}</p>
-                          <p className="text-[10px] text-slate-500">IPC Cases</p>
+                          <p className="text-lg font-bold text-rose-400">{mlaProfile.criminal_cases}</p>
+                          <p className="text-[10px] text-slate-500">Total Cases</p>
                         </div>
                         <div className="bg-slate-800/50 rounded-lg p-2">
-                          <p className="text-lg font-bold text-amber-400">{mlaProfile.criminal.pending_cases}</p>
-                          <p className="text-[10px] text-slate-500">Pending</p>
-                        </div>
-                        <div className="bg-slate-800/50 rounded-lg p-2">
-                          <p className="text-lg font-bold text-white">{mlaProfile.criminal.convicted ? 'Yes' : 'No'}</p>
-                          <p className="text-[10px] text-slate-500">Convicted</p>
+                          <p className="text-lg font-bold text-amber-400">{mlaProfile.serious_criminal_cases || 0}</p>
+                          <p className="text-[10px] text-slate-500">Serious Cases</p>
                         </div>
                       </div>
-                      {mlaProfile.criminal.case_details.length > 0 && (
-                        <div className="mt-3 space-y-1">
-                          {mlaProfile.criminal.case_details.map((c, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs p-2 bg-slate-800/30 rounded">
-                              <span className="text-rose-400 font-medium">{c.section}</span>
-                              <span className="text-slate-500 capitalize">{c.status}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   ) : (
                     <p className="text-emerald-400 text-sm flex items-center gap-2">
@@ -970,29 +968,13 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                 <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
                   <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
                     <Wallet size={14} />
-                    Assets & Liabilities ({mlaProfile.assets.declared_year})
+                    Declared Assets (2021)
                   </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-[10px] text-slate-500 mb-1">Movable Assets</p>
-                      <p className="text-sm font-bold text-emerald-400">{formatIndianCurrency(mlaProfile.assets.movable)}</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-[10px] text-slate-500 mb-1">Immovable Assets</p>
-                      <p className="text-sm font-bold text-emerald-400">{formatIndianCurrency(mlaProfile.assets.immovable)}</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-[10px] text-slate-500 mb-1">Total Assets</p>
-                      <p className="text-sm font-bold text-white">{formatIndianCurrency(mlaProfile.assets.total)}</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-[10px] text-slate-500 mb-1">Liabilities</p>
-                      <p className="text-sm font-bold text-rose-400">{formatIndianCurrency(mlaProfile.assets.liabilities)}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                    <p className="text-[10px] text-indigo-400 mb-1">Net Worth</p>
-                    <p className="text-lg font-bold text-indigo-400">{formatIndianCurrency(mlaProfile.assets.net_worth)}</p>
+                  <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                    <p className="text-[10px] text-indigo-400 mb-1">Total Declared Assets</p>
+                    <p className="text-lg font-bold text-indigo-400">
+                      {formatIndianCurrency(mlaProfile.declared_assets_lakhs)}
+                    </p>
                   </div>
                 </div>
 
@@ -1005,120 +987,70 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
                       <span className="text-xs text-slate-500">Education</span>
-                      <span className="text-sm text-white">{mlaProfile.education.qualification}</span>
+                      <span className="text-sm text-white">{mlaProfile.education || 'Not Available'}</span>
                     </div>
-                    {mlaProfile.education.details && (
-                      <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-                        <span className="text-xs text-slate-500">Details</span>
-                        <span className="text-sm text-slate-400">{mlaProfile.education.details}</span>
-                      </div>
-                    )}
-                    {mlaProfile.personal.age > 0 && (
+                    {mlaProfile.age && mlaProfile.age > 0 && (
                       <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
                         <span className="text-xs text-slate-500">Age</span>
-                        <span className="text-sm text-white">{mlaProfile.personal.age} years</span>
+                        <span className="text-sm text-white">{mlaProfile.age} years</span>
+                      </div>
+                    )}
+                    {mlaProfile.profession && (
+                      <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                        <span className="text-xs text-slate-500">Profession</span>
+                        <span className="text-sm text-white">{mlaProfile.profession}</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-                      <span className="text-xs text-slate-500">Profession</span>
-                      <span className="text-sm text-white">{mlaProfile.personal.profession}</span>
+                      <span className="text-xs text-slate-500">Party</span>
+                      <span
+                        className="text-sm font-bold px-2 py-0.5 rounded"
+                        style={{
+                          backgroundColor: `${getPartyColor(mlaProfile.party)}20`,
+                          color: getPartyColor(mlaProfile.party),
+                        }}
+                      >
+                        {mlaProfile.party}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Biography (from Wikipedia) */}
-                {mlaProfile.biography.summary && (
+                {/* Biography (from Wikipedia via positions_held) */}
+                {mlaBiography?.summary && (
                   <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
                     <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
                       <User size={14} />
                       Biography
                     </h3>
                     <div className="flex gap-4">
-                      {mlaProfile.biography.image_url && (
+                      {mlaProfile.photo_url && (
                         <img
-                          src={mlaProfile.biography.image_url}
-                          alt={mlaProfile.name}
+                          src={mlaProfile.photo_url}
+                          alt={mlaProfile.leader_name}
                           className="w-20 h-20 rounded-lg object-cover"
                         />
                       )}
                       <div className="flex-1">
-                        {mlaProfile.biography.birth_date && (
+                        {mlaBiography.birthDate && (
                           <p className="text-xs text-slate-500 mb-1">
-                            Born: <span className="text-slate-400">{mlaProfile.biography.birth_date}</span>
-                            {mlaProfile.biography.birth_place && ` in ${mlaProfile.biography.birth_place}`}
+                            Born: <span className="text-slate-400">{mlaBiography.birthDate}</span>
+                            {mlaBiography.birthPlace && ` in ${mlaBiography.birthPlace}`}
                           </p>
                         )}
                         <p className="text-sm text-slate-300 leading-relaxed line-clamp-4">
-                          {mlaProfile.biography.summary}
+                          {mlaBiography.summary}
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Political Career */}
-                {mlaProfile.political_career.positions.length > 0 && (
-                  <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
-                      <Briefcase size={14} />
-                      Political Career
-                    </h3>
-                    <div className="space-y-2">
-                      {mlaProfile.political_career.positions.map((pos, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-                          <span className="text-sm text-white">{pos.title}</span>
-                          <span className="text-xs text-slate-500">{pos.period}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {mlaProfile.political_career.party_history.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-slate-700/50">
-                        <p className="text-[10px] text-slate-500 mb-2">Party History</p>
-                        <div className="flex flex-wrap gap-2">
-                          {mlaProfile.political_career.party_history.map((p, i) => (
-                            <span key={i} className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded">
-                              {p.party}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Election History */}
-                {mlaProfile.elections.length > 0 && (
-                  <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
-                      <History size={14} />
-                      Election History
-                    </h3>
-                    <div className="space-y-2">
-                      {mlaProfile.elections.map((e, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-                          <div>
-                            <span className="text-sm font-medium text-white">{e.year}</span>
-                            <span className="text-xs text-slate-500 ml-2">{e.constituency}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-400">{e.votes.toLocaleString()} votes</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                              e.result === 'won' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                            }`}>
-                              {e.result.toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Source Links */}
                 <div className="flex gap-3 pt-2">
-                  {mlaProfile.myneta_url && (
+                  {mlaBiography?.mynetaUrl && (
                     <a
-                      href={mlaProfile.myneta_url}
+                      href={mlaBiography.mynetaUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors"
@@ -1127,9 +1059,9 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                       View on MyNeta.info
                     </a>
                   )}
-                  {mlaProfile.wikipedia_url && (
+                  {mlaBiography?.wikipediaUrl && (
                     <a
-                      href={mlaProfile.wikipedia_url}
+                      href={mlaBiography.wikipediaUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors"
@@ -1140,10 +1072,18 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                   )}
                 </div>
 
+                {/* Last Updated */}
+                {mlaProfile.updated_at && (
+                  <p className="text-center text-[10px] text-slate-600">
+                    Last updated: {new Date(mlaProfile.updated_at).toLocaleString()}
+                  </p>
+                )}
+
                 {/* Refresh Button */}
                 <button
                   onClick={() => {
                     setMlaProfile(null);
+                    setMlaBiography(null);
                     loadMlaProfile();
                   }}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs transition-colors"

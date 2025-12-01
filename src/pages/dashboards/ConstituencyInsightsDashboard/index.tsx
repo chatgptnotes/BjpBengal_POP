@@ -783,7 +783,6 @@ export default function PulseDashboard() {
                 constituencyId={selectedId}
                 party={currentLeader?.current_mla_party}
                 isSwing={currentLeader?.is_swing_constituency}
-                margin={currentLeader?.current_mla_margin}
               />
             </div>
 
