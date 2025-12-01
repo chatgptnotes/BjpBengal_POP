@@ -24,6 +24,8 @@ import LeaderDeepDive from './components/LeaderDeepDive';
 import { ConstituencyLeader, constituencyLeaderService } from '@/services/leaderTracking';
 // Import seed function for auto-populating data
 import { seedConstituencyLeaders } from '@/utils/seedConstituencyData';
+// Import Constituency Demographics component
+import ConstituencyDemographics from './components/ConstituencyDemographics';
 
 /* -------------------------------------------------------------------------
    GEMINI API UTILITIES
@@ -810,6 +812,9 @@ export default function PulseDashboard() {
                 selectedConstituency={data.constituency_name}
                 onLeaderClick={(leader) => setSelectedLeader(leader)}
               />
+
+              {/* Constituency Demographics Panel */}
+              <ConstituencyDemographics constituencyId={selectedId} />
 
               {/* Strategic Intelligence Unit */}
               {data.strategy && <StrategicDeepDive strategy={data.strategy} lastUpdate={lastNewsUpdate} />}

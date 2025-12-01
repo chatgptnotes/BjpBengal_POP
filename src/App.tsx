@@ -188,7 +188,16 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
 
-              {/* Constituency Insights Dashboard - NEW Dynamic Analytics */}
+              {/* Constituency Insights Dashboard - Default entry point */}
+              <Route path="/dashboard/constituency-insights" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ConstituencyInsightsDashboard />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+
+              {/* Constituency Insights Dashboard - With specific constituency */}
               <Route path="/insights/constituency/:constituencyId" element={
                 <ProtectedRoute>
                   <Layout>
