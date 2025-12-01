@@ -107,7 +107,9 @@ export default {
 async function handleSearch(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const query = url.searchParams.get('query') || buildBJPBengalQuery();
-  const maxResults = url.searchParams.get('max_results') || '10';
+  // Twitter API requires max_results between 10 and 100
+  const requestedMax = parseInt(url.searchParams.get('max_results') || '10', 10);
+  const maxResults = Math.max(10, Math.min(100, requestedMax)).toString();
 
   const cacheKey = `search:${query}:${maxResults}`;
   const cached = getFromCache(cacheKey);
@@ -148,7 +150,9 @@ async function handleSearch(request: Request, env: Env): Promise<Response> {
 async function handleUserTweets(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const username = url.searchParams.get('username') || 'BJP4Bengal';
-  const maxResults = url.searchParams.get('max_results') || '10';
+  // Twitter API requires max_results between 10 and 100
+  const requestedMax = parseInt(url.searchParams.get('max_results') || '10', 10);
+  const maxResults = Math.max(10, Math.min(100, requestedMax)).toString();
 
   const cacheKey = `user:${username}:${maxResults}`;
   const cached = getFromCache(cacheKey);
@@ -208,7 +212,9 @@ async function handleUserTweets(request: Request, env: Env): Promise<Response> {
 async function handleMentions(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const username = url.searchParams.get('username') || 'BJP4Bengal';
-  const maxResults = url.searchParams.get('max_results') || '10';
+  // Twitter API requires max_results between 10 and 100
+  const requestedMax = parseInt(url.searchParams.get('max_results') || '10', 10);
+  const maxResults = Math.max(10, Math.min(100, requestedMax)).toString();
 
   const cacheKey = `mentions:${username}:${maxResults}`;
   const cached = getFromCache(cacheKey);
@@ -250,7 +256,9 @@ async function handleMentions(request: Request, env: Env): Promise<Response> {
 // Combined BJP Bengal feed - all tweets, hashtags, mentions
 async function handleBJPBengalFeed(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  const maxResults = url.searchParams.get('max_results') || '20';
+  // Twitter API requires max_results between 10 and 100
+  const requestedMax = parseInt(url.searchParams.get('max_results') || '20', 10);
+  const maxResults = Math.max(10, Math.min(100, requestedMax)).toString();
 
   const cacheKey = `bjp-bengal-feed:${maxResults}`;
   const cached = getFromCache(cacheKey);
@@ -304,7 +312,9 @@ async function handleBJPBengalFeed(request: Request, env: Env): Promise<Response
 async function handleHashtagSearch(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const hashtag = url.searchParams.get('hashtag') || '#BJPBengal';
-  const maxResults = url.searchParams.get('max_results') || '10';
+  // Twitter API requires max_results between 10 and 100
+  const requestedMax = parseInt(url.searchParams.get('max_results') || '10', 10);
+  const maxResults = Math.max(10, Math.min(100, requestedMax)).toString();
 
   const cacheKey = `hashtag:${hashtag}:${maxResults}`;
   const cached = getFromCache(cacheKey);
@@ -315,7 +325,8 @@ async function handleHashtagSearch(request: Request, env: Env): Promise<Response
   }
 
   const twitterUrl = new URL('https://api.twitter.com/2/tweets/search/recent');
-  twitterUrl.searchParams.set('query', `${hashtag} -is:retweet lang:en OR lang:hi OR lang:bn`);
+  // Simplified query - complex lang operators can cause 500 errors on free tier
+  twitterUrl.searchParams.set('query', `${hashtag} -is:retweet`);
   twitterUrl.searchParams.set('max_results', maxResults);
   twitterUrl.searchParams.set('tweet.fields', 'created_at,public_metrics,author_id,lang');
   twitterUrl.searchParams.set('expansions', 'author_id');
@@ -343,12 +354,10 @@ async function handleHashtagSearch(request: Request, env: Env): Promise<Response
 
 // Build combined BJP Bengal search query
 function buildBJPBengalQuery(): string {
-  const hashtags = BJP_BENGAL_QUERIES.hashtags.slice(0, 5).join(' OR ');
-  const keywords = BJP_BENGAL_QUERIES.keywords.slice(0, 3).map(k => `"${k}"`).join(' OR ');
-  const accounts = BJP_BENGAL_QUERIES.accounts.map(a => `from:${a}`).join(' OR ');
-
-  // Twitter API has query length limits, so we combine smartly
-  return `(${hashtags} OR ${accounts}) -is:retweet (lang:en OR lang:hi OR lang:bn)`;
+  // Simplified query - complex queries with multiple OR and lang operators cause 500 errors
+  // Use just a few key hashtags without language filters
+  const hashtags = BJP_BENGAL_QUERIES.hashtags.slice(0, 3).join(' OR ');
+  return `(${hashtags}) -is:retweet`;
 }
 
 // Cache utilities

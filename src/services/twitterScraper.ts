@@ -12,8 +12,17 @@ const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const CACHE_KEY = 'bjp_bengal_twitter_cache';
 const API_USAGE_KEY = 'twitter_api_usage';
 
-// Use mock data when proxy is not available (no Cloudflare worker deployed)
-const USE_MOCK_DATA = !TWITTER_PROXY_URL || TWITTER_PROXY_URL === '';
+// Public CORS proxies (fallback when no custom proxy is set)
+// Try multiple proxies in case one fails
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?',
+];
+const TWITTER_API_BASE = 'https://api.twitter.com/2';
+
+// Use direct API with CORS proxy when no custom proxy is configured
+const USE_CORS_PROXY = !TWITTER_PROXY_URL || TWITTER_PROXY_URL === '';
+const USE_MOCK_DATA = false; // Never use mock data - always try real API
 
 // BJP Bengal specific queries
 export const BJP_BENGAL_CONFIG = {
@@ -462,16 +471,22 @@ export async function fetchBJPBengalTweets(maxResults: number = 10): Promise<Twi
     return { data: [], rateLimited: true, error: 'API limit reached' };
   }
 
-  try {
-    const response = await fetch(
-      `${TWITTER_PROXY_URL}/api/twitter/user-tweets?username=BJP4Bengal&max_results=${maxResults}`
-    );
-    const data = await response.json();
-    incrementAPIUsage();
-    return data;
-  } catch (error: any) {
-    return { error: error.message };
+  // If custom proxy is configured, use it
+  if (TWITTER_PROXY_URL) {
+    try {
+      const response = await fetch(
+        `${TWITTER_PROXY_URL}/api/twitter/user-tweets?username=BJP4Bengal&max_results=${maxResults}`
+      );
+      const data = await response.json();
+      incrementAPIUsage();
+      return data;
+    } catch (error: any) {
+      console.error('[TwitterScraper] Proxy error for fetchBJPBengalTweets:', error);
+    }
   }
+
+  // Fallback: Search for tweets mentioning BJP4Bengal
+  return searchTweets('from:BJP4Bengal OR @BJP4Bengal', maxResults);
 }
 
 /**
@@ -482,16 +497,70 @@ export async function searchHashtag(hashtag: string, maxResults: number = 10): P
     return { data: [], rateLimited: true, error: 'API limit reached' };
   }
 
-  try {
-    const response = await fetch(
-      `${TWITTER_PROXY_URL}/api/twitter/hashtags?hashtag=${encodeURIComponent(hashtag)}&max_results=${maxResults}`
-    );
-    const data = await response.json();
-    incrementAPIUsage();
-    return data;
-  } catch (error: any) {
-    return { error: error.message };
+  // If custom proxy is configured, use it
+  if (TWITTER_PROXY_URL) {
+    try {
+      const response = await fetch(
+        `${TWITTER_PROXY_URL}/api/twitter/hashtags?hashtag=${encodeURIComponent(hashtag)}&max_results=${maxResults}`
+      );
+      const data = await response.json();
+      incrementAPIUsage();
+      return data;
+    } catch (error: any) {
+      console.error('[TwitterScraper] Proxy error:', error);
+    }
   }
+
+  // Fallback: Direct Twitter API call with CORS proxy
+  if (!TWITTER_BEARER_TOKEN) {
+    return { data: [], error: 'Twitter Bearer Token not configured' };
+  }
+
+  const query = `#${hashtag.replace('#', '')} -is:retweet lang:en`;
+  const url = `${TWITTER_API_BASE}/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=${Math.max(10, Math.min(maxResults, 100))}&tweet.fields=created_at,public_metrics,entities,author_id,lang&expansions=author_id&user.fields=name,username,profile_image_url,verified`;
+
+  console.log(`[TwitterScraper] Calling Twitter API for hashtag: ${hashtag}`);
+
+  // Try each CORS proxy until one works
+  for (const corsProxy of CORS_PROXIES) {
+    try {
+      const proxyUrl = corsProxy + encodeURIComponent(url);
+      console.log(`[TwitterScraper] Trying CORS proxy: ${corsProxy.substring(0, 30)}...`);
+
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Authorization': `Bearer ${decodeURIComponent(TWITTER_BEARER_TOKEN)}`,
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`[TwitterScraper] Proxy failed (${response.status}):`, errorText.substring(0, 100));
+        continue; // Try next proxy
+      }
+
+      const data = await response.json();
+      incrementAPIUsage();
+
+      // Enrich with author data
+      if (data.data && data.includes?.users) {
+        const userMap = new Map(data.includes.users.map((u: TwitterUser) => [u.id, u]));
+        data.data = data.data.map((tweet: Tweet) => ({
+          ...tweet,
+          author: userMap.get(tweet.author_id)
+        }));
+      }
+
+      return { success: true, data: data.data || [], includes: data.includes, meta: data.meta };
+    } catch (error: any) {
+      console.warn(`[TwitterScraper] Proxy error:`, error.message);
+      continue; // Try next proxy
+    }
+  }
+
+  // All proxies failed
+  console.error('[TwitterScraper] All CORS proxies failed for hashtag search');
+  return { data: [], error: 'Twitter API unavailable. CORS proxies blocked. Deploy the Twitter proxy worker.' };
 }
 
 /**
@@ -502,16 +571,22 @@ export async function fetchMentions(maxResults: number = 10): Promise<TwitterRes
     return { data: [], rateLimited: true, error: 'API limit reached' };
   }
 
-  try {
-    const response = await fetch(
-      `${TWITTER_PROXY_URL}/api/twitter/mentions?username=BJP4Bengal&max_results=${maxResults}`
-    );
-    const data = await response.json();
-    incrementAPIUsage();
-    return data;
-  } catch (error: any) {
-    return { error: error.message };
+  // If custom proxy is configured, use it
+  if (TWITTER_PROXY_URL) {
+    try {
+      const response = await fetch(
+        `${TWITTER_PROXY_URL}/api/twitter/mentions?username=BJP4Bengal&max_results=${maxResults}`
+      );
+      const data = await response.json();
+      incrementAPIUsage();
+      return data;
+    } catch (error: any) {
+      console.error('[TwitterScraper] Proxy error for fetchMentions:', error);
+    }
   }
+
+  // Fallback: Search for mentions of BJP4Bengal
+  return searchTweets('@BJP4Bengal', maxResults);
 }
 
 /**
@@ -522,16 +597,78 @@ export async function searchTweets(query: string, maxResults: number = 10): Prom
     return { data: [], rateLimited: true, error: 'API limit reached' };
   }
 
-  try {
-    const response = await fetch(
-      `${TWITTER_PROXY_URL}/api/twitter/search?query=${encodeURIComponent(query)}&max_results=${maxResults}`
-    );
-    const data = await response.json();
-    incrementAPIUsage();
-    return data;
-  } catch (error: any) {
-    return { error: error.message };
+  // If custom proxy is configured, use it
+  if (TWITTER_PROXY_URL) {
+    try {
+      const response = await fetch(
+        `${TWITTER_PROXY_URL}/api/twitter/search?query=${encodeURIComponent(query)}&max_results=${maxResults}`
+      );
+      const data = await response.json();
+      incrementAPIUsage();
+      return data;
+    } catch (error: any) {
+      console.error('[TwitterScraper] Proxy error for searchTweets:', error);
+    }
   }
+
+  // Fallback: Direct Twitter API call with CORS proxy
+  if (!TWITTER_BEARER_TOKEN) {
+    return { data: [], error: 'Twitter Bearer Token not configured. Set VITE_TWITTER_BEARER_TOKEN in .env' };
+  }
+
+  const searchQuery = `${query} -is:retweet`;
+  const url = `${TWITTER_API_BASE}/tweets/search/recent?query=${encodeURIComponent(searchQuery)}&max_results=${Math.max(10, Math.min(maxResults, 100))}&tweet.fields=created_at,public_metrics,entities,author_id,lang&expansions=author_id&user.fields=name,username,profile_image_url,verified`;
+
+  console.log(`[TwitterScraper] Calling Twitter API for query: ${query}`);
+
+  // Try each CORS proxy until one works
+  for (const corsProxy of CORS_PROXIES) {
+    try {
+      const proxyUrl = corsProxy + encodeURIComponent(url);
+      console.log(`[TwitterScraper] Trying CORS proxy: ${corsProxy.substring(0, 30)}...`);
+
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Authorization': `Bearer ${decodeURIComponent(TWITTER_BEARER_TOKEN)}`,
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`[TwitterScraper] Proxy failed (${response.status}):`, errorText.substring(0, 100));
+
+        // Handle specific error codes that mean we should stop trying
+        if (response.status === 401) {
+          return { data: [], error: 'Invalid Twitter Bearer Token. Check VITE_TWITTER_BEARER_TOKEN.' };
+        }
+        if (response.status === 429) {
+          return { data: [], rateLimited: true, error: 'Twitter API rate limited. Try again later.' };
+        }
+        continue; // Try next proxy
+      }
+
+      const data = await response.json();
+      incrementAPIUsage();
+
+      // Enrich with author data
+      if (data.data && data.includes?.users) {
+        const userMap = new Map(data.includes.users.map((u: TwitterUser) => [u.id, u]));
+        data.data = data.data.map((tweet: Tweet) => ({
+          ...tweet,
+          author: userMap.get(tweet.author_id)
+        }));
+      }
+
+      return { success: true, data: data.data || [], includes: data.includes, meta: data.meta };
+    } catch (error: any) {
+      console.warn(`[TwitterScraper] Proxy error:`, error.message);
+      continue; // Try next proxy
+    }
+  }
+
+  // All proxies failed
+  console.error('[TwitterScraper] All CORS proxies failed for search');
+  return { data: [], error: 'Twitter API unavailable. Deploy the Twitter proxy worker to enable real-time data.' };
 }
 
 // Save tweets to Supabase database

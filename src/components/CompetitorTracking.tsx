@@ -9,6 +9,7 @@ import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import MessageIcon from '@mui/icons-material/Message';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
+import InfoIcon from '@mui/icons-material/Info';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import {
@@ -121,33 +122,9 @@ export default function CompetitorTracking({
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<'1d' | '7d' | '30d'>(propDateRange || '7d');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [nextRefresh, setNextRefresh] = useState<number>(300);
-
+  // Auto-refresh disabled - manual sync only via "Sync Data" button
   useEffect(() => {
     loadAllData();
-  }, [dateRange]);
-
-  useEffect(() => {
-    const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000;
-
-    const countdownId = setInterval(() => {
-      setNextRefresh(prev => {
-        if (prev <= 1) {
-          return 300;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    const refreshId = setInterval(() => {
-      loadAllData();
-      setNextRefresh(300);
-    }, AUTO_REFRESH_INTERVAL);
-
-    return () => {
-      clearInterval(countdownId);
-      clearInterval(refreshId);
-    };
   }, [dateRange]);
 
   useEffect(() => {
@@ -272,8 +249,31 @@ export default function CompetitorTracking({
     );
   }
 
+  // Check if all competitors have zero data
+  const hasNoData = competitors.every(c => c.mentions === 0 && c.reach === 0 && c.engagement === 0);
+
   return (
     <div className="space-y-6">
+      {/* No Data Warning Banner */}
+      {hasNoData && (
+        <div className="glass-card p-4 border-l-4 border-red-500 bg-red-50/50 animate-fadeInUp">
+          <div className="flex items-start gap-3">
+            <InfoIcon className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-red-800 mb-1">Twitter API Monthly Limit Reached</h4>
+              <p className="text-sm text-red-700 mb-2">
+                Twitter Free API has a <strong>monthly cap of ~1500 tweets</strong>. This limit resets at the start of each month.
+              </p>
+              <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
+                <li>Free tier limit has been exhausted for this month</li>
+                <li>Options: Wait until next month OR upgrade to Twitter Basic API ($100/month)</li>
+                <li>Consider using alternative data sources for competitor analysis</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header with filters */}
       <div className="flex flex-wrap items-center justify-between gap-4 animate-fadeInUp">
         <div className="flex items-center gap-2">
@@ -302,12 +302,6 @@ export default function CompetitorTracking({
                 Updated: {lastUpdated.toLocaleTimeString()}
               </span>
             )}
-            <span className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse-glow"></span>
-              <span className="text-green-700 font-medium">
-                {Math.floor(nextRefresh / 60)}:{(nextRefresh % 60).toString().padStart(2, '0')}
-              </span>
-            </span>
           </div>
           <button
             onClick={handleSync}

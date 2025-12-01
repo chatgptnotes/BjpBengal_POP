@@ -1,9 +1,7 @@
-name = "twitter-bjp-proxy"
+name = "pulse-twitter-proxy"
 main = "index.ts"
 compatibility_date = "2024-01-01"
-
-# Production route (update with your domain)
-# route = { pattern = "api.yourdomain.com/twitter/*", zone_name = "yourdomain.com" }
+workers_dev = true
 
 [vars]
 ENVIRONMENT = "production"
