@@ -28,8 +28,10 @@ import {
   MessageSquare,
   Bookmark,
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  Database
 } from 'lucide-react';
+import { seedMockArticles, SeedResult } from '../utils/seedArticles';
 import { MobileCard, ResponsiveGrid, MobileButton, MobileTabs } from '../components/MobileResponsive';
 import { useNewsSentiment } from '../hooks/useNewsSentiment';
 import { NewsArticle as DBNewsArticle } from '../services/newsService';
@@ -310,7 +312,7 @@ const newsSources: NewsSource[] = [
   }
 ];
 
-const mockArticles: NewsArticle[] = [
+export const mockArticles: NewsArticle[] = [
   // Bhowanipore - Kolkata
   {
     id: '1',
@@ -1048,6 +1050,8 @@ export default function PressMediaMonitoring() {
   const [filteredArticles, setFilteredArticles] = useState<NewsArticle[]>([]);
   const [isMonitoring, setIsMonitoring] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
 
   const [analytics, setAnalytics] = useState({
     totalArticles: 0,
@@ -1187,6 +1191,34 @@ export default function PressMediaMonitoring() {
     { key: 'analytics', label: 'Analytics', icon: Activity }
   ];
 
+  // Handle seeding mock articles to database
+  const handleSeedDatabase = async () => {
+    if (isSeeding) return;
+
+    setIsSeeding(true);
+    setSeedResult(null);
+
+    try {
+      const result = await seedMockArticles(mockArticles);
+      setSeedResult(result);
+
+      // Refresh data after successful seeding
+      if (result.inserted > 0) {
+        await refreshData();
+      }
+    } catch (error) {
+      setSeedResult({
+        success: false,
+        inserted: 0,
+        skipped: 0,
+        failed: mockArticles.length,
+        errors: [error instanceof Error ? error.message : 'Unknown error occurred']
+      });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   return (
     <div className="container-mobile py-6">
       <div className="space-responsive">
@@ -1214,13 +1246,16 @@ export default function PressMediaMonitoring() {
                 {isMonitoring ? 'Live Monitoring' : 'Monitoring Paused'}
               </span>
             </div>
+            {/* Sync Data Button */}
             <MobileButton
               variant="outline"
               size="small"
-              onClick={() => setIsMonitoring(!isMonitoring)}
+              onClick={handleSeedDatabase}
+              disabled={isSeeding}
+              className={isSeeding ? 'opacity-50 cursor-not-allowed' : ''}
             >
-              {isMonitoring ? <Pause className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />}
-              {isMonitoring ? 'Pause' : 'Resume'}
+              <Database className={`w-4 h-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
+              {isSeeding ? 'Saving...' : 'Save'}
             </MobileButton>
 
             {/* Constituency Dropdown */}
@@ -1238,6 +1273,32 @@ export default function PressMediaMonitoring() {
               <ChevronDown size={14} className="text-orange-600 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
+
+          {/* Seed Result Notification */}
+          {seedResult && (
+            <div className={`mt-3 p-3 rounded-lg text-sm flex items-center justify-center space-x-2 ${
+              seedResult.success
+                ? 'bg-green-100 text-green-800 border border-green-200'
+                : 'bg-red-100 text-red-800 border border-red-200'
+            }`}>
+              {seedResult.success ? (
+                <CheckCircle className="w-4 h-4" />
+              ) : (
+                <XCircle className="w-4 h-4" />
+              )}
+              <span>
+                {seedResult.success
+                  ? `Seeded ${seedResult.inserted} articles (${seedResult.skipped} skipped)`
+                  : `Failed: ${seedResult.errors[0] || 'Unknown error'}`}
+              </span>
+              <button
+                onClick={() => setSeedResult(null)}
+                className="ml-2 text-xs underline hover:no-underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Navigation Tabs */}
