@@ -58,11 +58,11 @@ export const mockHeatmapData: HeatmapData[] = [
 ];
 
 export const mockInfluencerData: InfluencerData[] = [
-  { id: '1', name: 'Dr. Rajesh Kumar', type: 'positive', engagement: 85, reach: 25000, platform: 'Twitter' },
-  { id: '2', name: 'Priya Sharma', type: 'neutral', engagement: 72, reach: 18000, platform: 'Instagram' },
-  { id: '3', name: 'Anil Singh', type: 'critical', engagement: 65, reach: 32000, platform: 'Facebook' },
-  { id: '4', name: 'Meera Patel', type: 'positive', engagement: 78, reach: 22000, platform: 'YouTube' },
-  { id: '5', name: 'Rohit Gupta', type: 'neutral', engagement: 68, reach: 15000, platform: 'LinkedIn' }
+  { id: '1', name: 'Mamata Banerjee', type: 'critical', engagement: 95, reach: 8000000, platform: 'Twitter' },
+  { id: '2', name: 'Suvendu Adhikari', type: 'positive', engagement: 82, reach: 1500000, platform: 'Twitter' },
+  { id: '3', name: 'Mithun Chakraborty', type: 'positive', engagement: 85, reach: 3500000, platform: 'Instagram' },
+  { id: '4', name: 'Arnab Goswami', type: 'neutral', engagement: 82, reach: 5200000, platform: 'Twitter' },
+  { id: '5', name: 'Abhishek Banerjee', type: 'critical', engagement: 78, reach: 2200000, platform: 'Twitter' }
 ];
 
 export const mockAlertData: AlertData[] = [
