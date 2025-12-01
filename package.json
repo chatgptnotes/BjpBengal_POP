@@ -31,6 +31,8 @@
     "scraper:news": "node --experimental-modules scripts/bengal-news-scraper.js",
     "scraper:news:once": "node --experimental-modules scripts/bengal-news-scraper.js --once",
     "scrape-news": "node --experimental-modules scripts/bengal-news-scraper.js --once",
+    "scrape:mlas": "node scripts/mla-profile-scraper.js",
+    "scrape:mlas:test": "node scripts/mla-profile-scraper.js --test",
     "_comment_cloudflare": "=== Cloudflare Workers ===",
     "workers:dev": "cd cloudflare-workers && wrangler dev",
     "workers:deploy": "cd cloudflare-workers && wrangler publish",
