@@ -26,6 +26,8 @@ import { ConstituencyLeader, constituencyLeaderService } from '@/services/leader
 import { seedConstituencyLeaders } from '@/utils/seedConstituencyData';
 // Import Constituency Demographics component
 import ConstituencyDemographics from './components/ConstituencyDemographics';
+// Import Infographic Generator component
+import InfographicGenerator from './components/InfographicGenerator';
 
 /* -------------------------------------------------------------------------
    GEMINI API UTILITIES
@@ -775,6 +777,14 @@ export default function PulseDashboard() {
 
           {/* AI Strategist Inject */}
           <PulseAIStrategist data={data} />
+
+          {/* Infographic Generator FAB */}
+          <InfographicGenerator
+            constituencyId={selectedId}
+            constituency={activeConstituency}
+            dashboardData={data}
+            currentLeader={currentLeader}
+          />
 
           {/* THREE COLUMN GRID LAYOUT */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

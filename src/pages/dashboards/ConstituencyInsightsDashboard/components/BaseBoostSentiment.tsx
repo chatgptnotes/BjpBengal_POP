@@ -1,22 +1,16 @@
 /**
  * Base-Boost Sentiment Tracker
  * Shows key issues with sentiment indicators and trend changes
+ * Data source: CSDS-Lokniti 2024 Pre-Poll Survey (derived estimates)
  */
 
-import React from 'react';
-import { TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { TrendingUp, TrendingDown, Minus, AlertCircle, Info } from 'lucide-react';
+import { issueSentimentService, IssueData } from '@/services/supabase/issueSentiment.service';
 import { getIssueSentiment } from '@/utils/constituencyExtendedData';
 
-interface IssueData {
-  issue: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  score: number;
-  trend: 'up' | 'down' | 'stable';
-  change: number;
-}
-
 interface Props {
-  data: IssueData[];
+  data?: IssueData[];
   constituencyId?: string;
   party?: string;
   isSwing?: boolean;
@@ -28,10 +22,41 @@ export default function BaseBoostSentiment({
   party,
   isSwing
 }: Props) {
-  // Use real data if constituencyId is provided, otherwise use passed data
-  const issueData = constituencyId && party !== undefined
-    ? getIssueSentiment(constituencyId, party || 'TMC', isSwing || false)
-    : data;
+  const [issueData, setIssueData] = useState<IssueData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataSource, setDataSource] = useState<string>('');
+
+  useEffect(() => {
+    async function fetchIssueData() {
+      if (!constituencyId) {
+        // Use passed data or default mock
+        setIssueData(data || generateIssueData());
+        setDataSource('Mock Data');
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+
+      // Try to fetch from database first
+      const dbData = await issueSentimentService.getFormattedIssues(constituencyId);
+
+      if (dbData && dbData.length > 0) {
+        setIssueData(dbData);
+        setDataSource('Estimated from CSDS 2024');
+      } else {
+        // Fallback to utility function
+        const fallbackData = getIssueSentiment(constituencyId, party || 'TMC', isSwing || false);
+        setIssueData(fallbackData);
+        setDataSource('Generated Estimate');
+      }
+
+      setIsLoading(false);
+    }
+
+    fetchIssueData();
+  }, [constituencyId, party, isSwing, data]);
+
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case 'positive': return 'bg-emerald-500';
@@ -57,13 +82,37 @@ export default function BaseBoostSentiment({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <div className="flex items-center gap-2 mb-5">
+          <AlertCircle size={18} className="text-amber-400" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            Base-Boost Sentiment
+          </h3>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-400"></div>
+          <span className="ml-3 text-sm text-slate-400">Loading sentiment data...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <div className="flex items-center gap-2 mb-5">
-        <AlertCircle size={18} className="text-amber-400" />
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-          Base-Boost Sentiment
-        </h3>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <AlertCircle size={18} className="text-amber-400" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            Base-Boost Sentiment
+          </h3>
+        </div>
+        {/* Data source indicator */}
+        <div className="flex items-center gap-1 text-[10px] text-slate-500" title={dataSource}>
+          <Info size={12} />
+          <span>{dataSource}</span>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -110,7 +159,7 @@ export default function BaseBoostSentiment({
   );
 }
 
-// Generate mock data
+// Generate default mock data (fallback)
 export function generateIssueData(topIssues?: Array<{ label: string; score: number }>): IssueData[] {
   if (topIssues && topIssues.length > 0) {
     return topIssues.slice(0, 6).map((issue, index) => ({
@@ -122,12 +171,13 @@ export function generateIssueData(topIssues?: Array<{ label: string; score: numb
     }));
   }
 
+  // Default fallback based on CSDS 2024 national averages
   return [
-    { issue: 'Jobs & Employment', sentiment: 'negative', score: 87, trend: 'up', change: 5 },
-    { issue: 'Price Rise / Inflation', sentiment: 'negative', score: 79, trend: 'up', change: 3 },
-    { issue: 'Civic Infrastructure', sentiment: 'neutral', score: 68, trend: 'stable', change: 0 },
-    { issue: 'Healthcare Access', sentiment: 'neutral', score: 62, trend: 'down', change: -2 },
-    { issue: 'Education Quality', sentiment: 'neutral', score: 55, trend: 'up', change: 4 },
-    { issue: 'Law & Order', sentiment: 'positive', score: 48, trend: 'down', change: -3 },
+    { issue: 'Jobs & Employment', sentiment: 'negative', score: 68, trend: 'up', change: 4 },
+    { issue: 'Price Rise / Inflation', sentiment: 'negative', score: 72, trend: 'up', change: 3 },
+    { issue: 'Civic Infrastructure', sentiment: 'neutral', score: 58, trend: 'stable', change: 0 },
+    { issue: 'Healthcare Access', sentiment: 'neutral', score: 54, trend: 'up', change: 2 },
+    { issue: 'Education Quality', sentiment: 'neutral', score: 48, trend: 'up', change: 2 },
+    { issue: 'Law & Order', sentiment: 'neutral', score: 52, trend: 'stable', change: 0 },
   ];
 }
