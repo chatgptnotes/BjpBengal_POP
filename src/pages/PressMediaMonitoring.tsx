@@ -36,6 +36,8 @@ import { MobileCard, ResponsiveGrid, MobileButton, MobileTabs } from '../compone
 import { useNewsSentiment } from '../hooks/useNewsSentiment';
 import { NewsArticle as DBNewsArticle } from '../services/newsService';
 import constituenciesDataRaw from '../data/wb_constituencies_50.json';
+import { generatePredictions, calculatePredictionStats, filterPredictions, ConstituencyPrediction, PredictionStats } from '../services/predictionService';
+import { seedElectionData } from '../utils/seedElectionData';
 
 // Transform constituency data
 const CONSTITUENCIES = constituenciesDataRaw.map((c: any) => ({
@@ -1191,89 +1193,66 @@ export default function PressMediaMonitoring() {
     { key: 'predictions', label: 'Analytics', icon: Target }
   ];
 
-  // Win Prediction Data for all constituencies
-  const constituencyPredictions = useMemo(() => {
-    return constituenciesDataRaw.map((c: any, index: number) => {
-      // Generate realistic prediction data based on region
-      const isUrban = c.is_urban;
-      const district = c.district;
+  // Win Prediction Data - Real data from 2021 Assembly + 2024 Lok Sabha results
+  const [constituencyPredictions, setConstituencyPredictions] = useState<ConstituencyPrediction[]>([]);
+  const [predictionStats, setPredictionStats] = useState<PredictionStats>({
+    bjpLeading: 0,
+    tmcLeading: 0,
+    swingSeats: 0,
+    safeBjp: 0,
+    safeTmc: 0,
+    predictedBjpSeats: { min: 0, max: 0 },
+    predictedTmcSeats: { min: 0, max: 0 }
+  });
+  const [isPredictionsLoading, setIsPredictionsLoading] = useState(true);
+  const [isSeedingElection, setIsSeedingElection] = useState(false);
 
-      // BJP typically stronger in certain areas
-      const bjpBaseStrength =
-        district === 'Darjeeling' ? 55 :
-        district === 'Purba Bardhaman' || district === 'Paschim Bardhaman' ? 48 :
-        district === 'Purulia' || district === 'Bankura' ? 45 :
-        district === 'Murshidabad' || district === 'Malda' ? 28 :
-        district === 'Kolkata' ? 35 :
-        district === 'Howrah' ? 38 :
-        40;
-
-      // Add some variance
-      const variance = (Math.sin(index * 1.5) * 15);
-      const bjpWin = Math.min(65, Math.max(25, bjpBaseStrength + variance));
-      const tmcWin = 100 - bjpWin;
-
-      const trends = ['rising', 'falling', 'stable'] as const;
-      const trendIndex = index % 3;
-
-      return {
-        id: c.id,
-        name: c.name,
-        district: c.district,
-        bjpWinProbability: Math.round(bjpWin),
-        tmcWinProbability: Math.round(tmcWin),
-        margin: Math.round(bjpWin - tmcWin),
-        trend: trends[trendIndex],
-        confidence: Math.round(70 + Math.random() * 25),
-        totalVoters: c.total_voters,
-        isUrban: c.is_urban,
-        factors: {
-          mediaSentiment: Math.round(40 + Math.random() * 40),
-          socialBuzz: Math.round(30 + Math.random() * 50),
-          groundReport: Math.round(35 + Math.random() * 45),
-          historicalPattern: Math.round(25 + Math.random() * 55)
-        },
-        keyIssues: index % 2 === 0
-          ? ['Development', 'Jobs', 'TMC Anti-incumbency']
-          : ['Law & Order', 'Corruption', 'Infrastructure']
-      };
-    });
+  // Load real prediction data on mount
+  useEffect(() => {
+    async function loadPredictions() {
+      setIsPredictionsLoading(true);
+      try {
+        const predictions = await generatePredictions(50, 50); // Default sentiment scores
+        setConstituencyPredictions(predictions);
+        setPredictionStats(calculatePredictionStats(predictions));
+      } catch (error) {
+        console.error('Error loading predictions:', error);
+      } finally {
+        setIsPredictionsLoading(false);
+      }
+    }
+    loadPredictions();
   }, []);
 
-  // Prediction Statistics
-  const predictionStats = useMemo(() => {
-    const bjpLeading = constituencyPredictions.filter(p => p.bjpWinProbability > 50).length;
-    const tmcLeading = constituencyPredictions.filter(p => p.tmcWinProbability > 50).length;
-    const swingSeats = constituencyPredictions.filter(p => Math.abs(p.margin) <= 10).length;
-    const safeBjp = constituencyPredictions.filter(p => p.bjpWinProbability >= 55).length;
-    const safeTmc = constituencyPredictions.filter(p => p.tmcWinProbability >= 55).length;
-
-    return { bjpLeading, tmcLeading, swingSeats, safeBjp, safeTmc };
-  }, [constituencyPredictions]);
+  // Handle seeding election data
+  const handleSeedElectionData = async () => {
+    if (isSeedingElection) return;
+    setIsSeedingElection(true);
+    try {
+      const result = await seedElectionData();
+      if (result.success) {
+        // Reload predictions after seeding
+        const predictions = await generatePredictions(50, 50);
+        setConstituencyPredictions(predictions);
+        setPredictionStats(calculatePredictionStats(predictions));
+        alert(`Seeded ${result.inserted} constituencies with real 2021+2024+2025 election data!`);
+      } else {
+        alert(`Seeding failed: ${result.errors.join(', ')}`);
+      }
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsSeedingElection(false);
+    }
+  };
 
   // Prediction Filters
   const [predictionFilter, setPredictionFilter] = useState<'all' | 'bjp' | 'tmc' | 'swing'>('all');
   const [predictionSort, setPredictionSort] = useState<'margin' | 'bjp' | 'tmc' | 'name'>('margin');
 
+  // Filter and sort predictions using service
   const filteredPredictions = useMemo(() => {
-    let filtered = [...constituencyPredictions];
-
-    if (predictionFilter === 'bjp') {
-      filtered = filtered.filter(p => p.bjpWinProbability > 50);
-    } else if (predictionFilter === 'tmc') {
-      filtered = filtered.filter(p => p.tmcWinProbability > 50);
-    } else if (predictionFilter === 'swing') {
-      filtered = filtered.filter(p => Math.abs(p.margin) <= 10);
-    }
-
-    filtered.sort((a, b) => {
-      if (predictionSort === 'margin') return Math.abs(b.margin) - Math.abs(a.margin);
-      if (predictionSort === 'bjp') return b.bjpWinProbability - a.bjpWinProbability;
-      if (predictionSort === 'tmc') return b.tmcWinProbability - a.tmcWinProbability;
-      return a.name.localeCompare(b.name);
-    });
-
-    return filtered;
+    return filterPredictions(constituencyPredictions, predictionFilter, predictionSort);
   }, [constituencyPredictions, predictionFilter, predictionSort]);
 
   // Handle seeding mock articles to database
@@ -1331,17 +1310,19 @@ export default function PressMediaMonitoring() {
                 {isMonitoring ? 'Live Monitoring' : 'Monitoring Paused'}
               </span>
             </div>
-            {/* Sync Data Button */}
-            <MobileButton
-              variant="outline"
-              size="small"
-              onClick={handleSeedDatabase}
-              disabled={isSeeding}
-              className={isSeeding ? 'opacity-50 cursor-not-allowed' : ''}
-            >
-              <Database className={`w-4 h-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
-              {isSeeding ? 'Saving...' : 'Save'}
-            </MobileButton>
+            {/* Sync Data Button - Only visible on Articles tab */}
+            {activeTab === 'articles' && (
+              <MobileButton
+                variant="outline"
+                size="small"
+                onClick={handleSeedDatabase}
+                disabled={isSeeding}
+                className={isSeeding ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                <Database className={`w-4 h-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
+                {isSeeding ? 'Saving...' : 'Save'}
+              </MobileButton>
+            )}
 
             {/* Constituency Dropdown - Hidden on Predictions tab */}
             {activeTab !== 'predictions' && (
@@ -1932,6 +1913,30 @@ export default function PressMediaMonitoring() {
         {/* Predictions Tab */}
         {activeTab === 'predictions' && (
           <div className="space-responsive">
+            {/* Header with Title and Seed Button */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">2026 WB Assembly Election Prediction</h2>
+                <p className="text-sm text-gray-500">Based on 2021 Assembly + 2024 Lok Sabha + 2025 By-Election results</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isPredictionsLoading && (
+                  <span className="text-sm text-gray-500 flex items-center gap-1">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </span>
+                )}
+                <button
+                  onClick={handleSeedElectionData}
+                  disabled={isSeedingElection}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  <Database className="w-4 h-4" />
+                  {isSeedingElection ? 'Loading...' : 'Load Historical Data'}
+                </button>
+              </div>
+            </div>
+
             {/* Row 1: State-Level Summary */}
             <ResponsiveGrid cols={{ sm: 2, md: 4 }}>
               <MobileCard padding="compact" className="border-l-4 border-orange-500 bg-gradient-to-r from-orange-50 to-white">
@@ -2119,7 +2124,16 @@ export default function PressMediaMonitoring() {
                           }`}
                         >
                           <td className="py-2 px-2 text-gray-500">{index + 1}</td>
-                          <td className="py-2 px-2 font-medium text-gray-900">{prediction.name}</td>
+                          <td className="py-2 px-2 font-medium text-gray-900">
+                            <span className="flex items-center gap-1">
+                              {prediction.name}
+                              {prediction.has2025Data && (
+                                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-medium">
+                                  2025
+                                </span>
+                              )}
+                            </span>
+                          </td>
                           <td className="py-2 px-2 text-gray-600 hidden sm:table-cell">{prediction.district}</td>
                           <td className="py-2 px-2 text-center">
                             <span className={`font-bold ${isBjpLeading ? 'text-orange-600' : 'text-orange-400'}`}>
