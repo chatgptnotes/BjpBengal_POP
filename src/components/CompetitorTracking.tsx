@@ -6,6 +6,9 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import MessageIcon from '@mui/icons-material/Message';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import TouchAppIcon from '@mui/icons-material/TouchApp';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import {
@@ -25,6 +28,86 @@ interface CompetitorTrackingProps {
   onDateRangeChange?: (range: '1d' | '7d' | '30d') => void;
 }
 
+// Animated Number Counter Component
+function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const duration = 1000;
+    const steps = 60;
+    let current = 0;
+    const increment = value / steps;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= value) {
+        setCount(value);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current));
+      }
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [value]);
+
+  return <span className="counter-value">{count.toLocaleString()}{suffix}</span>;
+}
+
+// Mini Circular Gauge Component
+function MiniGauge({ value, color, size = 80 }: { value: number; color: string; size?: number }) {
+  const normalizedValue = Math.min(Math.max(value, 0), 100);
+  const radius = size / 2 - 6;
+  const circumference = Math.PI * radius;
+  const offset = circumference - (normalizedValue / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative" style={{ width: size, height: size / 2 + 5 }}>
+        <svg width={size} height={size / 2 + 5} className="overflow-visible">
+          {/* Background arc */}
+          <path
+            d={`M ${size / 2 - radius} ${size / 2} A ${radius} ${radius} 0 0 1 ${size / 2 + radius} ${size / 2}`}
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth="6"
+            strokeLinecap="round"
+          />
+          {/* Value arc */}
+          <path
+            d={`M ${size / 2 - radius} ${size / 2} A ${radius} ${radius} 0 0 1 ${size / 2 + radius} ${size / 2}`}
+            fill="none"
+            stroke={color}
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{
+              transition: 'stroke-dashoffset 1s ease-in-out',
+            }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-end justify-center pb-1">
+          <div className="text-lg font-bold" style={{ color }}>
+            {normalizedValue.toFixed(0)}%
+          </div>
+        </div>
+      </div>
+      <div className="text-[10px] text-gray-500 mt-0.5">Sentiment</div>
+    </div>
+  );
+}
+
+// Get gradient class based on party name
+function getPartyGradient(name: string): string {
+  const gradients: Record<string, string> = {
+    'BJP': 'bg-gradient-bjp',
+    'TMC': 'bg-gradient-tmc',
+    'Congress': 'bg-gradient-congress',
+    'CPIM': 'bg-gradient-cpim',
+    'ISF': 'bg-gradient-isf'
+  };
+  return gradients[name] || '';
+}
+
 export default function CompetitorTracking({
   dateRange: propDateRange,
   onDateRangeChange
@@ -38,32 +121,27 @@ export default function CompetitorTracking({
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<'1d' | '7d' | '30d'>(propDateRange || '7d');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [nextRefresh, setNextRefresh] = useState<number>(300); // 5 minutes in seconds
+  const [nextRefresh, setNextRefresh] = useState<number>(300);
 
-  // Load data on mount and when date range changes
   useEffect(() => {
     loadAllData();
   }, [dateRange]);
 
-  // Auto-refresh every 5 minutes for real-time updates
   useEffect(() => {
-    const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+    const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000;
 
-    // Countdown timer
     const countdownId = setInterval(() => {
       setNextRefresh(prev => {
         if (prev <= 1) {
-          return 300; // Reset to 5 minutes
+          return 300;
         }
         return prev - 1;
       });
     }, 1000);
 
-    // Auto-refresh interval
     const refreshId = setInterval(() => {
-      console.log('[CompetitorTracking] Auto-refreshing data...');
       loadAllData();
-      setNextRefresh(300); // Reset countdown
+      setNextRefresh(300);
     }, AUTO_REFRESH_INTERVAL);
 
     return () => {
@@ -72,7 +150,6 @@ export default function CompetitorTracking({
     };
   }, [dateRange]);
 
-  // Update internal state when prop changes
   useEffect(() => {
     if (propDateRange && propDateRange !== dateRange) {
       setDateRange(propDateRange);
@@ -127,60 +204,54 @@ export default function CompetitorTracking({
   function getTrendIcon(trend: 'up' | 'down' | 'stable') {
     switch (trend) {
       case 'up':
-        return <TrendingUpIcon className="w-5 h-5" />;
+        return <TrendingUpIcon className="w-4 h-4" />;
       case 'down':
-        return <TrendingDownIcon className="w-5 h-5" />;
+        return <TrendingDownIcon className="w-4 h-4" />;
       default:
-        return <TrendingFlatIcon className="w-5 h-5" />;
+        return <TrendingFlatIcon className="w-4 h-4" />;
     }
   }
 
   function getTrendColor(trend: 'up' | 'down' | 'stable') {
     switch (trend) {
       case 'up':
-        return 'text-green-600';
+        return 'text-green-600 bg-green-50';
       case 'down':
-        return 'text-red-600';
+        return 'text-red-600 bg-red-50';
       default:
-        return 'text-gray-600';
+        return 'text-gray-600 bg-gray-50';
     }
   }
 
   function getSentimentColor(sentiment: number) {
-    if (sentiment > 0.6) return 'text-green-600';
-    if (sentiment > 0.4) return 'text-yellow-600';
-    return 'text-red-600';
+    if (sentiment > 0.6) return '#10b981';
+    if (sentiment > 0.4) return '#f59e0b';
+    return '#ef4444';
   }
 
   function getSeverityStyles(severity: string) {
     switch (severity) {
       case 'high':
       case 'critical':
-        return 'bg-red-50 border-red-400';
+        return 'bg-red-50/80 border-red-400';
       case 'medium':
-        return 'bg-yellow-50 border-yellow-400';
+        return 'bg-yellow-50/80 border-yellow-400';
       default:
-        return 'bg-blue-50 border-blue-400';
+        return 'bg-blue-50/80 border-blue-400';
     }
   }
 
-  function getSeverityDotColor(severity: string) {
-    switch (severity) {
-      case 'high':
-      case 'critical':
-        return 'bg-red-400';
-      case 'medium':
-        return 'bg-yellow-400';
-      default:
-        return 'bg-blue-400';
-    }
+  function formatNumber(num: number): string {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
+    return num.toLocaleString();
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <CircularProgress size={40} />
+          <CircularProgress size={40} sx={{ color: '#FF9933' }} />
           <p className="mt-4 text-gray-600">Loading competitor data...</p>
         </div>
       </div>
@@ -189,11 +260,11 @@ export default function CompetitorTracking({
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+      <div className="glass-card p-6 text-center">
         <p className="text-red-600 mb-4">{error}</p>
         <button
           onClick={loadAllData}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
           Retry
         </button>
@@ -204,18 +275,18 @@ export default function CompetitorTracking({
   return (
     <div className="space-y-6">
       {/* Header with filters */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 animate-fadeInUp">
         <div className="flex items-center gap-2">
           <FilterListIcon className="w-5 h-5 text-gray-500" />
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          <div className="flex rounded-xl border border-gray-200 overflow-hidden backdrop-blur-sm bg-white/50">
             {(['1d', '7d', '30d'] as const).map((range) => (
               <button
                 key={range}
                 onClick={() => handleDateRangeChange(range)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                className={`px-4 py-2 text-sm font-medium transition-all duration-300 ${
                   dateRange === range
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
+                    : 'bg-white/70 text-gray-600 hover:bg-white'
                 }`}
               >
                 {range === '1d' ? '24h' : range === '7d' ? '7 Days' : '30 Days'}
@@ -227,19 +298,21 @@ export default function CompetitorTracking({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 text-sm text-gray-500">
             {lastUpdated && (
-              <span>
+              <span className="hidden sm:inline">
                 Updated: {lastUpdated.toLocaleTimeString()}
               </span>
             )}
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Next refresh: {Math.floor(nextRefresh / 60)}:{(nextRefresh % 60).toString().padStart(2, '0')}
+            <span className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse-glow"></span>
+              <span className="text-green-700 font-medium">
+                {Math.floor(nextRefresh / 60)}:{(nextRefresh % 60).toString().padStart(2, '0')}
+              </span>
             </span>
           </div>
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
           >
             <RefreshIcon className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Syncing...' : 'Sync Data'}
@@ -247,49 +320,68 @@ export default function CompetitorTracking({
         </div>
       </div>
 
-      {/* Competitor Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {competitors.map((competitor) => (
+      {/* Competitor Overview Cards - Glassmorphism */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {competitors.map((competitor, index) => (
           <div
             key={competitor.id}
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
-            style={{ borderTopColor: competitor.color_code, borderTopWidth: '3px' }}
+            className={`glass-card p-5 animate-fadeInUp ${getPartyGradient(competitor.name)}`}
+            style={{
+              animationDelay: `${index * 100}ms`,
+              borderTop: `3px solid ${competitor.color_code}`
+            }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{competitor.name}</h3>
-                <p className="text-xs text-gray-500">{competitor.leader_name}</p>
+            {/* Header */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg"
+                  style={{ backgroundColor: competitor.color_code }}
+                >
+                  {competitor.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">{competitor.name}</h3>
+                  <p className="text-xs text-gray-500">{competitor.leader_name}</p>
+                </div>
               </div>
-              <div className={`flex items-center ${getTrendColor(competitor.trend)}`}>
+              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(competitor.trend)}`}>
                 {getTrendIcon(competitor.trend)}
-                <span className="ml-1 text-sm font-medium">
-                  {competitor.change > 0 ? '+' : ''}{competitor.change}%
-                </span>
+                <span>{competitor.change > 0 ? '+' : ''}{competitor.change}%</span>
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Sentiment</span>
-                <span className={`font-medium ${getSentimentColor(competitor.sentiment)}`}>
-                  {Math.round(competitor.sentiment * 100)}%
-                </span>
+
+            {/* Gauge */}
+            <div className="flex justify-center my-3">
+              <MiniGauge
+                value={competitor.sentiment * 100}
+                color={getSentimentColor(competitor.sentiment)}
+                size={90}
+              />
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              <div className="text-center p-2 bg-white/50 rounded-lg backdrop-blur-sm">
+                <MessageIcon className="w-4 h-4 mx-auto text-blue-500 mb-1" />
+                <div className="text-sm font-bold text-gray-900">
+                  <AnimatedNumber value={competitor.mentions} />
+                </div>
+                <div className="text-[10px] text-gray-500">Mentions</div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Mentions</span>
-                <span className="font-medium">{competitor.mentions.toLocaleString()}</span>
+              <div className="text-center p-2 bg-white/50 rounded-lg backdrop-blur-sm">
+                <VisibilityIcon className="w-4 h-4 mx-auto text-purple-500 mb-1" />
+                <div className="text-sm font-bold text-gray-900">
+                  {formatNumber(competitor.reach)}
+                </div>
+                <div className="text-[10px] text-gray-500">Reach</div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Reach</span>
-                <span className="font-medium">
-                  {competitor.reach >= 1000
-                    ? `${(competitor.reach / 1000).toFixed(0)}K`
-                    : competitor.reach.toLocaleString()
-                  }
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Engagement</span>
-                <span className="font-medium">{competitor.engagement}%</span>
+              <div className="text-center p-2 bg-white/50 rounded-lg backdrop-blur-sm">
+                <TouchAppIcon className="w-4 h-4 mx-auto text-green-500 mb-1" />
+                <div className="text-sm font-bold text-gray-900">
+                  {competitor.engagement}%
+                </div>
+                <div className="text-[10px] text-gray-500">Engage</div>
               </div>
             </div>
           </div>
@@ -297,25 +389,44 @@ export default function CompetitorTracking({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Issue Performance Comparison */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {/* Issue Performance Comparison - With Animated Bars */}
+        <div className="glass-card p-6 animate-fadeInUp" style={{ animationDelay: '500ms' }}>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Issue Performance Comparison</h3>
           {issues.length > 0 ? (
             <div className="space-y-4">
-              {issues.map((item, index) => (
+              {issues.slice(0, 6).map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  style={{ borderLeftColor: item.color_code, borderLeftWidth: '3px' }}
+                  className="animate-fadeInUp"
+                  style={{ animationDelay: `${600 + index * 50}ms` }}
                 >
-                  <div>
-                    <div className="font-medium text-gray-900">{item.issue}</div>
-                    <div className="text-sm text-gray-600">
-                      {item.party} - {item.volume} mentions
+                  <div className="flex justify-between items-center mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: item.color_code }}
+                      ></span>
+                      <span className="font-medium text-gray-900 text-sm">{item.issue}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">{item.party}</span>
+                      <span
+                        className="text-sm font-bold"
+                        style={{ color: getSentimentColor(item.sentiment) }}
+                      >
+                        {Math.round(item.sentiment * 100)}%
+                      </span>
                     </div>
                   </div>
-                  <div className={`text-lg font-bold ${getSentimentColor(item.sentiment)}`}>
-                    {Math.round(item.sentiment * 100)}%
+                  <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full animate-progress"
+                      style={{
+                        width: `${item.sentiment * 100}%`,
+                        backgroundColor: item.color_code,
+                        animationDelay: `${700 + index * 100}ms`
+                      }}
+                    />
                   </div>
                 </div>
               ))}
@@ -325,52 +436,53 @@ export default function CompetitorTracking({
           )}
         </div>
 
-        {/* Competitor Campaigns */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {/* Competitor Campaigns - Glass Cards */}
+        <div className="glass-card p-6 animate-fadeInUp" style={{ animationDelay: '600ms' }}>
           <div className="flex items-center gap-2 mb-4">
             <CampaignIcon className="w-5 h-5 text-orange-500" />
             <h3 className="text-lg font-semibold text-gray-900">Competitor Campaigns</h3>
           </div>
           {campaigns.length > 0 ? (
             <div className="space-y-4">
-              {campaigns.map((campaign) => (
+              {campaigns.slice(0, 4).map((campaign, index) => (
                 <div
                   key={campaign.id}
-                  className="border border-gray-200 rounded-lg p-4"
-                  style={{ borderLeftColor: campaign.color_code, borderLeftWidth: '3px' }}
+                  className="glass-card-subtle p-4 animate-fadeInUp"
+                  style={{
+                    animationDelay: `${700 + index * 100}ms`,
+                    borderLeft: `3px solid ${campaign.color_code}`
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{campaign.campaign}</h4>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    <h4 className="font-medium text-gray-900 text-sm">{campaign.campaign}</h4>
+                    <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
                       campaign.status === 'active'
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-green-100 text-green-700'
                         : campaign.status === 'paused'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-gray-100 text-gray-800'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-gray-100 text-gray-700'
                     }`}>
                       {campaign.status}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600 mb-3">{campaign.competitor}</div>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <div className="text-gray-600">Reach</div>
-                      <div className="font-medium">
-                        {campaign.reach >= 1000
-                          ? `${(campaign.reach / 1000).toFixed(0)}K`
-                          : campaign.reach.toLocaleString()
-                        }
-                      </div>
+                  <div className="text-xs text-gray-500 mb-3">{campaign.competitor}</div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-2 bg-white/60 rounded-lg">
+                      <div className="text-base font-bold text-gray-900">{formatNumber(campaign.reach)}</div>
+                      <div className="text-[10px] text-gray-500">Reach</div>
                     </div>
-                    <div>
-                      <div className="text-gray-600">Engagement</div>
-                      <div className="font-medium">{campaign.engagement}%</div>
+                    <div className="text-center p-2 bg-white/60 rounded-lg">
+                      <div className="text-base font-bold text-gray-900">{campaign.engagement}%</div>
+                      <div className="text-[10px] text-gray-500">Engage</div>
                     </div>
-                    <div>
-                      <div className="text-gray-600">Sentiment</div>
-                      <div className={`font-medium ${getSentimentColor(campaign.sentiment)}`}>
+                    <div className="text-center p-2 bg-white/60 rounded-lg">
+                      <div
+                        className="text-base font-bold"
+                        style={{ color: getSentimentColor(campaign.sentiment) }}
+                      >
                         {Math.round(campaign.sentiment * 100)}%
                       </div>
+                      <div className="text-[10px] text-gray-500">Sentiment</div>
                     </div>
                   </div>
                 </div>
@@ -383,24 +495,30 @@ export default function CompetitorTracking({
       </div>
 
       {/* Competitive Intelligence Alerts */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="glass-card p-6 animate-fadeInUp" style={{ animationDelay: '800ms' }}>
         <div className="flex items-center gap-2 mb-4">
           <NotificationsActiveIcon className="w-5 h-5 text-orange-500" />
           <h3 className="text-lg font-semibold text-gray-900">Competitive Intelligence Alerts</h3>
         </div>
         {alerts.length > 0 ? (
-          <div className="space-y-3">
-            {alerts.map((alert) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {alerts.map((alert, index) => (
               <div
                 key={alert.id}
-                className={`flex items-start p-3 rounded-lg border-l-4 ${getSeverityStyles(alert.severity)}`}
+                className={`flex items-start p-3 rounded-xl border-l-4 backdrop-blur-sm animate-fadeInUp ${getSeverityStyles(alert.severity)}`}
+                style={{ animationDelay: `${900 + index * 50}ms` }}
               >
-                <div className={`w-2 h-2 rounded-full mt-2 mr-3 ${getSeverityDotColor(alert.severity)}`} />
                 <div className="flex-1">
                   <p className="text-sm text-gray-900">{alert.message}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-2">
                     {alert.competitor && (
-                      <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                      <span
+                        className="text-xs font-medium px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: `${competitors.find(c => c.name === alert.competitor)?.color_code}20`,
+                          color: competitors.find(c => c.name === alert.competitor)?.color_code
+                        }}
+                      >
                         {alert.competitor}
                       </span>
                     )}
