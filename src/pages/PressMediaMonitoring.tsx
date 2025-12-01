@@ -1310,17 +1310,19 @@ export default function PressMediaMonitoring() {
                 {isMonitoring ? 'Live Monitoring' : 'Monitoring Paused'}
               </span>
             </div>
-            {/* Sync Data Button */}
-            <MobileButton
-              variant="outline"
-              size="small"
-              onClick={handleSeedDatabase}
-              disabled={isSeeding}
-              className={isSeeding ? 'opacity-50 cursor-not-allowed' : ''}
-            >
-              <Database className={`w-4 h-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
-              {isSeeding ? 'Saving...' : 'Save'}
-            </MobileButton>
+            {/* Sync Data Button - Only visible on Articles tab */}
+            {activeTab === 'articles' && (
+              <MobileButton
+                variant="outline"
+                size="small"
+                onClick={handleSeedDatabase}
+                disabled={isSeeding}
+                className={isSeeding ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                <Database className={`w-4 h-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
+                {isSeeding ? 'Saving...' : 'Save'}
+              </MobileButton>
+            )}
 
             {/* Constituency Dropdown - Hidden on Predictions tab */}
             {activeTab !== 'predictions' && (
@@ -1930,7 +1932,7 @@ export default function PressMediaMonitoring() {
                   className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
                   <Database className="w-4 h-4" />
-                  {isSeedingElection ? 'Seeding...' : 'Seed Election Data'}
+                  {isSeedingElection ? 'Loading...' : 'Load Historical Data'}
                 </button>
               </div>
             </div>
