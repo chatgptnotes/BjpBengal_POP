@@ -199,6 +199,52 @@ export type DemographicSentimentInsert = Omit<DemographicSentimentRow, 'id' | 'c
 export type DemographicSentimentUpdate = Partial<Omit<DemographicSentimentRow, 'id' | 'created_at'>>;
 
 // ============================================================================
+// CONSTITUENCY DEMOGRAPHICS TABLE TYPE
+// ============================================================================
+
+export interface ConstituencyDemographicsRow {
+  id: string;
+  constituency_id: string;
+  total_population: number;
+  age_0_18: number;
+  age_18_35: number;
+  age_35_60: number;
+  age_60_plus: number;
+  male_percentage: number;
+  female_percentage: number;
+  sc_percentage: number;
+  st_percentage: number;
+  obc_percentage: number;
+  general_percentage: number;
+  hindu_percentage: number;
+  muslim_percentage: number;
+  christian_percentage: number;
+  others_percentage: number;
+  // Extended fields (Census 2011)
+  literacy_rate: number | null;
+  urban_percentage: number | null;
+  rural_percentage: number | null;
+  sex_ratio: number | null;
+  child_sex_ratio: number | null;
+  bpl_percentage: number | null;
+  total_voters: number | null;
+  area_sq_km: number | null;
+  population_density: number | null;
+  polling_stations: number | null;
+  // Metadata
+  data_source: string;
+  last_updated: string;
+  created_at: string;
+}
+
+export type ConstituencyDemographicsInsert = Omit<ConstituencyDemographicsRow, 'id' | 'created_at'> & {
+  id?: string;
+  created_at?: string;
+};
+
+export type ConstituencyDemographicsUpdate = Partial<Omit<ConstituencyDemographicsRow, 'id' | 'created_at'>>;
+
+// ============================================================================
 // PHASE 2: GEOGRAPHY & TERRITORY TABLE TYPES
 // ============================================================================
 
