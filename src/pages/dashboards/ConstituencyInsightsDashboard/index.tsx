@@ -26,12 +26,12 @@ import { ConstituencyLeader, constituencyLeaderService } from '@/services/leader
 import { seedConstituencyLeaders } from '@/utils/seedConstituencyData';
 // Import Constituency Demographics component
 import ConstituencyDemographics from './components/ConstituencyDemographics';
-// Import Competitor Analysis Summary Card
-import CompetitorAnalysisSummaryCard from '@/components/CompetitorAnalysisSummaryCard';
 // Import Infographic Generator component
 import InfographicGenerator from './components/InfographicGenerator';
 // Import Constituency Infographic Card (new dynamic tab)
 import ConstituencyInfographicCard from './components/ConstituencyInfographicCard';
+// Import Competitor Analysis Summary Card
+import CompetitorAnalysisSummaryCard from '@/components/CompetitorAnalysisSummaryCard';
 // Import Election Results Service for real historical data
 import { getElectionHistory, getPartyStrength, type ElectionHistory, type PartyStrength } from '@/services/supabase/electionResults.service';
 
@@ -881,9 +881,6 @@ export default function PulseDashboard() {
               {/* Constituency Demographics Panel */}
               <ConstituencyDemographics constituencyId={selectedId} />
 
-              {/* Competitor Analysis Summary Card */}
-              <CompetitorAnalysisSummaryCard />
-
               {/* Strategic Intelligence Unit */}
               {data.strategy && <StrategicDeepDive strategy={data.strategy} lastUpdate={lastNewsUpdate} />}
             </div>
@@ -1158,6 +1155,9 @@ export default function PulseDashboard() {
                 </div>
              </div>
           </div>
+
+          {/* Competitor Analysis Summary Card */}
+          <CompetitorAnalysisSummaryCard />
 
           <div className="h-8"></div>
         </div>
