@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { newsService, NewsArticle, BJPSentimentReport, ArticleFilters } from '../services/newsService';
 import { bjpNewsAgent, AnalysisResult } from '../services/newsAgent';
-import { refreshArticlesIfStale } from '../utils/seedArticles';
+// Removed auto-refresh - articles now persist and Save button adds new ones
 
 // =====================================================
 // TYPE DEFINITIONS
@@ -266,18 +266,11 @@ export const useNewsSentiment = (options: {
 
   /**
    * Initial data fetch
-   * Also checks if articles need refresh (stale from previous day)
+   * Fetches articles from database (no auto-delete/refresh)
    */
   useEffect(() => {
-    const initializeArticles = async () => {
-      // First, check if articles need to be refreshed (stale from previous day)
-      await refreshArticlesIfStale();
-      // Then fetch the articles
-      refreshData();
-    };
-
     if (autoFetch) {
-      initializeArticles();
+      refreshData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFetch]);
