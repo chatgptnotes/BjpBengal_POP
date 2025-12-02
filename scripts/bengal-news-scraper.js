@@ -620,7 +620,6 @@ async function scrapeRSSFeed(source) {
         summary: cleanSummary,
         url: item.link,
         source: source.name,
-        author: item.creator || item.author || null,
         published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
 
         // Sentiment

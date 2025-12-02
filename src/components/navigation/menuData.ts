@@ -94,6 +94,12 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       icon: NewspaperIcon
     },
     {
+      name: 'News API',
+      href: '/news-api',
+      icon: NewspaperIcon,
+      badge: 'Live'
+    },
+    {
       name: 'Influencer Tracking',
       href: '/influencer-tracking',
       icon: InfluencerIcon
