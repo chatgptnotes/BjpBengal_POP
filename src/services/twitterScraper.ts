@@ -377,16 +377,30 @@ export async function fetchBJPBengalFeed(maxResults: number = 50): Promise<BJPBe
     };
   }
 
-  // Check monthly API limit
+  // Check monthly API limit - try Supabase fallback
   if (isAPILimitReached()) {
-    console.warn('[TwitterScraper] Monthly API limit reached, returning empty data');
+    console.warn('[TwitterScraper] Monthly API limit reached, fetching from Supabase...');
+    const cachedTweets = await getTweetsFromSupabase(maxResults);
+    if (cachedTweets.length > 0) {
+      return {
+        data: cachedTweets,
+        meta: { result_count: cachedTweets.length },
+        fromCache: true,
+        rateLimited: true,
+        fetchedAt: new Date().toISOString(),
+        hashtags: BJP_BENGAL_CONFIG.hashtags,
+        keywords: BJP_BENGAL_CONFIG.keywords,
+        accounts: BJP_BENGAL_CONFIG.accounts,
+        error: 'Using cached data - Twitter API rate limited.'
+      };
+    }
     return {
       data: [],
       meta: { result_count: 0 },
       fromCache: false,
       rateLimited: true,
       fetchedAt: new Date().toISOString(),
-      error: 'Monthly API limit of 1500 calls reached.'
+      error: 'Monthly API limit of 1500 calls reached. No cached data available.'
     };
   }
 
@@ -402,7 +416,21 @@ export async function fetchBJPBengalFeed(maxResults: number = 50): Promise<BJPBe
 
     // Check if API returned error (rate limited or other error)
     if (!data.success && data.rateLimited) {
-      console.warn('[TwitterScraper] API rate limited, returning empty data');
+      console.warn('[TwitterScraper] API rate limited, fetching from Supabase...');
+      const cachedTweets = await getTweetsFromSupabase(maxResults);
+      if (cachedTweets.length > 0) {
+        return {
+          data: cachedTweets,
+          meta: { result_count: cachedTweets.length },
+          fromCache: true,
+          rateLimited: true,
+          fetchedAt: new Date().toISOString(),
+          hashtags: BJP_BENGAL_CONFIG.hashtags,
+          keywords: BJP_BENGAL_CONFIG.keywords,
+          accounts: BJP_BENGAL_CONFIG.accounts,
+          error: 'Using cached data - Twitter API rate limited.'
+        };
+      }
       return {
         data: [],
         meta: { result_count: 0 },
@@ -411,7 +439,7 @@ export async function fetchBJPBengalFeed(maxResults: number = 50): Promise<BJPBe
         fetchedAt: new Date().toISOString(),
         hashtags: BJP_BENGAL_CONFIG.hashtags,
         keywords: BJP_BENGAL_CONFIG.keywords,
-        error: 'Twitter API rate limited. Please try again later.'
+        error: 'Twitter API rate limited. No cached data available.'
       };
     }
 
@@ -449,6 +477,22 @@ export async function fetchBJPBengalFeed(maxResults: number = 50): Promise<BJPBe
     const staleCache = localStorage.getItem(CACHE_KEY);
     if (staleCache) {
       return { ...JSON.parse(staleCache), fromCache: true, error: error.message };
+    }
+
+    // Try Supabase fallback
+    console.log('[TwitterScraper] Trying Supabase fallback...');
+    const cachedTweets = await getTweetsFromSupabase(maxResults);
+    if (cachedTweets.length > 0) {
+      return {
+        data: cachedTweets,
+        meta: { result_count: cachedTweets.length },
+        fromCache: true,
+        fetchedAt: new Date().toISOString(),
+        hashtags: BJP_BENGAL_CONFIG.hashtags,
+        keywords: BJP_BENGAL_CONFIG.keywords,
+        accounts: BJP_BENGAL_CONFIG.accounts,
+        error: 'Using cached data from database.'
+      };
     }
 
     // Return empty data with error (NO mock data)
@@ -669,6 +713,61 @@ export async function searchTweets(query: string, maxResults: number = 10): Prom
   // All proxies failed
   console.error('[TwitterScraper] All CORS proxies failed for search');
   return { data: [], error: 'Twitter API unavailable. Deploy the Twitter proxy worker to enable real-time data.' };
+}
+
+// Fetch cached tweets from Supabase when API is rate limited
+async function getTweetsFromSupabase(limit: number = 50): Promise<Tweet[]> {
+  try {
+    console.log('[TwitterScraper] Fetching cached tweets from Supabase...');
+    const { data, error } = await supabaseService
+      .from('social_media_posts')
+      .select('*')
+      .eq('platform', 'twitter')
+      .order('posted_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('[TwitterScraper] Error fetching from Supabase:', error);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      console.log('[TwitterScraper] No cached tweets found in Supabase');
+      return [];
+    }
+
+    console.log(`[TwitterScraper] Found ${data.length} cached tweets in Supabase`);
+
+    // Convert Supabase format back to Tweet format
+    const tweets: Tweet[] = data.map((post: any) => ({
+      id: post.post_id,
+      text: post.post_content,
+      created_at: post.posted_at,
+      author_id: post.author_id || 'cached',
+      public_metrics: {
+        like_count: post.likes || 0,
+        retweet_count: post.shares || 0,
+        reply_count: post.comments_count || 0,
+        quote_count: 0,
+        impression_count: post.reach || 0
+      },
+      entities: {
+        hashtags: (post.hashtags || []).map((tag: string) => ({ tag })),
+        mentions: (post.mentions || []).map((username: string) => ({ username }))
+      },
+      author: {
+        id: post.author_id || 'cached',
+        name: post.author_name || 'BJP Bengal',
+        username: post.author_username || 'BJP4Bengal',
+        profile_image_url: post.author_avatar || ''
+      }
+    }));
+
+    return tweets;
+  } catch (error) {
+    console.error('[TwitterScraper] Failed to fetch from Supabase:', error);
+    return [];
+  }
 }
 
 // Save tweets to Supabase database

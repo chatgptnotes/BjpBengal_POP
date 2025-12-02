@@ -126,7 +126,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .from('users')
         .select('*')
         .eq('email', session.user.email)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       try {
         const { data: userData, error: userError } = await Promise.race([
@@ -214,7 +215,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .from('users')
         .select('*')
         .eq('email', session.user.email)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       try {
         const { data: userData, error: userError } = await Promise.race([
@@ -371,7 +373,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .from('users')
         .select('*')
         .eq('email', email)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       try {
         const { data: userData, error: userError } = await Promise.race([

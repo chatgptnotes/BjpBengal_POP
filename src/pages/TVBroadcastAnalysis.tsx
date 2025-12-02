@@ -37,6 +37,7 @@ import {
   Podcast
 } from 'lucide-react';
 import { MobileCard, ResponsiveGrid, MobileButton, MobileTabs } from '../components/MobileResponsive';
+import TranscriptPanel from '../components/TranscriptPanel';
 
 interface TVChannel {
   id: string;
@@ -87,6 +88,68 @@ interface ShowAnalytics {
   biasScore: number;
   credibilityRating: number;
 }
+
+interface LiveTVChannel {
+  id: string;
+  name: string;
+  youtubeChannelId: string;
+  language: string;
+  logo: string;
+  description: string;
+}
+
+// Bengali Live TV Channels with YouTube Live Streams
+// Note: These channels may show national news at times, not just Bengal news
+const bengaliLiveChannels: LiveTVChannel[] = [
+  {
+    id: 'calcutta-news',
+    name: 'Calcutta News',
+    youtubeChannelId: '@calcuttanews',
+    language: 'Bengali',
+    logo: '',
+    description: 'Calcutta News - Kolkata & Bengal Local News'
+  },
+  {
+    id: 'zee-24-ghanta',
+    name: 'Zee 24 Ghanta',
+    youtubeChannelId: 'UCO6smBmJvlCkgQDL6SbQ8Rg',
+    language: 'Bengali',
+    logo: '',
+    description: 'Zee 24 Ghanta - Bengal News Channel'
+  },
+  {
+    id: 'abp-ananda',
+    name: 'ABP Ananda',
+    youtubeChannelId: 'UCmphdqZNmqL72WJ2uyiNw5w',
+    language: 'Bengali',
+    logo: '',
+    description: 'ABP Ananda - Bengali News (National + Bengal)'
+  },
+  {
+    id: 'news18-bangla',
+    name: 'News18 Bangla',
+    youtubeChannelId: 'UC1xITmKbNnFOyZ5xfDeJKfA',
+    language: 'Bengali',
+    logo: '',
+    description: 'News18 Bangla - 24x7 Bengali News'
+  },
+  {
+    id: 'tv9-bangla',
+    name: 'TV9 Bangla',
+    youtubeChannelId: 'UC_gUM8rL-Lrg6O3adPW9K1g',
+    language: 'Bengali',
+    logo: '',
+    description: 'TV9 Bangla - Breaking News & Analysis'
+  },
+  {
+    id: 'bangla-news-live',
+    name: 'Bengal News 24',
+    youtubeChannelId: 'UCNhF6Xn4c0o3ecyrXqHw8_w',
+    language: 'Bengali',
+    logo: '',
+    description: 'Bengal News 24 - West Bengal Local News'
+  }
+];
 
 const tvChannels: TVChannel[] = [
   {
@@ -279,6 +342,7 @@ export default function TVBroadcastAnalysis() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMonitoring, setIsMonitoring] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedLiveChannel, setSelectedLiveChannel] = useState<LiveTVChannel | null>(bengaliLiveChannels[0]);
 
   const [analytics, setAnalytics] = useState({
     totalChannels: 8,
@@ -384,16 +448,113 @@ export default function TVBroadcastAnalysis() {
         {/* Live TV Tab */}
         {activeTab === 'live' && (
           <div className="space-responsive">
+            {/* Bengali Live TV Section */}
+            <MobileCard padding="default" className="border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                <h3 className="text-responsive-lg font-bold text-gray-900">
+                  Bengali Live TV Channels
+                </h3>
+                <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded font-medium">
+                  LIVE NOW
+                </span>
+              </div>
+
+              {/* Channel Selector */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {bengaliLiveChannels.map(channel => (
+                  <button
+                    key={channel.id}
+                    onClick={() => setSelectedLiveChannel(channel)}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all ${
+                      selectedLiveChannel?.id === channel.id
+                        ? 'bg-red-600 text-white shadow-md'
+                        : 'bg-white text-gray-700 border border-gray-200 hover:border-red-300 hover:bg-red-50'
+                    }`}
+                  >
+                    <Tv className="w-4 h-4" />
+                    <span className="text-sm font-medium">{channel.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* YouTube Live Stream Player */}
+              {selectedLiveChannel && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                        <Tv className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-responsive-base font-semibold text-gray-900">
+                          {selectedLiveChannel.name}
+                        </h4>
+                        <p className="text-xs text-gray-500">{selectedLiveChannel.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      <span className="text-sm text-red-600 font-medium">LIVE</span>
+                    </div>
+                  </div>
+
+                  <div className="relative w-full rounded-lg overflow-hidden bg-black" style={{ paddingTop: '56.25%' }}>
+                    <iframe
+                      className="absolute top-0 left-0 w-full h-full"
+                      src={`https://www.youtube.com/embed/live_stream?channel=${selectedLiveChannel.youtubeChannelId}&autoplay=0`}
+                      title={selectedLiveChannel.name}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="flex items-center space-x-4">
+                      <span className="text-xs text-gray-500 flex items-center space-x-1">
+                        <Globe className="w-3 h-3" />
+                        <span>{selectedLiveChannel.language}</span>
+                      </span>
+                      <span className="text-xs text-gray-500 flex items-center space-x-1">
+                        <Radio className="w-3 h-3" />
+                        <span>24/7 Live News</span>
+                      </span>
+                    </div>
+                    <a
+                      href={`https://www.youtube.com/channel/${selectedLiveChannel.youtubeChannelId}/live`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center space-x-1"
+                    >
+                      <span>Watch on YouTube</span>
+                      <Share2 className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {/* Live Transcript Panel */}
+                  <div className="mt-4">
+                    <TranscriptPanel
+                      channelName={selectedLiveChannel.name}
+                      channelId={selectedLiveChannel.youtubeChannelId}
+                      isLive={true}
+                      maxHeight="300px"
+                    />
+                  </div>
+                </div>
+              )}
+            </MobileCard>
+
             {/* Key Metrics */}
             <ResponsiveGrid cols={{ sm: 2, lg: 4 }}>
               <MobileCard padding="default" className="text-center">
                 <Video className="w-8 h-8 text-red-600 mx-auto mb-2" />
                 <div className="text-responsive-xl font-bold text-gray-900">
-                  {analytics.liveChannels}
+                  {bengaliLiveChannels.length}
                 </div>
-                <div className="text-responsive-sm text-gray-600">Live Channels</div>
+                <div className="text-responsive-sm text-gray-600">Bengali Channels</div>
               </MobileCard>
-              
+
               <MobileCard padding="default" className="text-center">
                 <Eye className="w-8 h-8 text-blue-600 mx-auto mb-2" />
                 <div className="text-responsive-xl font-bold text-gray-900">
@@ -401,7 +562,7 @@ export default function TVBroadcastAnalysis() {
                 </div>
                 <div className="text-responsive-sm text-gray-600">Total Viewers</div>
               </MobileCard>
-              
+
               <MobileCard padding="default" className="text-center">
                 <TrendingUp className="w-8 h-8 text-green-600 mx-auto mb-2" />
                 <div className="text-responsive-xl font-bold text-gray-900">
@@ -409,7 +570,7 @@ export default function TVBroadcastAnalysis() {
                 </div>
                 <div className="text-responsive-sm text-gray-600">Avg Sentiment</div>
               </MobileCard>
-              
+
               <MobileCard padding="default" className="text-center">
                 <Mic className="w-8 h-8 text-purple-600 mx-auto mb-2" />
                 <div className="text-responsive-xl font-bold text-gray-900">
@@ -419,107 +580,73 @@ export default function TVBroadcastAnalysis() {
               </MobileCard>
             </ResponsiveGrid>
 
-            {/* Prime Time Alert */}
-            <MobileCard padding="default" className="border-yellow-200 bg-yellow-50">
-              <div className="flex items-center space-x-3">
-                <Timer className="w-6 h-6 text-yellow-600" />
-                <div className="flex-1">
-                  <h3 className="text-responsive-base font-semibold text-yellow-900">
-                    Prime Time Active
-                  </h3>
-                  <p className="text-responsive-sm text-yellow-700">
-                    {analytics.primeTimeActive} channels currently in prime time slots with increased viewership
-                  </p>
-                </div>
-                <div className="text-responsive-lg font-bold text-yellow-900">
-                  {analytics.primeTimeActive}/8
-                </div>
-              </div>
-            </MobileCard>
-
-            {/* Live Channels Grid */}
+            {/* All Bengali Channels Grid */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-responsive-lg font-semibold text-gray-900">
-                  Live Channels
+                  All Bengali News Channels
                 </h3>
-                <MobileButton variant="outline" size="small">
-                  <Settings className="w-4 h-4 mr-1" />
-                  Configure
-                </MobileButton>
               </div>
 
               <ResponsiveGrid cols={{ sm: 1, md: 2, lg: 3 }}>
-                {tvChannels.filter(channel => channel.isLive).map(channel => {
-                  const ChannelLogo = channel.logo;
-                  return (
-                  <MobileCard key={channel.id} padding="default" className="relative">
+                {bengaliLiveChannels.map(channel => (
+                  <MobileCard
+                    key={channel.id}
+                    padding="default"
+                    className={`relative cursor-pointer transition-all hover:shadow-md ${
+                      selectedLiveChannel?.id === channel.id ? 'ring-2 ring-red-500' : ''
+                    }`}
+                    onClick={() => setSelectedLiveChannel(channel)}
+                  >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <ChannelLogo className="w-8 h-8" />
+                        <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center">
+                          <Tv className="w-5 h-5 text-white" />
+                        </div>
                         <div>
                           <h4 className="text-responsive-sm font-semibold text-gray-900">
                             {channel.name}
                           </h4>
                           <div className="flex items-center space-x-2 mt-1">
                             <span className="text-xs text-gray-500">{channel.language}</span>
-                            <span className={`text-xs px-2 py-1 rounded ${getBiasColor(channel.bias)}`}>
-                              {channel.bias}
-                            </span>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                         <span className="text-xs text-red-600 font-medium">LIVE</span>
                       </div>
                     </div>
 
-                    <div className="mb-3">
-                      <div className="text-xs text-gray-600 mb-1">Now Playing:</div>
-                      <div className="text-responsive-sm font-medium text-gray-900">
-                        {channel.currentShow}
-                      </div>
-                      {isInPrimeTime(channel) && (
-                        <div className="inline-flex items-center space-x-1 mt-1">
-                          <Star className="w-3 h-3 text-yellow-500" />
-                          <span className="text-xs text-yellow-600">Prime Time</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-                      <div className="text-center p-2 bg-gray-50 rounded">
-                        <div className="font-medium text-gray-900">
-                          {(channel.viewership / 1000000).toFixed(1)}M
-                        </div>
-                        <div className="text-gray-600">Viewers</div>
-                      </div>
-                      <div className="text-center p-2 bg-gray-50 rounded">
-                        <div className="font-medium text-gray-900">{channel.credibilityScore}%</div>
-                        <div className="text-gray-600">Credibility</div>
-                      </div>
-                    </div>
+                    <p className="text-xs text-gray-600 mb-3">{channel.description}</p>
 
                     <div className="flex justify-between items-center">
-                      <div className="flex space-x-2">
-                        <MobileButton variant="ghost" size="small">
-                          <Volume2 className="w-4 h-4" />
-                        </MobileButton>
-                        <MobileButton variant="ghost" size="small">
-                          <Headphones className="w-4 h-4" />
-                        </MobileButton>
-                      </div>
-                      
-                      <MobileButton variant="primary" size="small">
+                      <a
+                        href={`https://www.youtube.com/channel/${channel.youtubeChannelId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gray-500 hover:text-red-600 flex items-center space-x-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span>YouTube Channel</span>
+                        <Share2 className="w-3 h-3" />
+                      </a>
+
+                      <MobileButton
+                        variant={selectedLiveChannel?.id === channel.id ? "primary" : "outline"}
+                        size="small"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          setSelectedLiveChannel(channel);
+                        }}
+                      >
                         <Play className="w-4 h-4 mr-1" />
-                        Watch
+                        {selectedLiveChannel?.id === channel.id ? 'Playing' : 'Watch'}
                       </MobileButton>
                     </div>
                   </MobileCard>
-                  );
-                })}
+                ))}
               </ResponsiveGrid>
             </div>
           </div>
