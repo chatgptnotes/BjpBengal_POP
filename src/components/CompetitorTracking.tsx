@@ -533,9 +533,9 @@ export default function CompetitorTracking({
                       <span className="text-xs text-gray-500">{item.party}</span>
                       <span
                         className="text-sm font-bold"
-                        style={{ color: getSentimentColor(item.sentiment) }}
+                        style={{ color: getSentimentColor(item.sentiment * 100) }}
                       >
-                        {Math.round(item.sentiment)}%
+                        {Math.round(item.sentiment * 100)}%
                       </span>
                     </div>
                   </div>
@@ -543,7 +543,7 @@ export default function CompetitorTracking({
                     <div
                       className="h-full rounded-full animate-progress"
                       style={{
-                        width: `${item.sentiment}%`,
+                        width: `${item.sentiment * 100}%`,
                         backgroundColor: item.color_code,
                         animationDelay: `${700 + index * 100}ms`
                       }}
@@ -599,9 +599,9 @@ export default function CompetitorTracking({
                     <div className="text-center p-2 bg-white/60 rounded-lg">
                       <div
                         className="text-base font-bold"
-                        style={{ color: getSentimentColor(campaign.sentiment) }}
+                        style={{ color: getSentimentColor(campaign.sentiment * 100) }}
                       >
-                        {Math.round(campaign.sentiment)}%
+                        {Math.round(campaign.sentiment * 100)}%
                       </div>
                       <div className="text-[10px] text-gray-500">Sentiment</div>
                     </div>
