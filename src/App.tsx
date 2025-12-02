@@ -40,6 +40,7 @@ import VoterSentimentAnalysis from './pages/VoterSentimentAnalysis'
 import VoiceAgentChat from './pages/VoiceAgentChat'
 import PersonaDashboard from './pages/VoterPersonas/PersonaDashboard'
 import NewsApiTab from './pages/NewsApiTab'
+import SocialIntelligenceDashboard from './pages/SocialIntelligenceDashboard'
 import EnhancedWardHeatmap from './components/EnhancedWardHeatmap'
 import ManifestoMatch from './components/ManifestoMatch'
 import FeedbackChatbot from './components/FeedbackChatbot'
@@ -437,6 +438,13 @@ function AppRoutes() {
                 <ProtectedRoute>
                   <Layout>
                     <NewsApiTab />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/social-intelligence" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SocialIntelligenceDashboard />
                   </Layout>
                 </ProtectedRoute>
               } />
