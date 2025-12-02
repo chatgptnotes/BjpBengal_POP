@@ -103,6 +103,8 @@ function getPartyColor(party: string): string {
  * Get election results for a specific constituency
  */
 export async function getElectionResults(constituencyId: string): Promise<ElectionResult | null> {
+  console.log('[ElectionResults] Querying for constituency_id:', constituencyId);
+
   const { data, error } = await supabase
     .from('election_results')
     .select('*')
@@ -111,9 +113,11 @@ export async function getElectionResults(constituencyId: string): Promise<Electi
 
   if (error) {
     console.error('[ElectionResults] Error fetching:', error);
+    console.error('[ElectionResults] Error details:', { code: error.code, message: error.message, details: error.details });
     return null;
   }
 
+  console.log('[ElectionResults] Found data:', data ? 'YES' : 'NO', data?.constituency_name);
   return data as ElectionResult;
 }
 

@@ -42,6 +42,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { fetchNewsForConstituency } from '@/services/leaderIntelligence/newsIntelligenceService';
 import { refreshAllNews } from '@/services/leaderIntelligence/leaderIntelligenceService';
+import { usePartySentimentTrend } from '../hooks/usePartySentimentTrend';
 
 // Types
 interface PartyStrength {
@@ -218,6 +219,14 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
   const partyStrength = getPartyStrengthData();
   const votingTrends = getVotingTrendData();
 
+  // Fetch real sentiment data from database
+  const {
+    data: sentimentData,
+    loading: sentimentLoading,
+    isFromDatabase: sentimentFromDb,
+    lastUpdated: sentimentLastUpdated
+  } = usePartySentimentTrend(leader?.constituency_id);
+
   // Fetch leader data when constituency changes
   useEffect(() => {
     const fetchLeaderData = async () => {
@@ -391,24 +400,7 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
     }
   };
 
-  // Generate sentiment data from actual data or use placeholder
-  const generateSentimentData = () => {
-    const data = [];
-    const today = new Date();
-    for (let i = 14; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      data.push({
-        date: date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
-        bjp: 45 + Math.random() * 20,
-        tmc: 55 + Math.random() * 15,
-        inc: 25 + Math.random() * 15,
-      });
-    }
-    return data;
-  };
-
-  const sentimentData = generateSentimentData();
+  // sentimentData is now provided by usePartySentimentTrend hook above
 
   if (loading) {
     return (
@@ -646,44 +638,76 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
         {activeTab === 'trends' && (
           <div className="space-y-4">
             <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
-              <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">
-                Party Sentiment Trend (14 Days)
-              </h4>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={sentimentData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 9, fill: '#94a3b8' }}
-                      tickLine={{ stroke: '#475569' }}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 9, fill: '#94a3b8' }}
-                      tickLine={{ stroke: '#475569' }}
-                      domain={[0, 100]}
-                    />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                    />
-                    <Line type="monotone" dataKey="bjp" stroke={PARTY_COLORS.BJP} strokeWidth={2} dot={false} name="BJP" />
-                    <Line type="monotone" dataKey="tmc" stroke={PARTY_COLORS.TMC} strokeWidth={2} dot={false} name="TMC" />
-                    <Line type="monotone" dataKey="inc" stroke={PARTY_COLORS.INC} strokeWidth={2} dot={false} name="INC" />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs font-bold text-slate-400 uppercase">
+                  Party Sentiment Trend (14 Days)
+                </h4>
+                <div className="flex items-center gap-2">
+                  {sentimentFromDb ? (
+                    <span className="text-[10px] text-green-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                      From News
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-amber-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                      Estimated
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-center gap-4 mt-3">
-                {[
-                  { party: 'BJP', color: PARTY_COLORS.BJP },
-                  { party: 'TMC', color: PARTY_COLORS.TMC },
-                  { party: 'INC', color: PARTY_COLORS.INC },
-                ].map(p => (
-                  <div key={p.party} className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }}></div>
-                    <span className="text-xs text-slate-400">{p.party}</span>
+              {sentimentLoading ? (
+                <div className="h-48 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-xs text-slate-400">Loading sentiment data...</span>
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={sentimentData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 9, fill: '#94a3b8' }}
+                          tickLine={{ stroke: '#475569' }}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 9, fill: '#94a3b8' }}
+                          tickLine={{ stroke: '#475569' }}
+                          domain={[0, 100]}
+                        />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                          formatter={(value: number) => [`${Math.round(value)}%`, '']}
+                        />
+                        <Line type="monotone" dataKey="bjp" stroke={PARTY_COLORS.BJP} strokeWidth={2} dot={false} name="BJP" />
+                        <Line type="monotone" dataKey="tmc" stroke={PARTY_COLORS.TMC} strokeWidth={2} dot={false} name="TMC" />
+                        <Line type="monotone" dataKey="inc" stroke={PARTY_COLORS.INC} strokeWidth={2} dot={false} name="INC" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex justify-center gap-4 mt-3">
+                    {[
+                      { party: 'BJP', color: PARTY_COLORS.BJP },
+                      { party: 'TMC', color: PARTY_COLORS.TMC },
+                      { party: 'INC', color: PARTY_COLORS.INC },
+                    ].map(p => (
+                      <div key={p.party} className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }}></div>
+                        <span className="text-xs text-slate-400">{p.party}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {!sentimentFromDb && (
+                    <p className="text-[10px] text-amber-400/70 text-center mt-2">
+                      Click "Fetch News" in the News tab to populate real sentiment data
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Party Strength Donut */}

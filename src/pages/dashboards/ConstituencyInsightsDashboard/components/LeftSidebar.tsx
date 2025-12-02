@@ -3,14 +3,15 @@
  * Contains Demographics, Issue Tracker, and Historical Trends
  */
 
-import React from 'react';
 import SentimentByDemographics from './SentimentByDemographics';
 import BaseBoostSentiment, { generateIssueData } from './BaseBoostSentiment';
-import HistoricalVotingTrends, { generateHistoricalData } from './HistoricalVotingTrends';
+import HistoricalVotingTrends from './HistoricalVotingTrends';
 
 interface Props {
   topIssues?: Array<{ label: string; score: number }>;
   constituencyId?: string;
+  constituencyName?: string;
+  district?: string;
   party?: string;
   isSwing?: boolean;
 }
@@ -18,16 +19,19 @@ interface Props {
 export default function LeftSidebar({
   topIssues,
   constituencyId,
+  constituencyName,
+  district,
   party,
   isSwing,
 }: Props) {
   const issueData = generateIssueData(topIssues);
-  const historicalData = generateHistoricalData();
 
   return (
     <div className="space-y-6">
       <SentimentByDemographics
         constituencyId={constituencyId}
+        constituencyName={constituencyName}
+        district={district}
       />
       <BaseBoostSentiment
         data={issueData}
@@ -35,7 +39,7 @@ export default function LeftSidebar({
         party={party}
         isSwing={isSwing}
       />
-      <HistoricalVotingTrends data={historicalData} />
+      <HistoricalVotingTrends constituencyId={constituencyId} />
     </div>
   );
 }

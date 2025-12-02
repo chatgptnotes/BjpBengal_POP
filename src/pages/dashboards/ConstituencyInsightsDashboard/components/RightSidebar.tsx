@@ -7,10 +7,11 @@ import React from 'react';
 import GeographicHeatmap, { generateMapData } from './GeographicHeatmap';
 import KeyLeaderPerformance, { generateLeaderData } from './KeyLeaderPerformance';
 import MediaCoverageAnalysis, { generateMediaData } from './MediaCoverageAnalysis';
-import CampaignMetrics, { generateCampaignMetrics } from './CampaignMetrics';
+import CampaignMetrics from './CampaignMetrics';
 
 interface Props {
   selectedConstituency?: string;
+  constituencyId?: string;
   constituencyLeaders?: Array<{
     constituency_id: string;
     constituency_name: string;
@@ -22,12 +23,12 @@ interface Props {
 
 export default function RightSidebar({
   selectedConstituency,
+  constituencyId,
   constituencyLeaders
 }: Props) {
   const mapData = generateMapData(selectedConstituency);
   const leaderData = generateLeaderData();
   const mediaData = generateMediaData();
-  const campaignData = generateCampaignMetrics();
 
   return (
     <div className="space-y-6">
@@ -38,7 +39,7 @@ export default function RightSidebar({
       />
       <KeyLeaderPerformance data={leaderData} />
       <MediaCoverageAnalysis data={mediaData} />
-      <CampaignMetrics data={campaignData} />
+      <CampaignMetrics constituencyId={constituencyId} />
     </div>
   );
 }
