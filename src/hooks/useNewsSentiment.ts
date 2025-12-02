@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { newsService, NewsArticle, BJPSentimentReport, ArticleFilters } from '../services/newsService';
 import { bjpNewsAgent, AnalysisResult } from '../services/newsAgent';
+import { refreshArticlesIfStale } from '../utils/seedArticles';
 
 // =====================================================
 // TYPE DEFINITIONS
@@ -265,10 +266,18 @@ export const useNewsSentiment = (options: {
 
   /**
    * Initial data fetch
+   * Also checks if articles need refresh (stale from previous day)
    */
   useEffect(() => {
-    if (autoFetch) {
+    const initializeArticles = async () => {
+      // First, check if articles need to be refreshed (stale from previous day)
+      await refreshArticlesIfStale();
+      // Then fetch the articles
       refreshData();
+    };
+
+    if (autoFetch) {
+      initializeArticles();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFetch]);

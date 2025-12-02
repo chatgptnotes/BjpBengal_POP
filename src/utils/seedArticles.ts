@@ -215,3 +215,82 @@ export async function seedMockArticlesBatch(
 
   return result;
 }
+
+/**
+ * Delete all seeded articles for an organization
+ */
+export async function deleteSeededArticles(
+  organizationId: string = DEFAULT_ORG_ID
+): Promise<{ success: boolean; deleted: number; error?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('news_articles')
+      .delete()
+      .eq('organization_id', organizationId)
+      .select();
+
+    if (error) {
+      console.error('Error deleting seeded articles:', error);
+      return { success: false, deleted: 0, error: error.message };
+    }
+
+    const deletedCount = data?.length || 0;
+    console.log(`Deleted ${deletedCount} seeded articles`);
+    return { success: true, deleted: deletedCount };
+  } catch (error) {
+    console.error('Error in deleteSeededArticles:', error);
+    return {
+      success: false,
+      deleted: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Check if articles need to be refreshed (stale = from previous day)
+ * Uses localStorage to track last refresh date
+ */
+export async function refreshArticlesIfStale(): Promise<boolean> {
+  const STORAGE_KEY = 'articles_last_refresh';
+  const today = new Date().toDateString();
+
+  // Check if already refreshed today
+  const lastRefresh = localStorage.getItem(STORAGE_KEY);
+  if (lastRefresh === today) {
+    console.log('Articles already refreshed today, skipping');
+    return false;
+  }
+
+  console.log('Articles are stale, refreshing with current timestamps...');
+
+  try {
+    // Delete old seeded articles
+    await deleteSeededArticles();
+
+    // Dynamic import to get fresh mock articles with current Date.now() timestamps
+    const { mockArticles } = await import('../pages/PressMediaMonitoring');
+
+    // Generate fresh articles with current timestamps
+    const freshArticles: ComponentNewsArticle[] = mockArticles.map((article, index) => ({
+      ...article,
+      // Recalculate timestamps relative to NOW
+      timestamp: new Date(Date.now() - (index * 1800000 + 1800000)) // 30 min increments starting from 30 mins ago
+    }));
+
+    // Re-seed with fresh timestamps
+    const result = await seedMockArticlesBatch(freshArticles);
+
+    if (result.success || result.inserted > 0) {
+      localStorage.setItem(STORAGE_KEY, today);
+      console.log(`Articles refreshed successfully: ${result.inserted} inserted`);
+      return true;
+    } else {
+      console.error('Failed to refresh articles:', result.errors);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error refreshing articles:', error);
+    return false;
+  }
+}

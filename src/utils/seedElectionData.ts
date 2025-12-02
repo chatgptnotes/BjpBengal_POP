@@ -870,6 +870,60 @@ export const electionData: ElectionResult[] = [
 ];
 
 /**
+ * Clear all election results from database
+ */
+export async function clearElectionData(): Promise<{
+  success: boolean;
+  deleted: number;
+  error?: string;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from('election_results')
+      .delete()
+      .neq('constituency_id', '') // Delete all records
+      .select();
+
+    if (error) {
+      console.error('Error clearing election data:', error);
+      return { success: false, deleted: 0, error: error.message };
+    }
+
+    const deleted = data?.length || 0;
+    console.log(`Cleared ${deleted} election records`);
+    return { success: true, deleted };
+  } catch (err: any) {
+    console.error('Error in clearElectionData:', err);
+    return { success: false, deleted: 0, error: err.message };
+  }
+}
+
+/**
+ * Clear and re-seed election data (fixes duplicates)
+ */
+export async function clearAndReseedElectionData(): Promise<{
+  success: boolean;
+  deleted: number;
+  inserted: number;
+  errors: string[];
+}> {
+  console.log('Clearing and re-seeding election data...');
+
+  // First clear
+  const clearResult = await clearElectionData();
+
+  // Then seed
+  const seedResult = await seedElectionData();
+
+  return {
+    success: clearResult.success && seedResult.success,
+    deleted: clearResult.deleted,
+    inserted: seedResult.inserted,
+    errors: seedResult.errors
+  };
+}
+
+/**
  * Seed election data to Supabase
  */
 export async function seedElectionData(): Promise<{
