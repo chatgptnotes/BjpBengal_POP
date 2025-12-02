@@ -22,6 +22,7 @@ import {
   CameraAlt as DataCaptureIcon,
   Phone as PhoneIcon,
   Psychology as PersonaIcon,
+  Hub as HubIcon,
   // Maps
   Map as MapIcon,
   Public as GlobalIcon,
@@ -76,6 +77,13 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       href: '/voter-personas',
       icon: PersonaIcon,
       badge: 'ML'
+    },
+    // Social Intelligence - Aggregated Data
+    {
+      name: 'Social Intelligence',
+      href: '/social-intelligence',
+      icon: HubIcon,
+      badge: 'AI'
     },
     // Other Data Intelligence Items
     {
