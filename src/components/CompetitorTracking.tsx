@@ -174,13 +174,15 @@ export default function CompetitorTracking({
         fetchCompetitorAlerts()
       ]);
 
+      console.log('[CompetitorTracking] Loaded metrics:', JSON.parse(JSON.stringify(metricsData)));
+      console.log('[CompetitorTracking] ISF metric:', metricsData.find(m => m.name === 'ISF'));
       setCompetitors(metricsData);
       setIssues(issuesData);
       setCampaigns(campaignsData);
       setAlerts(alertsData);
       setLastUpdated(new Date());
     } catch (err) {
-      console.error('Error loading competitor data:', err);
+      console.error('[CompetitorTracking] Error loading competitor data:', err);
       setError('Failed to load competitor data. Please try again.');
     } finally {
       setLoading(false);
@@ -262,9 +264,10 @@ export default function CompetitorTracking({
   }
 
   function getSentimentColor(sentiment: number) {
-    if (sentiment > 0.6) return '#10b981';
-    if (sentiment > 0.4) return '#f59e0b';
-    return '#ef4444';
+    // Sentiment is now on 0-100 scale
+    if (sentiment > 60) return '#10b981'; // Positive
+    if (sentiment > 40) return '#f59e0b'; // Neutral
+    return '#ef4444'; // Negative
   }
 
   function getSeverityStyles(severity: string) {
@@ -472,7 +475,7 @@ export default function CompetitorTracking({
             {/* Gauge */}
             <div className="flex justify-center my-3">
               <MiniGauge
-                value={competitor.sentiment * 100}
+                value={competitor.sentiment}
                 color={getSentimentColor(competitor.sentiment)}
                 size={90}
               />
@@ -532,7 +535,7 @@ export default function CompetitorTracking({
                         className="text-sm font-bold"
                         style={{ color: getSentimentColor(item.sentiment) }}
                       >
-                        {Math.round(item.sentiment * 100)}%
+                        {Math.round(item.sentiment)}%
                       </span>
                     </div>
                   </div>
@@ -540,7 +543,7 @@ export default function CompetitorTracking({
                     <div
                       className="h-full rounded-full animate-progress"
                       style={{
-                        width: `${item.sentiment * 100}%`,
+                        width: `${item.sentiment}%`,
                         backgroundColor: item.color_code,
                         animationDelay: `${700 + index * 100}ms`
                       }}
@@ -598,7 +601,7 @@ export default function CompetitorTracking({
                         className="text-base font-bold"
                         style={{ color: getSentimentColor(campaign.sentiment) }}
                       >
-                        {Math.round(campaign.sentiment * 100)}%
+                        {Math.round(campaign.sentiment)}%
                       </div>
                       <div className="text-[10px] text-gray-500">Sentiment</div>
                     </div>

@@ -26,6 +26,8 @@ import { ConstituencyLeader, constituencyLeaderService } from '@/services/leader
 import { seedConstituencyLeaders } from '@/utils/seedConstituencyData';
 // Import Constituency Demographics component
 import ConstituencyDemographics from './components/ConstituencyDemographics';
+// Import Competitor Analysis Summary Card
+import CompetitorAnalysisSummaryCard from '@/components/CompetitorAnalysisSummaryCard';
 // Import Infographic Generator component
 import InfographicGenerator from './components/InfographicGenerator';
 // Import Election Results Service for real historical data
@@ -873,6 +875,9 @@ export default function PulseDashboard() {
 
               {/* Constituency Demographics Panel */}
               <ConstituencyDemographics constituencyId={selectedId} />
+
+              {/* Competitor Analysis Summary Card */}
+              <CompetitorAnalysisSummaryCard />
 
               {/* Strategic Intelligence Unit */}
               {data.strategy && <StrategicDeepDive strategy={data.strategy} lastUpdate={lastNewsUpdate} />}
