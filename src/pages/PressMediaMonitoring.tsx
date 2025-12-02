@@ -1187,7 +1187,6 @@ export default function PressMediaMonitoring() {
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: BarChart3 },
-    { key: 'sources', label: 'Sources', icon: BookOpen },
     { key: 'articles', label: 'Articles', icon: Newspaper },
     { key: 'trends', label: 'Trends', icon: TrendingUp },
     { key: 'predictions', label: 'Analytics', icon: Target }
@@ -1562,82 +1561,6 @@ export default function PressMediaMonitoring() {
                 })}
               </div>
             </MobileCard>
-          </div>
-        )}
-
-        {/* Sources Tab */}
-        {activeTab === 'sources' && (
-          <div className="space-responsive">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-responsive-lg font-semibold text-gray-900">
-                West Bengal News Sources
-              </h3>
-              <span className="text-xs text-orange-600 font-medium">BJP Coverage Sentiment</span>
-            </div>
-
-            <ResponsiveGrid cols={{ sm: 1, md: 2, lg: 3 }}>
-              {sourcePerformance.map(source => {
-                const isPositive = source.bjpSentimentPercent > 0;
-                const isNegative = source.bjpSentimentPercent < 0;
-                const sentimentColor = isPositive ? 'text-green-600' : isNegative ? 'text-red-600' : 'text-gray-500';
-                const sentimentBgColor = isPositive ? 'bg-green-500' : isNegative ? 'bg-red-500' : 'bg-gray-400';
-                const sentimentBarWidth = Math.min(Math.abs(source.bjpSentimentPercent), 100);
-
-                return (
-                  <MobileCard key={source.id} padding="default" className="relative border-orange-100">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-2xl">{source.logo}</div>
-                        <div>
-                          <h4 className="text-responsive-sm font-semibold text-gray-900">
-                            {source.name}
-                          </h4>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className="text-xs px-2 py-1 rounded bg-orange-100 text-orange-700">
-                              {source.language}
-                            </span>
-                            <span className="text-xs text-gray-500">{source.region}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`w-3 h-3 rounded-full ${source.active ? 'bg-green-500' : 'bg-gray-300'}`} />
-                    </div>
-
-                    {/* BJP Sentiment Section */}
-                    <div className="space-y-2 mb-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-700 font-medium">BJP Sentiment</span>
-                        <span className={`font-bold ${sentimentColor}`}>
-                          {isPositive ? '+' : ''}{source.bjpSentimentPercent}% {isPositive ? 'positive' : isNegative ? 'negative' : 'neutral'}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`${sentimentBgColor} h-2 rounded-full transition-all duration-300`}
-                          style={{ width: `${sentimentBarWidth}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{source.bjpArticleCount} BJP articles</span>
-                        <span>{source.bjpPositiveCount} pos / {source.bjpNegativeCount} neg</span>
-                      </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="text-center p-2 bg-blue-50 rounded">
-                        <div className="font-medium text-blue-700">{source.credibilityScore}%</div>
-                        <div className="text-blue-600">Credibility</div>
-                      </div>
-                      <div className="text-center p-2 bg-purple-50 rounded">
-                        <div className="font-medium text-purple-700">{(source.reachEstimate / 1000000).toFixed(1)}M</div>
-                        <div className="text-purple-600">Reach</div>
-                      </div>
-                    </div>
-                  </MobileCard>
-                );
-              })}
-            </ResponsiveGrid>
           </div>
         )}
 
