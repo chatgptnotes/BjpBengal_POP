@@ -161,7 +161,7 @@ export default function ConstituencyInfographicCard({
         {/* --- HEADER --- */}
         <div className="relative bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-4 md:p-6 text-white shadow-xl border border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center">
           <div className="flex-1">
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{constituency.name}</h1>
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white drop-shadow-lg">{constituency.name}</h1>
             <div className="mt-2 text-slate-300 text-sm md:text-base flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
               <span>District: <span className="text-white font-medium">{constituency.district}</span></span>
               <span className="hidden md:inline">|</span>
