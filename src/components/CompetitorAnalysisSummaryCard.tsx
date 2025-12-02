@@ -34,7 +34,7 @@ function MiniSentimentGauge({ value, color }: { value: number; color: string }) 
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
         <div
           className="h-full transition-all duration-1000 ease-out rounded-full"
           style={{
@@ -106,12 +106,12 @@ export default function CompetitorAnalysisSummaryCard() {
   }, []);
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-xl">
+    <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-bold text-white">Competitor Analysis</h3>
-          <p className="text-sm text-slate-400 mt-1">Last 30 days performance tracking</p>
+          <h3 className="text-lg font-bold text-slate-900">Competitor Analysis</h3>
+          <p className="text-sm text-slate-600 mt-1">Last 30 days performance tracking</p>
         </div>
         <Link
           to="/competitor-analysis"
@@ -127,7 +127,7 @@ export default function CompetitorAnalysisSummaryCard() {
         <div className="space-y-4">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="animate-pulse">
-              <div className="h-16 bg-slate-800 rounded-lg"></div>
+              <div className="h-16 bg-gray-100 rounded-lg"></div>
             </div>
           ))}
         </div>
@@ -155,7 +155,7 @@ export default function CompetitorAnalysisSummaryCard() {
               return (
                 <div
                   key={competitor.id}
-                  className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:bg-slate-800 hover:border-slate-600 transition-all"
+                  className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 hover:border-gray-300 transition-all"
                 >
                   {/* Party Name & Badge */}
                   <div className="flex items-center justify-between mb-3">
@@ -165,8 +165,8 @@ export default function CompetitorAnalysisSummaryCard() {
                         style={{ backgroundColor: competitor.color_code }}
                       />
                       <div>
-                        <h4 className="text-white font-semibold text-sm">{competitor.name}</h4>
-                        <p className="text-slate-400 text-xs">{competitor.leader_name}</p>
+                        <h4 className="text-slate-900 font-semibold text-sm">{competitor.name}</h4>
+                        <p className="text-slate-600 text-xs">{competitor.leader_name}</p>
                       </div>
                     </div>
                     <TrendIndicator trend={metric.trend} trendValue={metric.change} />
@@ -179,8 +179,8 @@ export default function CompetitorAnalysisSummaryCard() {
 
                   {/* Mentions Count */}
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Mentions</span>
-                    <span className="text-slate-200 font-semibold">
+                    <span className="text-slate-500">Mentions</span>
+                    <span className="text-slate-900 font-semibold">
                       <AnimatedNumber value={metric.mentions} />
                     </span>
                   </div>
@@ -190,31 +190,31 @@ export default function CompetitorAnalysisSummaryCard() {
           </div>
 
           {/* Footer Stats */}
-          <div className="mt-6 pt-4 border-t border-slate-700">
+          <div className="mt-6 pt-4 border-t border-gray-200">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-white">
+                <div className="text-2xl font-bold text-slate-900">
                   {Object.keys(metrics).length}
                 </div>
-                <div className="text-xs text-slate-400 mt-1">Parties Tracked</div>
+                <div className="text-xs text-slate-500 mt-1">Parties Tracked</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">
+                <div className="text-2xl font-bold text-slate-900">
                   <AnimatedNumber
                     value={Object.values(metrics).reduce((sum, m) => sum + m.mentions, 0)}
                   />
                 </div>
-                <div className="text-xs text-slate-400 mt-1">Total Mentions</div>
+                <div className="text-xs text-slate-500 mt-1">Total Mentions</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">
+                <div className="text-2xl font-bold text-slate-900">
                   {Object.values(metrics).length > 0
                     ? (Object.values(metrics).reduce((sum, m) => sum + m.sentiment, 0) /
                         Object.values(metrics).length).toFixed(0)
                     : 0}
                   %
                 </div>
-                <div className="text-xs text-slate-400 mt-1">Avg Sentiment</div>
+                <div className="text-xs text-slate-500 mt-1">Avg Sentiment</div>
               </div>
             </div>
           </div>
