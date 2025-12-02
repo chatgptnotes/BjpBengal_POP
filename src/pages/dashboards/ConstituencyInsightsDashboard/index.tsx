@@ -30,6 +30,8 @@ import ConstituencyDemographics from './components/ConstituencyDemographics';
 import CompetitorAnalysisSummaryCard from '@/components/CompetitorAnalysisSummaryCard';
 // Import Infographic Generator component
 import InfographicGenerator from './components/InfographicGenerator';
+// Import Constituency Infographic Card (new dynamic tab)
+import ConstituencyInfographicCard from './components/ConstituencyInfographicCard';
 // Import Election Results Service for real historical data
 import { getElectionHistory, getPartyStrength, type ElectionHistory, type PartyStrength } from '@/services/supabase/electionResults.service';
 
@@ -816,7 +818,10 @@ export default function PulseDashboard() {
         </div>
       </div>
 
-      {/* 3. MAIN DASHBOARD CONTENT */}
+      {/* 3. INFOGRAPHIC CARD - Directly below Time Window */}
+      <ConstituencyInfographicCard constituencyId={selectedId} />
+
+      {/* 4. MAIN DASHBOARD CONTENT */}
       {loading || !data ? (
         <div className="w-full px-4 h-64 flex flex-col items-center justify-center text-slate-400">
            <Activity className="animate-spin mb-3 text-blue-500" size={32} />

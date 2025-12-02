@@ -1,0 +1,452 @@
+[
+  {
+    "constituency_id": "wb_kolkata_bhowanipore",
+    "constituency_name": "Bhabanipur",
+    "winner_2016": "Mamata Banerjee",
+    "winner_party_2016": "AITC",
+    "margin_2016": 25301,
+    "runner_up_2016": "Deepa Dasmunshi",
+    "runner_up_party_2016": "INC"
+  },
+  {
+    "constituency_id": "wb_north_24_parganas_bidhannagar",
+    "constituency_name": "Bidhannagar",
+    "winner_2016": "Sujit Bose",
+    "winner_party_2016": "AITC",
+    "margin_2016": 6988,
+    "runner_up_2016": "Arunava Ghosh",
+    "runner_up_party_2016": "INC"
+  },
+  {
+    "constituency_id": "wb_kolkata_beleghata",
+    "constituency_name": "Beleghata",
+    "winner_2016": "Paresh Paul",
+    "winner_party_2016": "AITC",
+    "margin_2016": 45000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_kolkata_entally",
+    "constituency_name": "Entally",
+    "winner_2016": "Swarna Kamal Saha",
+    "winner_party_2016": "AITC",
+    "margin_2016": 38000,
+    "runner_up_2016": "INC Candidate",
+    "runner_up_party_2016": "INC"
+  },
+  {
+    "constituency_id": "wb_kolkata_ballygunge",
+    "constituency_name": "Ballygunge",
+    "winner_2016": "Subrata Mukherjee",
+    "winner_party_2016": "AITC",
+    "margin_2016": 52000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_kolkata_chowringhee",
+    "constituency_name": "Chowrangee",
+    "winner_2016": "Nayna Bandyopadhyay",
+    "winner_party_2016": "AITC",
+    "margin_2016": 35000,
+    "runner_up_2016": "INC Candidate",
+    "runner_up_party_2016": "INC"
+  },
+  {
+    "constituency_id": "wb_kolkata_rashbehari",
+    "constituency_name": "Rashbehari",
+    "winner_2016": "Debasish Kumar",
+    "winner_party_2016": "AITC",
+    "margin_2016": 18000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_kolkata_tollygunge",
+    "constituency_name": "Tollyganj",
+    "winner_2016": "Aroop Biswas",
+    "winner_party_2016": "AITC",
+    "margin_2016": 42000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_kolkata_jadavpur",
+    "constituency_name": "Jadavpur",
+    "winner_2016": "Manish Gupta",
+    "winner_party_2016": "AITC",
+    "margin_2016": 15000,
+    "runner_up_2016": "Sujan Chakraborty",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_kolkata_kasba",
+    "constituency_name": "Kasba",
+    "winner_2016": "Javed Khan",
+    "winner_party_2016": "AITC",
+    "margin_2016": 48000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_kolkata_behala_west",
+    "constituency_name": "Behala Paschim",
+    "winner_2016": "Partha Chatterjee",
+    "winner_party_2016": "AITC",
+    "margin_2016": 38000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_howrah_howrah_uttar",
+    "constituency_name": "Howrah Uttar",
+    "winner_2016": "Arup Roy",
+    "winner_party_2016": "AITC",
+    "margin_2016": 12000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_howrah_howrah_madhya",
+    "constituency_name": "Howrah Madhya",
+    "winner_2016": "Gautam Chowdhuri",
+    "winner_party_2016": "AITC",
+    "margin_2016": 32000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_howrah_shibpur",
+    "constituency_name": "Shibpur",
+    "winner_2016": "Sujit Bose",
+    "winner_party_2016": "AITC",
+    "margin_2016": 22000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_howrah_bally",
+    "constituency_name": "Bally",
+    "winner_2016": "Rana Chatterjee",
+    "winner_party_2016": "AITC",
+    "margin_2016": 8000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_howrah_uttarpara",
+    "constituency_name": "Uttarpara",
+    "winner_2016": "Kanchan Mullick",
+    "winner_party_2016": "AITC",
+    "margin_2016": 25000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_north_24_parganas_barrackpore",
+    "constituency_name": "Barrackpur",
+    "winner_2016": "Arjun Singh",
+    "winner_party_2016": "AITC",
+    "margin_2016": 15000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_north_24_parganas_dum_dum",
+    "constituency_name": "Dum Dum",
+    "winner_2016": "Sougata Roy",
+    "winner_party_2016": "AITC",
+    "margin_2016": 35000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_north_24_parganas_rajarhat_new_town",
+    "constituency_name": "Rajarhat New Town",
+    "winner_2016": "Tapash Chatterjee",
+    "winner_party_2016": "AITC",
+    "margin_2016": 45000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_north_24_parganas_madhyamgram",
+    "constituency_name": "Madhyamgram",
+    "winner_2016": "Rathin Ghosh",
+    "winner_party_2016": "AITC",
+    "margin_2016": 38000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_south_24_parganas_jadavpur",
+    "constituency_name": "Jadavpur",
+    "winner_2016": "Manish Gupta",
+    "winner_party_2016": "AITC",
+    "margin_2016": 15000,
+    "runner_up_2016": "Sujan Chakraborty",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_south_24_parganas_sonarpur_uttar",
+    "constituency_name": "Sonarpur Uttar",
+    "winner_2016": "Firdousi Begum",
+    "winner_party_2016": "AITC",
+    "margin_2016": 28000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_south_24_parganas_budge_budge",
+    "constituency_name": "Budge Budge",
+    "winner_2016": "Ashok Kumar Deb",
+    "winner_party_2016": "AITC",
+    "margin_2016": 35000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_darjeeling_darjeeling",
+    "constituency_name": "Darjeeling",
+    "winner_2016": "Amar Singh Rai",
+    "winner_party_2016": "GJM",
+    "margin_2016": 32000,
+    "runner_up_2016": "IND Candidate",
+    "runner_up_party_2016": "IND"
+  },
+  {
+    "constituency_id": "wb_darjeeling_siliguri",
+    "constituency_name": "Siliguri",
+    "winner_2016": "Ashok Bhattacharya",
+    "winner_party_2016": "CPI(M)",
+    "margin_2016": 18000,
+    "runner_up_2016": "AITC Candidate",
+    "runner_up_party_2016": "AITC"
+  },
+  {
+    "constituency_id": "wb_jalpaiguri_jalpaiguri",
+    "constituency_name": "Jalpaiguri",
+    "winner_2016": "Sarala Murmu",
+    "winner_party_2016": "AITC",
+    "margin_2016": 8000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_cooch_behar_cooch_behar_uttar",
+    "constituency_name": "Coochbehar Uttar",
+    "winner_2016": "Binay Krishna Barman",
+    "winner_party_2016": "AITC",
+    "margin_2016": 12000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_malda_english_bazar",
+    "constituency_name": "Englishbazar",
+    "winner_2016": "Krishnendu Narayan Choudhury",
+    "winner_party_2016": "INC",
+    "margin_2016": 15000,
+    "runner_up_2016": "AITC Candidate",
+    "runner_up_party_2016": "AITC"
+  },
+  {
+    "constituency_id": "wb_murshidabad_berhampore",
+    "constituency_name": "Berhampore",
+    "winner_2016": "Adhir Ranjan Chowdhury",
+    "winner_party_2016": "INC",
+    "margin_2016": 38000,
+    "runner_up_2016": "AITC Candidate",
+    "runner_up_party_2016": "AITC"
+  },
+  {
+    "constituency_id": "wb_nadia_krishnanagar_uttar",
+    "constituency_name": "Krishnanagar Uttar",
+    "winner_2016": "Koushani Mukherjee",
+    "winner_party_2016": "AITC",
+    "margin_2016": 18000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_hooghly_serampore",
+    "constituency_name": "Sreerampur",
+    "winner_2016": "Sudipto Roy",
+    "winner_party_2016": "AITC",
+    "margin_2016": 22000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_hooghly_chandannagar",
+    "constituency_name": "Chandannagar",
+    "winner_2016": "Indranil Sen",
+    "winner_party_2016": "AITC",
+    "margin_2016": 28000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_hooghly_chinsurah",
+    "constituency_name": "Chunchura",
+    "winner_2016": "Asit Mazumder",
+    "winner_party_2016": "AITC",
+    "margin_2016": 15000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_purba_bardhaman_asansol_uttar",
+    "constituency_name": "Asansol Uttar",
+    "winner_2016": "Moloy Ghatak",
+    "winner_party_2016": "AITC",
+    "margin_2016": 25000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_purba_bardhaman_asansol_dakshin",
+    "constituency_name": "Asansol Dakshin",
+    "winner_2016": "Sanat Deb",
+    "winner_party_2016": "AITC",
+    "margin_2016": 12000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_purba_bardhaman_durgapur_purba",
+    "constituency_name": "Durgapur Purba",
+    "winner_2016": "Pradip Mazumdar",
+    "winner_party_2016": "AITC",
+    "margin_2016": 8000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_purba_bardhaman_durgapur_paschim",
+    "constituency_name": "Durgapur Paschim",
+    "winner_2016": "Apurba Mukherjee",
+    "winner_party_2016": "CPI(M)",
+    "margin_2016": 5000,
+    "runner_up_2016": "AITC Candidate",
+    "runner_up_party_2016": "AITC"
+  },
+  {
+    "constituency_id": "wb_purba_bardhaman_bardhaman_uttar",
+    "constituency_name": "Burdwan Uttar",
+    "winner_2016": "Nisith Kumar Malik",
+    "winner_party_2016": "AITC",
+    "margin_2016": 22000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_purba_medinipur_tamluk",
+    "constituency_name": "Tamluk",
+    "winner_2016": "Saumen Mahapatra",
+    "winner_party_2016": "AITC",
+    "margin_2016": 18000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_purba_medinipur_haldia",
+    "constituency_name": "Haldia",
+    "winner_2016": "Tapasi Mondal",
+    "winner_party_2016": "AITC",
+    "margin_2016": 15000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_paschim_medinipur_midnapore",
+    "constituency_name": "Medinipur",
+    "winner_2016": "June Maliah",
+    "winner_party_2016": "AITC",
+    "margin_2016": 28000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_bankura_bankura",
+    "constituency_name": "Bankura",
+    "winner_2016": "Srinivas Sinha",
+    "winner_party_2016": "AITC",
+    "margin_2016": 18000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_purulia_purulia",
+    "constituency_name": "Purulia",
+    "winner_2016": "Bikash Chatterjee",
+    "winner_party_2016": "AITC",
+    "margin_2016": 12000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_birbhum_bolpur",
+    "constituency_name": "Bolpur",
+    "winner_2016": "Chandranath Sinha",
+    "winner_party_2016": "AITC",
+    "margin_2016": 25000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_birbhum_suri",
+    "constituency_name": "Suri",
+    "winner_2016": "Bikash Roychoudhury",
+    "winner_party_2016": "AITC",
+    "margin_2016": 15000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_paschim_bardhaman_pandaveswar",
+    "constituency_name": "Pandabeswar",
+    "winner_2016": "Narendranath Chakraborty",
+    "winner_party_2016": "AITC",
+    "margin_2016": 8000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_hooghly_arambag",
+    "constituency_name": "Arambag",
+    "winner_2016": "Saktipad Mondal",
+    "winner_party_2016": "AITC",
+    "margin_2016": 12000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_nadia_ranaghat_uttar_paschim",
+    "constituency_name": "Ranaghat Uttar Paschim",
+    "winner_2016": "Sankar Singha",
+    "winner_party_2016": "AITC",
+    "margin_2016": 18000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_north_24_parganas_barasat",
+    "constituency_name": "Barasat",
+    "winner_2016": "Chiranjeet Chakrabarti",
+    "winner_party_2016": "AITC",
+    "margin_2016": 28000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  },
+  {
+    "constituency_id": "wb_south_24_parganas_diamond_harbour",
+    "constituency_name": "Diamond Harbour",
+    "winner_2016": "Dipak Haldar",
+    "winner_party_2016": "AITC",
+    "margin_2016": 22000,
+    "runner_up_2016": "CPI(M) Candidate",
+    "runner_up_party_2016": "CPI(M)"
+  }
+]

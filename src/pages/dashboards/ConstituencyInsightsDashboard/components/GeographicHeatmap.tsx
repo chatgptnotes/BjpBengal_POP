@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MapPin, Newspaper, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { GlowIcon } from '../../../../components/ui/GlowIcon';
 import { getMapData, ConstituencyMapData } from '@/utils/constituencyExtendedData';
 
 // News data interface
@@ -136,9 +137,9 @@ export default function GeographicHeatmap({
   // Get sentiment icon
   const SentimentIcon = ({ label }: { label: string }) => {
     switch (label) {
-      case 'positive': return <TrendingUp size={12} className="text-emerald-400" />;
-      case 'negative': return <TrendingDown size={12} className="text-red-400" />;
-      default: return <Minus size={12} className="text-amber-400" />;
+      case 'positive': return <GlowIcon icon={TrendingUp} variant="positive" size="xs" glow />;
+      case 'negative': return <GlowIcon icon={TrendingDown} variant="negative" size="xs" glow />;
+      default: return <GlowIcon icon={Minus} variant="warning" size="xs" />;
     }
   };
 
@@ -146,7 +147,7 @@ export default function GeographicHeatmap({
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <MapPin size={18} className="text-emerald-400" />
+          <GlowIcon icon={MapPin} variant="positive" size="sm" glow />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Geographic Heatmap
           </h3>

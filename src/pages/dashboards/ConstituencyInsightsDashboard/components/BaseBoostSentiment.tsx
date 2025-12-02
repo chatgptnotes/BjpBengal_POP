@@ -6,6 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus, AlertCircle, Info } from 'lucide-react';
+import { GlowIcon } from '../../../../components/ui/GlowIcon';
 import { issueSentimentService, IssueData } from '@/services/supabase/issueSentiment.service';
 import { getIssueSentiment } from '@/utils/constituencyExtendedData';
 
@@ -68,9 +69,9 @@ export default function BaseBoostSentiment({
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
-      case 'up': return <TrendingUp size={14} className="text-emerald-500" />;
-      case 'down': return <TrendingDown size={14} className="text-rose-500" />;
-      default: return <Minus size={14} className="text-slate-500" />;
+      case 'up': return <GlowIcon icon={TrendingUp} variant="positive" size="xs" glow />;
+      case 'down': return <GlowIcon icon={TrendingDown} variant="negative" size="xs" glow />;
+      default: return <GlowIcon icon={Minus} variant="neutral" size="xs" />;
     }
   };
 
@@ -86,7 +87,7 @@ export default function BaseBoostSentiment({
     return (
       <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
         <div className="flex items-center gap-2 mb-5">
-          <AlertCircle size={18} className="text-amber-400" />
+          <GlowIcon icon={AlertCircle} variant="warning" size="sm" glow />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Base-Boost Sentiment
           </h3>
@@ -103,7 +104,7 @@ export default function BaseBoostSentiment({
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <AlertCircle size={18} className="text-amber-400" />
+          <GlowIcon icon={AlertCircle} variant="warning" size="sm" glow />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Base-Boost Sentiment
           </h3>

@@ -4,7 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Users, Loader2, Calendar, Database, MapPin, BookOpen, Building2 } from 'lucide-react';
+import { Users, Loader2, Calendar, Database } from 'lucide-react';
+import { GlowIcon } from '../../../../components/ui/GlowIcon';
+import {
+  PopulationIcon,
+  LiteracyIcon,
+  UrbanIcon,
+  VotersIcon,
+  GenderIcon,
+  GeminiIconWrapper,
+} from '../../../../components/ui/GeminiIcons';
 import { getByConstituencyId } from '@/services/supabase/constituencyDemographics.service';
 import type { ConstituencyDemographicsRow } from '@/types/database';
 
@@ -92,7 +101,9 @@ export default function ConstituencyDemographics({ constituencyId }: Props) {
     return (
       <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
         <div className="flex items-center gap-2 mb-5">
-          <Users size={18} className="text-purple-400" />
+          <GeminiIconWrapper color="purple" size="sm">
+            <PopulationIcon size={16} />
+          </GeminiIconWrapper>
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Constituency Demographics
           </h3>
@@ -110,14 +121,18 @@ export default function ConstituencyDemographics({ constituencyId }: Props) {
     return (
       <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
         <div className="flex items-center gap-2 mb-5">
-          <Users size={18} className="text-purple-400" />
+          <GeminiIconWrapper color="purple" size="sm">
+            <PopulationIcon size={16} />
+          </GeminiIconWrapper>
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Constituency Demographics
           </h3>
         </div>
         <div className="flex flex-col items-center justify-center py-12">
-          <Users size={48} className="text-slate-600 mb-4" />
-          <p className="text-slate-400 text-sm text-center">
+          <GeminiIconWrapper color="cyan" size="lg">
+            <PopulationIcon size={24} />
+          </GeminiIconWrapper>
+          <p className="text-slate-400 text-sm text-center mt-4">
             No demographic data available
           </p>
           <p className="text-slate-500 text-xs text-center mt-1">
@@ -138,7 +153,9 @@ export default function ConstituencyDemographics({ constituencyId }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Users size={18} className="text-purple-400" />
+          <GeminiIconWrapper color="purple" size="sm">
+            <PopulationIcon size={16} />
+          </GeminiIconWrapper>
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Constituency Demographics
           </h3>
@@ -149,56 +166,75 @@ export default function ConstituencyDemographics({ constituencyId }: Props) {
         </div>
       </div>
 
-      {/* Key Stats Row */}
+      {/* Key Stats Row - Gemini Style */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         {/* Total Population */}
         <div className="bg-slate-900/50 rounded-lg p-3 text-center">
-          <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Population</p>
-          <p className="text-xl font-bold text-white">{formatPopulation(data?.total_population || 0)}</p>
+          <div className="flex items-center justify-center mb-2">
+            <GeminiIconWrapper color="cyan" size="md">
+              <PopulationIcon size={20} />
+            </GeminiIconWrapper>
+          </div>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Population</p>
+          <p className="text-lg font-bold text-white">{formatPopulation(data?.total_population || 0)}</p>
         </div>
 
         {/* Literacy Rate */}
         <div className="bg-slate-900/50 rounded-lg p-3 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <BookOpen size={12} className="text-emerald-400" />
-            <p className="text-xs text-slate-400 uppercase tracking-wider">Literacy</p>
+          <div className="flex items-center justify-center mb-2">
+            <GeminiIconWrapper color="cyan" size="md">
+              <LiteracyIcon size={20} />
+            </GeminiIconWrapper>
           </div>
-          <p className="text-xl font-bold text-emerald-400">
+          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Literacy Rate</p>
+          <p className="text-lg font-bold text-cyan-400">
             {data?.literacy_rate ? `${data.literacy_rate.toFixed(1)}%` : 'N/A'}
           </p>
         </div>
 
-        {/* Urban/Rural */}
+        {/* Urban */}
         <div className="bg-slate-900/50 rounded-lg p-3 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <Building2 size={12} className="text-blue-400" />
-            <p className="text-xs text-slate-400 uppercase tracking-wider">Urban</p>
+          <div className="flex items-center justify-center mb-2">
+            <GeminiIconWrapper color="cyan" size="md">
+              <UrbanIcon size={20} />
+            </GeminiIconWrapper>
           </div>
-          <p className="text-xl font-bold text-blue-400">
+          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Urban</p>
+          <p className="text-lg font-bold text-cyan-400">
             {data?.urban_percentage != null ? `${data.urban_percentage.toFixed(1)}%` : 'N/A'}
           </p>
         </div>
       </div>
 
-      {/* Sex Ratio & Voters Row */}
+      {/* Sex Ratio & Voters Row - Gemini Style */}
       {(data?.sex_ratio || data?.total_voters) && (
         <div className="grid grid-cols-2 gap-3 mb-4">
           {data?.sex_ratio && (
             <div className="bg-slate-900/50 rounded-lg p-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Sex Ratio</span>
-                <span className="text-sm font-semibold text-pink-400">{data.sex_ratio}</span>
+              <div className="flex items-center gap-3">
+                <GeminiIconWrapper color="pink" size="sm">
+                  <GenderIcon size={16} />
+                </GeminiIconWrapper>
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase">Sex Ratio</p>
+                  <p className="text-lg font-bold text-pink-400">{data.sex_ratio}</p>
+                  <p className="text-[10px] text-slate-500">females per 1000 males</p>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 mt-1">females per 1000 males</p>
             </div>
           )}
           {data?.total_voters && (
             <div className="bg-slate-900/50 rounded-lg p-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Total Voters</span>
-                <span className="text-sm font-semibold text-cyan-400">{formatPopulation(data.total_voters)}</span>
+              <div className="flex items-center gap-3">
+                <GeminiIconWrapper color="cyan" size="sm">
+                  <VotersIcon size={16} />
+                </GeminiIconWrapper>
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase">Total Voters</p>
+                  <p className="text-lg font-bold text-cyan-400">{formatPopulation(data.total_voters)}</p>
+                  <p className="text-[10px] text-slate-500">registered electors</p>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 mt-1">registered electors</p>
             </div>
           )}
         </div>

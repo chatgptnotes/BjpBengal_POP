@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { User, TrendingUp, TrendingDown } from 'lucide-react';
+import { GlowIcon } from '../../../../components/ui/GlowIcon';
 
 interface LeaderData {
   id: string;
@@ -37,7 +38,7 @@ export default function KeyLeaderPerformance({ data }: Props) {
   return (
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
       <div className="flex items-center gap-2 mb-5">
-        <User size={18} className="text-indigo-400" />
+        <GlowIcon icon={User} variant="primary" size="sm" glow />
         <h3 className="text-sm font-bold text-white uppercase tracking-wider">
           Key Leader Performance
         </h3>
@@ -81,9 +82,9 @@ export default function KeyLeaderPerformance({ data }: Props) {
               {/* Trend */}
               <div className="flex items-center gap-1">
                 {leader.trend === 'up' ? (
-                  <TrendingUp size={12} className="text-emerald-500" />
+                  <GlowIcon icon={TrendingUp} variant="positive" size="xs" glow />
                 ) : (
-                  <TrendingDown size={12} className="text-rose-500" />
+                  <GlowIcon icon={TrendingDown} variant="negative" size="xs" glow />
                 )}
                 <span className={`text-[10px] font-bold ${leader.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
                   {leader.change > 0 ? '+' : ''}{leader.change}%

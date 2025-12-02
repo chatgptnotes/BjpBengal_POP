@@ -770,3 +770,56 @@
   opacity: 1 !important;
   visibility: visible !important;
 }
+
+/* ========================================
+   GEMINI-STYLE GLOW ICON EFFECTS
+   ======================================== */
+
+/* Glow effects for icons */
+.glow-emerald {
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4), 0 0 24px rgba(16, 185, 129, 0.2);
+}
+
+.glow-rose {
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.4), 0 0 24px rgba(244, 63, 94, 0.2);
+}
+
+.glow-amber {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4), 0 0 24px rgba(245, 158, 11, 0.2);
+}
+
+.glow-blue {
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4), 0 0 24px rgba(59, 130, 246, 0.2);
+}
+
+.glow-indigo {
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4), 0 0 24px rgba(99, 102, 241, 0.2);
+}
+
+.glow-purple {
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.4), 0 0 24px rgba(168, 85, 247, 0.2);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.4), 0 0 24px rgba(6, 182, 212, 0.2);
+}
+
+.glow-slate {
+  box-shadow: 0 0 12px rgba(100, 116, 139, 0.3), 0 0 24px rgba(100, 116, 139, 0.15);
+}
+
+/* Glow pulse animation for highlighted icons */
+@keyframes glow-icon-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+
+.animate-glow-icon-pulse {
+  animation: glow-icon-pulse 2s ease-in-out infinite;
+}
