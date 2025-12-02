@@ -26,6 +26,8 @@ import {
   Shield,
   Target
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface Issue {
   id: string;
@@ -86,187 +88,543 @@ interface Event {
 }
 
 export default function MyConstituencyApp() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'issues' | 'representatives' | 'events' | 'insights' | 'report'>('issues');
-  const [selectedConstituency] = useState('Thiruvananthapuram Central');
+  const [selectedConstituency, setSelectedConstituency] = useState('');
+  const [constituencyData, setConstituencyData] = useState<any>(null);
+  const [constituencyId, setConstituencyId] = useState<string>('');
   const [showReportForm, setShowReportForm] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
+  const [isLoadingIssues, setIsLoadingIssues] = useState(false);
+  const [isLoadingRepresentatives, setIsLoadingRepresentatives] = useState(false);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
-  // Mock data for Thiruvananthapuram Central constituency
-  const [issues, setIssues] = useState<Issue[]>([
-    {
-      id: '1',
-      title: 'Poor Street Lighting on MG Road',
-      description: 'Several street lights have been non-functional for over 2 months, creating safety concerns for evening commuters and pedestrians.',
-      category: 'infrastructure',
-      priority: 'high',
-      status: 'acknowledged',
-      location: 'MG Road, Near Central Station',
-      reportedBy: 'Rajesh Kumar',
-      reportedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      supporters: 23,
-      comments: 8,
-      assignedTo: 'PWD Team',
-      estimatedResolution: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-      updates: [
-        {
-          id: '1',
-          message: 'Issue acknowledged by PWD department. Survey team dispatched.',
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-          author: 'PWD Officer',
-          type: 'status_change'
+  // Load user's constituency from database
+  useEffect(() => {
+    async function loadConstituency() {
+      if (!user?.id) return;
+
+      try {
+        // Get user's constituency from users table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('constituency')
+          .eq('id', user.id)
+          .single();
+
+        if (userError) throw userError;
+
+        const userConstituency = userData?.constituency || user?.constituency;
+
+        if (userConstituency) {
+          setSelectedConstituency(userConstituency);
+
+          // Fetch constituency details
+          const { data: constData } = await supabase
+            .from('constituencies')
+            .select('*')
+            .ilike('name', `%${userConstituency}%`)
+            .limit(1)
+            .single();
+
+          if (constData) {
+            setConstituencyData(constData);
+            setConstituencyId(constData.id);
+          }
+        } else {
+          // Default to first West Bengal constituency
+          const { data: defaultConst } = await supabase
+            .from('constituencies')
+            .select('*')
+            .ilike('code', 'WB%')
+            .limit(1)
+            .single();
+
+          if (defaultConst) {
+            setSelectedConstituency(defaultConst.name);
+            setConstituencyData(defaultConst);
+            setConstituencyId(defaultConst.id);
+          }
         }
-      ]
-    },
-    {
-      id: '2',
-      title: 'Overcrowding at Government Hospital',
-      description: 'Long waiting times at the OPD, insufficient seating arrangements, and need for additional consultation rooms.',
-      category: 'healthcare',
-      priority: 'urgent',
-      status: 'in_progress',
-      location: 'Government General Hospital',
-      reportedBy: 'Dr. Priya Nair',
-      reportedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      supporters: 67,
-      comments: 15,
-      assignedTo: 'Health Department',
-      updates: [
-        {
-          id: '1',
-          message: 'Additional temporary consultation rooms being set up. New appointment system under testing.',
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          author: 'Health Secretary',
-          type: 'update'
+      } catch (error) {
+        console.error('Error loading constituency:', error);
+        // Fallback to default West Bengal constituency
+        setSelectedConstituency('Bhowanipore');
+      }
+    }
+
+    loadConstituency();
+  }, [user]);
+
+  // Load issues from database based on constituency
+  const [issues, setIssues] = useState<Issue[]>([]);
+
+  useEffect(() => {
+    async function loadIssues() {
+      if (!selectedConstituency) return;
+
+      setIsLoadingIssues(true);
+      try {
+        // Try to fetch from constituency_issues table
+        // Database uses format like: wb_kolkata_bhowanipore
+        const queryPattern = selectedConstituency.toLowerCase().replace(/\s+/g, '_');
+
+        console.log('[Issues] Searching for constituency:', selectedConstituency, '→', queryPattern);
+
+        // Try multiple search strategies
+        let dbIssues = null;
+        let error = null;
+
+        // Strategy 1: Search by exact constituency_id pattern
+        const { data: data1, error: error1 } = await supabase
+          .from('constituency_issues')
+          .select('*')
+          .ilike('constituency_id', `%${queryPattern}%`);
+
+        if (data1 && data1.length > 0) {
+          dbIssues = data1;
+        } else {
+          // Strategy 2: Search by constituency_name
+          const { data: data2, error: error2 } = await supabase
+            .from('constituency_issues')
+            .select('*')
+            .ilike('constituency_name', `%${selectedConstituency}%`);
+
+          dbIssues = data2;
+          error = error2;
         }
-      ]
-    },
-    {
-      id: '3',
-      title: 'Need for Children\'s Park in Residential Area',
-      description: 'The Pattom residential area lacks recreational facilities for children. Request for establishing a small park with playground equipment.',
-      category: 'environment',
-      priority: 'medium',
-      status: 'reported',
-      location: 'Pattom Residential Complex',
-      reportedBy: 'Residents Association',
-      reportedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      supporters: 41,
-      comments: 12
-    },
-    {
-      id: '4',
-      title: 'Irregular Water Supply',
-      description: 'Water supply has been irregular for the past month. Many households receiving water only on alternate days.',
-      category: 'utilities',
-      priority: 'high',
-      status: 'acknowledged',
-      location: 'Vazhuthacaud Area',
-      reportedBy: 'Multiple Citizens',
-      reportedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-      supporters: 89,
-      comments: 23,
-      assignedTo: 'Water Authority'
-    }
-  ]);
 
-  const representatives: Representative[] = [
-    {
-      id: '1',
-      name: 'Shashi Tharoor',
-      position: 'Member of Parliament',
-      party: 'Indian National Congress',
-      contact: {
-        phone: '+91-471-2345678',
-        email: 'mp.thiruvananthapuram@parliament.gov.in',
-        office: 'MP Office, Statue Junction'
-      },
-      availability: {
-        publicMeeting: 'Every Saturday 10 AM - 12 PM',
-        onlineHours: 'Monday & Wednesday 6 PM - 8 PM'
-      },
-      responsiveness: 0.87,
-      issuesHandled: 142,
-      satisfactionRating: 4.2
-    },
-    {
-      id: '2',
-      name: 'V.S. Sivakumar',
-      position: 'MLA Thiruvananthapuram',
-      party: 'Indian National Congress',
-      contact: {
-        phone: '+91-471-2456789',
-        email: 'mla.tvpm@kerala.gov.in',
-        office: 'MLA Office, Secretariat'
-      },
-      availability: {
-        publicMeeting: 'Tuesday & Thursday 11 AM - 1 PM',
-        onlineHours: 'Friday 5 PM - 7 PM'
-      },
-      responsiveness: 0.92,
-      issuesHandled: 89,
-      satisfactionRating: 4.5
-    },
-    {
-      id: '3',
-      name: 'Arya Rajendran',
-      position: 'Mayor of Thiruvananthapuram',
-      party: 'CPI(M)',
-      contact: {
-        phone: '+91-471-2567890',
-        email: 'mayor@corporationtvm.kerala.gov.in',
-        office: 'Mayor Office, Corporation Building'
-      },
-      availability: {
-        publicMeeting: 'Every Wednesday 2 PM - 4 PM',
-        onlineHours: 'Thursday 7 PM - 9 PM'
-      },
-      responsiveness: 0.89,
-      issuesHandled: 156,
-      satisfactionRating: 4.3
+        if (error) {
+          console.warn('Error fetching issues from database:', error);
+          // Fall back to demo data if database query fails
+          loadDemoIssues();
+        } else if (dbIssues && dbIssues.length > 0) {
+          // Map database fields to component interface
+          const mappedIssues: Issue[] = dbIssues.map(issue => ({
+            id: issue.id,
+            title: issue.issue_title || 'Untitled Issue',
+            description: issue.issue_description || '',
+            category: mapIssueCategory(issue.issue_category),
+            priority: mapSeverityToPriority(issue.severity),
+            status: 'reported' as const,
+            location: Array.isArray(issue.affected_areas) && issue.affected_areas.length > 0
+              ? issue.affected_areas[0]
+              : selectedConstituency,
+            reportedBy: 'Constituency Residents',
+            reportedAt: issue.issue_since ? new Date(issue.issue_since) : new Date(issue.created_at),
+            supporters: issue.affected_population_estimate || 0,
+            comments: 0,
+            assignedTo: issue.mla_response ? 'MLA Office' : undefined
+          }));
+          setIssues(mappedIssues);
+        } else {
+          // No data in database, use demo data
+          loadDemoIssues();
+        }
+      } catch (error) {
+        console.error('Error loading issues:', error);
+        loadDemoIssues();
+      } finally {
+        setIsLoadingIssues(false);
+      }
     }
-  ];
 
-  const events: Event[] = [
-    {
-      id: '1',
-      title: 'Monthly Town Hall Meeting',
-      description: 'Discuss ongoing development projects, citizen concerns, and upcoming initiatives for Thiruvananthapuram Central.',
-      date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-      location: 'Community Hall, Statue Junction',
-      organizer: 'MLA Office',
-      category: 'town_hall',
-      attendees: 0,
-      maxCapacity: 200,
-      isOnline: false
-    },
-    {
-      id: '2',
-      title: 'Smart City Project Updates',
-      description: 'Presentation on progress of Smart City initiatives including digital infrastructure, traffic management, and e-governance.',
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      location: 'Online Meeting',
-      organizer: 'Smart City Mission',
-      category: 'development_update',
-      attendees: 0,
-      maxCapacity: 500,
-      isOnline: true,
-      meetingLink: 'https://meet.google.com/xyz-abc-def'
-    },
-    {
-      id: '3',
-      title: 'Health Camp & Awareness Program',
-      description: 'Free health checkups, vaccination drive, and awareness session on preventive healthcare measures.',
-      date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-      location: 'Government Higher Secondary School',
-      organizer: 'Health Department',
-      category: 'community_event',
-      attendees: 0,
-      maxCapacity: 300,
-      isOnline: false
+    loadIssues();
+  }, [constituencyId, selectedConstituency]);
+
+  // Helper functions for mapping database values to component interface
+  const mapIssueCategory = (dbCategory: string): Issue['category'] => {
+    const categoryMap: Record<string, Issue['category']> = {
+      'infrastructure': 'infrastructure',
+      'healthcare': 'healthcare',
+      'health': 'healthcare',
+      'education': 'education',
+      'employment': 'employment',
+      'jobs': 'employment',
+      'environment': 'environment',
+      'safety': 'safety',
+      'utilities': 'utilities',
+      'water': 'utilities',
+      'electricity': 'utilities',
+      'transport': 'transport',
+      'transportation': 'transport'
+    };
+    return categoryMap[dbCategory?.toLowerCase()] || 'infrastructure';
+  };
+
+  const mapSeverityToPriority = (severity: string): Issue['priority'] => {
+    const priorityMap: Record<string, Issue['priority']> = {
+      'low': 'low',
+      'medium': 'medium',
+      'high': 'high',
+      'critical': 'urgent'
+    };
+    return priorityMap[severity?.toLowerCase()] || 'medium';
+  };
+
+  // Fallback demo data function
+  const loadDemoIssues = () => {
+    setIssues([
+      {
+        id: '1',
+        title: 'Poor Street Lighting on Sarat Bose Road',
+        description: 'Several street lights have been non-functional for over 2 months, creating safety concerns for evening commuters and pedestrians.',
+        category: 'infrastructure',
+        priority: 'high',
+        status: 'acknowledged',
+        location: 'Sarat Bose Road, Near Gariahat',
+        reportedBy: 'Amit Chatterjee',
+        reportedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        supporters: 23,
+        comments: 8,
+        assignedTo: 'PWD Team',
+        estimatedResolution: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        updates: [
+          {
+            id: '1',
+            message: 'Issue acknowledged by PWD department. Survey team dispatched.',
+            timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+            author: 'PWD Officer',
+            type: 'status_change'
+          }
+        ]
+      },
+      {
+        id: '2',
+        title: 'Overcrowding at Government Hospital',
+        description: 'Long waiting times at the OPD, insufficient seating arrangements, and need for additional consultation rooms.',
+        category: 'healthcare',
+        priority: 'urgent',
+        status: 'in_progress',
+        location: 'SSKM Hospital',
+        reportedBy: 'Dr. Debjani Roy',
+        reportedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        supporters: 67,
+        comments: 15,
+        assignedTo: 'Health Department',
+        updates: [
+          {
+            id: '1',
+            message: 'Additional temporary consultation rooms being set up. New appointment system under testing.',
+            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+            author: 'Health Secretary',
+            type: 'update'
+          }
+        ]
+      },
+      {
+        id: '3',
+        title: 'Need for Children\'s Park in Residential Area',
+        description: 'The residential area lacks recreational facilities for children. Request for establishing a small park with playground equipment.',
+        category: 'environment',
+        priority: 'medium',
+        status: 'reported',
+        location: 'Kalighat Area',
+        reportedBy: 'Residents Association',
+        reportedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        supporters: 41,
+        comments: 12
+      },
+      {
+        id: '4',
+        title: 'Irregular Water Supply',
+        description: 'Water supply has been irregular for the past month. Many households receiving water only on alternate days.',
+        category: 'utilities',
+        priority: 'high',
+        status: 'acknowledged',
+        location: 'Bhowanipore Area',
+        reportedBy: 'Multiple Citizens',
+        reportedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+        supporters: 89,
+        comments: 23,
+        assignedTo: 'Water Authority'
+      }
+    ]);
+  };
+
+  // Load representatives from database
+  const [representatives, setRepresentatives] = useState<Representative[]>([]);
+
+  useEffect(() => {
+    async function loadRepresentatives() {
+      if (!selectedConstituency) return;
+
+      setIsLoadingRepresentatives(true);
+      try {
+        // Try to fetch from constituency_leaders table
+        // Database uses format like: wb_kolkata_bhowanipore
+        const queryPattern = selectedConstituency.toLowerCase().replace(/\s+/g, '_');
+
+        console.log('[Representatives] Searching for constituency:', selectedConstituency, '→', queryPattern);
+
+        // Try multiple search strategies
+        let leaderData = null;
+        let error = null;
+
+        // Strategy 1: Search by exact constituency_id pattern
+        const { data: data1, error: error1 } = await supabase
+          .from('constituency_leaders')
+          .select('*')
+          .ilike('constituency_id', `%${queryPattern}%`)
+          .limit(1);
+
+        if (data1 && data1.length > 0) {
+          leaderData = data1[0];
+          console.log('[Representatives] ✅ Found leader data:', leaderData?.current_mla_name);
+        } else {
+          // Strategy 2: Search by constituency_name
+          const { data: data2, error: error2 } = await supabase
+            .from('constituency_leaders')
+            .select('*')
+            .ilike('constituency_name', `%${selectedConstituency}%`)
+            .limit(1);
+
+          leaderData = data2?.[0];
+          error = error2;
+
+          if (leaderData) {
+            console.log('[Representatives] ✅ Found leader data by name:', leaderData?.current_mla_name);
+          } else {
+            console.log('[Representatives] ❌ No leader data found');
+          }
+        }
+
+        if (error || !leaderData) {
+          console.warn('No leaders found in database, using demo data');
+          loadDemoRepresentatives();
+        } else {
+          // Map database fields to representative interface
+          const reps: Representative[] = [];
+
+          // Add current MLA if exists
+          if (leaderData.current_mla_name) {
+            reps.push({
+              id: '1',
+              name: leaderData.current_mla_name,
+              position: 'Member of Legislative Assembly (MLA)',
+              party: leaderData.current_mla_party || 'Unknown',
+              contact: {
+                phone: '+91-33-XXXX-XXXX',
+                email: `mla.${selectedConstituency.toLowerCase().replace(/\s+/g, '')}@wb.gov.in`,
+                office: `MLA Office, ${selectedConstituency}`
+              },
+              availability: {
+                publicMeeting: 'Every Saturday 10 AM - 12 PM',
+                onlineHours: 'Monday & Wednesday 6 PM - 8 PM'
+              },
+              responsiveness: 0.85,
+              issuesHandled: 0,
+              satisfactionRating: 4.0
+            });
+          }
+
+          // Add runner-up if exists
+          if (leaderData.runner_up_name) {
+            reps.push({
+              id: '2',
+              name: leaderData.runner_up_name,
+              position: 'Opposition Leader',
+              party: leaderData.runner_up_party || 'Unknown',
+              contact: {
+                phone: '+91-33-XXXX-XXXX',
+                email: `contact@${leaderData.runner_up_party?.toLowerCase().replace(/\s+/g, '')}.org`,
+                office: `Party Office, ${selectedConstituency}`
+              },
+              availability: {
+                publicMeeting: 'Tuesday & Thursday 11 AM - 1 PM',
+                onlineHours: 'Friday 5 PM - 7 PM'
+              },
+              responsiveness: 0.80,
+              issuesHandled: 0,
+              satisfactionRating: 3.8
+            });
+          }
+
+          if (reps.length > 0) {
+            setRepresentatives(reps);
+          } else {
+            loadDemoRepresentatives();
+          }
+        }
+      } catch (error) {
+        console.error('Error loading representatives:', error);
+        loadDemoRepresentatives();
+      } finally {
+        setIsLoadingRepresentatives(false);
+      }
     }
-  ];
+
+    loadRepresentatives();
+  }, [constituencyId, selectedConstituency]);
+
+  const loadDemoRepresentatives = () => {
+    setRepresentatives([
+      {
+        id: '1',
+        name: 'Suvendu Adhikari',
+        position: 'Leader of Opposition, West Bengal',
+        party: 'Bharatiya Janata Party',
+        contact: {
+          phone: '+91-33-2345-6789',
+          email: 'lop.westbengal@bjp.org',
+          office: 'BJP State Office, Kolkata'
+        },
+        availability: {
+          publicMeeting: 'Every Saturday 10 AM - 12 PM',
+          onlineHours: 'Monday & Wednesday 6 PM - 8 PM'
+        },
+        responsiveness: 0.87,
+        issuesHandled: 142,
+        satisfactionRating: 4.2
+      },
+      {
+        id: '2',
+        name: 'BJP Constituency Leader',
+        position: 'Local MLA',
+        party: 'Bharatiya Janata Party',
+        contact: {
+          phone: '+91-33-2456-7890',
+          email: 'mla.kolkata@bjp.org',
+          office: 'MLA Office, Kolkata'
+        },
+        availability: {
+          publicMeeting: 'Tuesday & Thursday 11 AM - 1 PM',
+          onlineHours: 'Friday 5 PM - 7 PM'
+        },
+        responsiveness: 0.92,
+        issuesHandled: 89,
+        satisfactionRating: 4.5
+      },
+      {
+        id: '3',
+        name: 'Kolkata Municipal Leader',
+        position: 'Ward Councillor',
+        party: 'Bharatiya Janata Party',
+        contact: {
+          phone: '+91-33-2567-8901',
+          email: 'councillor@kolkatamunicipal.gov.in',
+          office: 'Ward Office, Kolkata'
+        },
+        availability: {
+          publicMeeting: 'Every Wednesday 2 PM - 4 PM',
+          onlineHours: 'Thursday 7 PM - 9 PM'
+        },
+        responsiveness: 0.89,
+        issuesHandled: 156,
+        satisfactionRating: 4.3
+      }
+    ]);
+  };
+
+  // Load events from database
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    async function loadEvents() {
+      if (!selectedConstituency) return;
+
+      setIsLoadingEvents(true);
+      try {
+        // Try to fetch future events from database
+        const queryPattern = selectedConstituency.toLowerCase().replace(/\s+/g, '_');
+
+        console.log('[Events] Searching for constituency:', selectedConstituency, '→', queryPattern);
+
+        // Try searching by location name
+        const { data: dbEvents, error } = await supabase
+          .from('events')
+          .select('*')
+          .ilike('location', `%${selectedConstituency}%`)
+          .gt('start_datetime', new Date().toISOString())
+          .order('start_datetime', { ascending: true })
+          .limit(10);
+
+        if (error || !dbEvents || dbEvents.length === 0) {
+          console.warn('No events found in database, using demo data');
+          loadDemoEvents();
+        } else {
+          // Map database fields to event interface
+          const mappedEvents: Event[] = dbEvents.map(event => ({
+            id: event.id,
+            title: event.event_name,
+            description: event.description || `Event organized at ${selectedConstituency}`,
+            date: new Date(event.start_datetime),
+            location: event.location || selectedConstituency,
+            organizer: event.organizer_name || 'Constituency Office',
+            category: mapEventType(event.event_type),
+            attendees: event.actual_attendance || 0,
+            maxCapacity: event.expected_attendance || 100,
+            isOnline: event.location?.toLowerCase().includes('online') || event.location?.toLowerCase().includes('virtual') || false
+          }));
+          setEvents(mappedEvents);
+        }
+      } catch (error) {
+        console.error('Error loading events:', error);
+        loadDemoEvents();
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    }
+
+    loadEvents();
+  }, [constituencyId, selectedConstituency]);
+
+  const mapEventType = (dbEventType: string): Event['category'] => {
+    const eventTypeMap: Record<string, Event['category']> = {
+      'rally': 'public_meeting',
+      'meeting': 'town_hall',
+      'town_hall': 'town_hall',
+      'door_to_door': 'community_event',
+      'booth_visit': 'community_event',
+      'development': 'development_update',
+      'public_meeting': 'public_meeting'
+    };
+    return eventTypeMap[dbEventType?.toLowerCase()] || 'community_event';
+  };
+
+  const loadDemoEvents = () => {
+    setEvents([
+      {
+        id: '1',
+        title: 'Monthly Town Hall Meeting',
+        description: 'Discuss ongoing development projects, citizen concerns, and upcoming initiatives for the constituency.',
+        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        location: 'Community Hall, Kolkata',
+        organizer: 'BJP Local Office',
+        category: 'town_hall',
+        attendees: 0,
+        maxCapacity: 200,
+        isOnline: false
+      },
+      {
+        id: '2',
+        title: 'Smart City Project Updates',
+        description: 'Presentation on progress of Smart City initiatives including digital infrastructure, traffic management, and e-governance.',
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        location: 'Online Meeting',
+        organizer: 'Smart City Mission',
+        category: 'development_update',
+        attendees: 0,
+        maxCapacity: 500,
+        isOnline: true,
+        meetingLink: 'https://meet.google.com/xyz-abc-def'
+      },
+      {
+        id: '3',
+        title: 'Health Camp & Awareness Program',
+        description: 'Free health checkups, vaccination drive, and awareness session on preventive healthcare measures.',
+        date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        location: 'Government Higher Secondary School',
+        organizer: 'Health Department',
+        category: 'community_event',
+        attendees: 0,
+        maxCapacity: 300,
+        isOnline: false
+      }
+    ]);
+  };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -366,7 +724,7 @@ export default function MyConstituencyApp() {
         <div>
           <h3 className="text-xl font-bold text-gray-900 flex items-center">
             <MapPin className="mr-2 h-6 w-6 text-green-600" />
-            My Constituency: {selectedConstituency}
+            My Constituency: {selectedConstituency || 'Loading...'}
           </h3>
           <p className="text-sm text-gray-600 mt-1">
             Citizen engagement platform for local issues and community participation
@@ -493,7 +851,18 @@ export default function MyConstituencyApp() {
 
           {/* Issues List */}
           <div className="space-y-4">
-            {filteredIssues.map((issue) => (
+            {isLoadingIssues ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                <p className="mt-2 text-sm text-gray-500">Loading issues...</p>
+              </div>
+            ) : filteredIssues.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+                <Flag className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600 font-medium">No issues found</p>
+                <p className="text-sm text-gray-500 mt-1">There are currently no reported issues for this constituency</p>
+              </div>
+            ) : filteredIssues.map((issue) => (
               <div key={issue.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -574,7 +943,18 @@ export default function MyConstituencyApp() {
       {/* Representatives Tab */}
       {activeTab === 'representatives' && (
         <div className="space-y-4">
-          {representatives.map((rep) => (
+          {isLoadingRepresentatives ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              <p className="mt-2 text-sm text-gray-500">Loading representatives...</p>
+            </div>
+          ) : representatives.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 font-medium">No representatives found</p>
+              <p className="text-sm text-gray-500 mt-1">Representative information is not available for this constituency</p>
+            </div>
+          ) : representatives.map((rep) => (
             <div key={rep.id} className="border border-gray-200 rounded-lg p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
@@ -653,7 +1033,18 @@ export default function MyConstituencyApp() {
       {/* Events Tab */}
       {activeTab === 'events' && (
         <div className="space-y-4">
-          {events.map((event) => (
+          {isLoadingEvents ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              <p className="mt-2 text-sm text-gray-500">Loading events...</p>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 font-medium">No upcoming events</p>
+              <p className="text-sm text-gray-500 mt-1">There are no scheduled events for this constituency</p>
+            </div>
+          ) : events.map((event) => (
             <div key={event.id} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">

@@ -372,7 +372,7 @@ export async function calculateCompetitorMetrics(
   const competitors = await fetchCompetitors();
   const posts = await fetchCompetitorPosts(undefined, undefined, dateRange);
 
-  console.log(`[Metrics] Calculating for ${competitors.length} competitors, ${posts.length} posts`);
+  console.log(`[calculateCompetitorMetrics] Date range: ${dateRange}, Competitors: ${competitors.length}, Posts: ${posts.length}`);
 
   const metrics: CompetitorMetrics[] = competitors.map(competitor => {
     // Get this competitor's posts
@@ -385,13 +385,14 @@ export async function calculateCompetitorMetrics(
 
     if (postCount === 0) {
       // No data - return zeros
+      console.log(`[calculateCompetitorMetrics] ${competitor.name}: 0 posts found, returning zeros`);
       return {
         id: competitor.id,
         name: competitor.name,
         party_name: competitor.party_name,
         leader_name: competitor.leader_name,
         color_code: competitor.color_code,
-        sentiment: 0,
+        sentiment: 0, // 0% when no data
         mentions: 0,
         reach: 0,
         engagement: 0,
@@ -404,6 +405,9 @@ export async function calculateCompetitorMetrics(
 
     // Calculate real metrics
     const avgSentiment = competitorPosts.reduce((sum, p) => sum + p.sentiment_score, 0) / postCount;
+    const sentimentPercentage = parseFloat((avgSentiment * 100).toFixed(1));
+
+    console.log(`[calculateCompetitorMetrics] ${competitor.name}: ${postCount} posts, avgSentiment=${avgSentiment.toFixed(2)}, percentage=${sentimentPercentage}%`);
 
     const totalLikes = competitorPosts.reduce((sum, p) => sum + p.likes_count, 0);
     const totalComments = competitorPosts.reduce((sum, p) => sum + p.comments_count, 0);
@@ -426,7 +430,7 @@ export async function calculateCompetitorMetrics(
       party_name: competitor.party_name,
       leader_name: competitor.leader_name,
       color_code: competitor.color_code,
-      sentiment: parseFloat(avgSentiment.toFixed(2)),
+      sentiment: sentimentPercentage, // 0-100 scale
       mentions: postCount,
       reach: estimatedReach,
       engagement: parseFloat(avgEngagement.toFixed(1)),
