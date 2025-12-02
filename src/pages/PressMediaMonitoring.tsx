@@ -31,7 +31,7 @@ import {
   ChevronDown,
   Database
 } from 'lucide-react';
-import { seedMockArticles, SeedResult } from '../utils/seedArticles';
+import { SeedResult, seedDailyArticles, seedHistorical7Days, clearAndReseed7Days } from '../utils/seedArticles';
 import { MobileCard, ResponsiveGrid, MobileButton, MobileTabs } from '../components/MobileResponsive';
 import { useNewsSentiment } from '../hooks/useNewsSentiment';
 import { NewsArticle as DBNewsArticle } from '../services/newsService';
@@ -1054,6 +1054,7 @@ export default function PressMediaMonitoring() {
   const [showFilters, setShowFilters] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
+  const [isSeedingHistory, setIsSeedingHistory] = useState(false);
 
   const [analytics, setAnalytics] = useState({
     totalArticles: 0,
@@ -1254,7 +1255,7 @@ export default function PressMediaMonitoring() {
     return filterPredictions(constituencyPredictions, predictionFilter, predictionSort);
   }, [constituencyPredictions, predictionFilter, predictionSort]);
 
-  // Handle seeding mock articles to database
+  // Handle saving daily articles to database (preserves existing articles)
   const handleSeedDatabase = async () => {
     if (isSeeding) return;
 
@@ -1262,7 +1263,8 @@ export default function PressMediaMonitoring() {
     setSeedResult(null);
 
     try {
-      const result = await seedMockArticles(mockArticles);
+      // Use seedDailyArticles - only adds new articles, preserves existing
+      const result = await seedDailyArticles(mockArticles);
       setSeedResult(result);
 
       // Refresh data after successful seeding
@@ -1279,6 +1281,65 @@ export default function PressMediaMonitoring() {
       });
     } finally {
       setIsSeeding(false);
+    }
+  };
+
+  // Handle seeding historical 7 days of articles (CLEAR AND RESEED)
+  const handleSeedHistorical = async () => {
+    if (isSeedingHistory) return;
+
+    // Confirm before clearing all data
+    const confirmed = window.confirm(
+      'This will DELETE all existing articles and create fresh 7-day data.\n\n' +
+      'Are you sure you want to continue?'
+    );
+
+    if (!confirmed) return;
+
+    setIsSeedingHistory(true);
+    setSeedResult(null);
+
+    try {
+      console.log('Starting CLEAR AND RESEED for 7 days...');
+      const result = await clearAndReseed7Days(mockArticles);
+
+      setSeedResult({
+        success: result.success,
+        inserted: result.inserted,
+        skipped: result.skipped,
+        failed: result.failed,
+        errors: result.errors
+      });
+
+      // Show alert with result
+      alert(
+        `CLEAR & RESEED Complete!\n\n` +
+        `Deleted: ${result.deleted} old articles\n` +
+        `Inserted: ${result.inserted} new articles\n` +
+        `Failed: ${result.failed}\n\n` +
+        `7 days of data created:\n` +
+        `- Today (Dec 2)\n` +
+        `- Yesterday (Dec 1)\n` +
+        `- Nov 30, 29, 28, 27, 26\n\n` +
+        `Check Supabase "published_at" column for dates!`
+      );
+
+      // Refresh data after successful seeding
+      if (result.inserted > 0) {
+        await refreshData();
+      }
+    } catch (error) {
+      console.error('Clear and reseed error:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setSeedResult({
+        success: false,
+        inserted: 0,
+        skipped: 0,
+        failed: 28, // 7 days * 4 articles
+        errors: [error instanceof Error ? error.message : 'Unknown error occurred']
+      });
+    } finally {
+      setIsSeedingHistory(false);
     }
   };
 
@@ -1309,18 +1370,20 @@ export default function PressMediaMonitoring() {
                 {isMonitoring ? 'Live Monitoring' : 'Monitoring Paused'}
               </span>
             </div>
-            {/* Sync Data Button - Only visible on Articles tab */}
+            {/* Sync Data Buttons - Only visible on Articles tab */}
             {activeTab === 'articles' && (
-              <MobileButton
-                variant="outline"
-                size="small"
-                onClick={handleSeedDatabase}
-                disabled={isSeeding}
-                className={isSeeding ? 'opacity-50 cursor-not-allowed' : ''}
-              >
-                <Database className={`w-4 h-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
-                {isSeeding ? 'Saving...' : 'Save'}
-              </MobileButton>
+              <div className="flex items-center gap-2">
+                <MobileButton
+                  variant="outline"
+                  size="small"
+                  onClick={handleSeedDatabase}
+                  disabled={isSeeding}
+                  className={isSeeding ? 'opacity-50 cursor-not-allowed' : ''}
+                >
+                  <Database className={`w-4 h-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
+                  {isSeeding ? 'Saving...' : 'Save'}
+                </MobileButton>
+              </div>
             )}
 
             {/* Constituency Dropdown - Hidden on Predictions tab */}

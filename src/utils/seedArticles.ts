@@ -248,6 +248,38 @@ export async function deleteSeededArticles(
 }
 
 /**
+ * Generate timestamp for article based on index (spread across 7 days)
+ * Distribution: More recent articles first, spread evenly across week
+ */
+function getArticleTimestamp(index: number, totalArticles: number): Date {
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000; // 24 hours in ms
+  const ONE_HOUR = 60 * 60 * 1000;
+
+  // Distribute articles across 7 days
+  // First few articles: today (last 12 hours)
+  // Next batch: yesterday
+  // Continue spreading across the week
+
+  if (index < 5) {
+    // Today: 1-12 hours ago
+    return new Date(now - (index + 1) * 2 * ONE_HOUR);
+  } else if (index < 10) {
+    // Yesterday: 24-36 hours ago
+    return new Date(now - ONE_DAY - (index - 5) * 2 * ONE_HOUR);
+  } else if (index < 15) {
+    // 2-3 days ago
+    return new Date(now - 2 * ONE_DAY - (index - 10) * 8 * ONE_HOUR);
+  } else if (index < 20) {
+    // 4-5 days ago
+    return new Date(now - 4 * ONE_DAY - (index - 15) * 8 * ONE_HOUR);
+  } else {
+    // 6-7 days ago
+    return new Date(now - 6 * ONE_DAY - (index - 20) * 6 * ONE_HOUR);
+  }
+}
+
+/**
  * Check if articles need to be refreshed (stale = from previous day)
  * Uses localStorage to track last refresh date
  */
@@ -262,7 +294,7 @@ export async function refreshArticlesIfStale(): Promise<boolean> {
     return false;
   }
 
-  console.log('Articles are stale, refreshing with current timestamps...');
+  console.log('Articles are stale, refreshing with timestamps spread across 7 days...');
 
   try {
     // Delete old seeded articles
@@ -271,11 +303,11 @@ export async function refreshArticlesIfStale(): Promise<boolean> {
     // Dynamic import to get fresh mock articles with current Date.now() timestamps
     const { mockArticles } = await import('../pages/PressMediaMonitoring');
 
-    // Generate fresh articles with current timestamps
+    // Generate fresh articles with timestamps spread across 7 days
     const freshArticles: ComponentNewsArticle[] = mockArticles.map((article, index) => ({
       ...article,
-      // Recalculate timestamps relative to NOW
-      timestamp: new Date(Date.now() - (index * 1800000 + 1800000)) // 30 min increments starting from 30 mins ago
+      // Spread timestamps across 7 days (recent first)
+      timestamp: getArticleTimestamp(index, mockArticles.length)
     }));
 
     // Re-seed with fresh timestamps
@@ -283,7 +315,7 @@ export async function refreshArticlesIfStale(): Promise<boolean> {
 
     if (result.success || result.inserted > 0) {
       localStorage.setItem(STORAGE_KEY, today);
-      console.log(`Articles refreshed successfully: ${result.inserted} inserted`);
+      console.log(`Articles refreshed successfully: ${result.inserted} inserted (7-day spread)`);
       return true;
     } else {
       console.error('Failed to refresh articles:', result.errors);
@@ -293,4 +325,360 @@ export async function refreshArticlesIfStale(): Promise<boolean> {
     console.error('Error refreshing articles:', error);
     return false;
   }
+}
+
+/**
+ * Seed daily articles - adds new articles for today WITHOUT deleting existing ones
+ * This is the function called by the Save button
+ * - Does NOT delete existing articles
+ * - Only adds new articles with today's timestamp
+ * - Checks for duplicates by title+source
+ */
+export async function seedDailyArticles(
+  articles: ComponentNewsArticle[],
+  organizationId: string = DEFAULT_ORG_ID
+): Promise<SeedResult> {
+  const result: SeedResult = {
+    success: true,
+    inserted: 0,
+    skipped: 0,
+    failed: 0,
+    errors: []
+  };
+
+  console.log(`Seeding ${articles.length} daily articles (preserving existing)...`);
+
+  // Generate articles with today's timestamps (spread across last few hours)
+  const now = Date.now();
+  const ONE_HOUR = 60 * 60 * 1000;
+
+  const todaysArticles: ComponentNewsArticle[] = articles.map((article, index) => ({
+    ...article,
+    // Spread timestamps across last 12 hours of today
+    timestamp: new Date(now - (index * 30 * 60 * 1000)) // 30 min increments
+  }));
+
+  // Filter out duplicates and insert only new ones
+  const articlesToInsert: DBNewsArticle[] = [];
+
+  for (const article of todaysArticles) {
+    const exists = await checkArticleExists(article.title, article.source);
+    if (exists) {
+      result.skipped++;
+      continue;
+    }
+    articlesToInsert.push(mapComponentArticleToDBArticle(article, organizationId));
+  }
+
+  if (articlesToInsert.length === 0) {
+    console.log('No new articles to insert (all duplicates)');
+    return result;
+  }
+
+  // Batch insert new articles only
+  try {
+    const { data, error } = await supabase
+      .from('news_articles')
+      .insert(articlesToInsert)
+      .select();
+
+    if (error) {
+      console.error('Daily seed failed:', error);
+      result.failed = articlesToInsert.length;
+      result.errors.push(error.message);
+      result.success = false;
+    } else {
+      result.inserted = data?.length || 0;
+      console.log(`Daily seed complete: ${result.inserted} new articles added`);
+    }
+  } catch (error) {
+    console.error('Error in daily seed:', error);
+    result.failed = articlesToInsert.length;
+    result.errors.push(error instanceof Error ? error.message : 'Unknown error');
+    result.success = false;
+  }
+
+  return result;
+}
+
+/**
+ * Seed historical articles for last 7 days
+ * Creates unique articles for each day with proper published_at dates
+ * DOES NOT delete existing articles - only adds new ones
+ */
+export async function seedHistorical7Days(
+  baseArticles: ComponentNewsArticle[],
+  organizationId: string = DEFAULT_ORG_ID
+): Promise<SeedResult> {
+  const result: SeedResult = {
+    success: true,
+    inserted: 0,
+    skipped: 0,
+    failed: 0,
+    errors: []
+  };
+
+  console.log('Seeding historical articles for last 6 days (keeping existing data)...');
+
+  const now = new Date();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+
+  // Generate articles for each of the last 6 days (Nov 26 - Dec 1)
+  for (let dayOffset = 1; dayOffset <= 6; dayOffset++) {
+    const targetDate = new Date(now.getTime() - (dayOffset * ONE_DAY));
+    const dateStr = targetDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+    console.log(`Creating articles for ${dateStr}...`);
+
+    // Select 4 articles for this day
+    const startIdx = (dayOffset - 1) * 4;
+    const articlesPerDay = baseArticles.slice(startIdx, startIdx + 4);
+
+    for (let i = 0; i < articlesPerDay.length; i++) {
+      const baseArticle = articlesPerDay[i];
+
+      // Create truly unique title with date and timestamp
+      const uniqueId = Date.now() + Math.random().toString(36).substring(7);
+      const uniqueTitle = `${baseArticle.title} - ${dateStr} [${uniqueId.slice(-6)}]`;
+
+      // Check if this exact article already exists
+      const exists = await checkArticleExists(uniqueTitle, baseArticle.source);
+      if (exists) {
+        console.log(`Skipping duplicate: ${uniqueTitle}`);
+        result.skipped++;
+        continue;
+      }
+
+      // Create historical timestamp for this day
+      const historicalTimestamp = new Date(targetDate);
+      historicalTimestamp.setHours(9 + (i * 3), 0, 0, 0); // 9am, 12pm, 3pm, 6pm
+
+      console.log(`  Article: "${uniqueTitle}" -> published_at: ${historicalTimestamp.toISOString()}`);
+
+      // Create the DB article with correct published_at
+      const dbArticle: DBNewsArticle = {
+        organization_id: organizationId,
+        title: uniqueTitle,
+        content: baseArticle.summary,
+        summary: baseArticle.summary,
+        url: baseArticle.url !== '#' ? baseArticle.url : undefined,
+        source: baseArticle.source,
+        published_at: historicalTimestamp.toISOString(), // THIS IS THE KEY - historical date
+        language: baseArticle.language?.toLowerCase() === 'bengali' ? 'bn' :
+                  baseArticle.language?.toLowerCase() === 'hindi' ? 'hi' : 'en',
+        tags: baseArticle.topics,
+        sentiment_score: baseArticle.sentimentScore,
+        sentiment_polarity: baseArticle.sentiment,
+        credibility_score: baseArticle.credibilityScore / 100,
+        is_verified: baseArticle.verified,
+        is_breaking: baseArticle.isBreaking,
+        priority: baseArticle.priority,
+        bjp_mentioned: true,
+      };
+
+      // Insert one by one to ensure each gets correct timestamp
+      try {
+        const { data, error } = await supabase
+          .from('news_articles')
+          .insert([dbArticle])
+          .select();
+
+        if (error) {
+          console.error(`Failed to insert: ${uniqueTitle}`, error);
+          result.failed++;
+          result.errors.push(`${uniqueTitle}: ${error.message}`);
+        } else {
+          console.log(`  Inserted: ${uniqueTitle} with date ${historicalTimestamp.toISOString()}`);
+          result.inserted++;
+        }
+      } catch (error) {
+        console.error(`Error inserting: ${uniqueTitle}`, error);
+        result.failed++;
+      }
+    }
+  }
+
+  result.success = result.failed === 0;
+  console.log(`Historical seed complete: ${result.inserted} inserted, ${result.skipped} skipped, ${result.failed} failed`);
+
+  return result;
+}
+
+/**
+ * CLEAR AND RESEED - Deletes ALL articles and reseeds with 7 days of data
+ * This is a "nuclear" option to ensure clean data
+ */
+export async function clearAndReseed7Days(
+  baseArticles: ComponentNewsArticle[],
+  organizationId: string = DEFAULT_ORG_ID
+): Promise<SeedResult & { deleted: number }> {
+  const result: SeedResult & { deleted: number } = {
+    success: true,
+    inserted: 0,
+    skipped: 0,
+    failed: 0,
+    errors: [],
+    deleted: 0
+  };
+
+  console.log('=== CLEAR AND RESEED 7 DAYS ===');
+  console.log('Base articles count:', baseArticles.length);
+
+  // Step 1: Delete ALL existing articles
+  try {
+    console.log('Step 1: Deleting all existing articles...');
+    const { data: deletedData, error: deleteError } = await supabase
+      .from('news_articles')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all (trick to match all)
+      .select();
+
+    if (deleteError) {
+      console.error('Delete error:', deleteError);
+      // Try alternative delete
+      const { error: altDeleteError } = await supabase
+        .from('news_articles')
+        .delete()
+        .gte('created_at', '1900-01-01');
+
+      if (altDeleteError) {
+        console.error('Alternative delete also failed:', altDeleteError);
+      }
+    }
+
+    result.deleted = deletedData?.length || 0;
+    console.log(`Deleted ${result.deleted} existing articles`);
+  } catch (error) {
+    console.error('Error deleting articles:', error);
+  }
+
+  // Step 2: Seed articles for all 7 days
+  console.log('Step 2: Seeding fresh articles for 7 days...');
+
+  const now = new Date();
+  console.log('Current time (now):', now.toISOString());
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+
+  // Collect all articles to insert with their dates for debugging
+  const articlesToInsert: { title: string; published_at: string; dayOffset: number }[] = [];
+
+  // Day 0 = Today, Day 1 = Yesterday, ... Day 6 = 6 days ago
+  for (let dayOffset = 0; dayOffset <= 6; dayOffset++) {
+    const targetDate = new Date(now.getTime() - (dayOffset * ONE_DAY));
+    const dateStr = targetDate.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+
+    console.log(`\n========== Day ${dayOffset}: ${dateStr} (${targetDate.toISOString()}) ==========`);
+
+    // Use 4 articles per day, cycling through baseArticles
+    const articlesForDay = 4;
+
+    for (let i = 0; i < articlesForDay; i++) {
+      // Cycle through baseArticles
+      const articleIndex = (dayOffset * articlesForDay + i) % baseArticles.length;
+      const baseArticle = baseArticles[articleIndex];
+
+      if (!baseArticle) {
+        console.log(`No article at index ${articleIndex}`);
+        continue;
+      }
+
+      // Create unique title with day info - FORCE different date in title
+      const uniqueTitle = `${baseArticle.title} [${dateStr}]`;
+
+      // Create timestamp for this day (spread across hours: 9AM, 12PM, 3PM, 6PM)
+      const articleTime = new Date(targetDate.getTime()); // Clone the date!
+      articleTime.setHours(9 + (i * 3), Math.floor(Math.random() * 60), 0, 0);
+
+      console.log(`  [${i + 1}] Title: "${uniqueTitle.substring(0, 60)}..."`);
+      console.log(`       targetDate: ${targetDate.toISOString()}`);
+      console.log(`       articleTime: ${articleTime.toISOString()}`);
+
+      const dbArticle: DBNewsArticle = {
+        organization_id: organizationId,
+        title: uniqueTitle,
+        content: baseArticle.summary,
+        summary: baseArticle.summary,
+        url: baseArticle.url !== '#' ? baseArticle.url : undefined,
+        source: baseArticle.source,
+        published_at: articleTime.toISOString(),
+        language: baseArticle.language?.toLowerCase() === 'bengali' ? 'bn' :
+                  baseArticle.language?.toLowerCase() === 'hindi' ? 'hi' : 'en',
+        tags: baseArticle.topics,
+        sentiment_score: baseArticle.sentimentScore,
+        sentiment_polarity: baseArticle.sentiment,
+        credibility_score: baseArticle.credibilityScore / 100,
+        is_verified: baseArticle.verified,
+        is_breaking: baseArticle.isBreaking,
+        priority: baseArticle.priority,
+        bjp_mentioned: true,
+      };
+
+      try {
+        const { data, error } = await supabase
+          .from('news_articles')
+          .insert([dbArticle])
+          .select();
+
+        if (error) {
+          console.error(`  FAILED: ${error.message}`);
+          console.error('  Full error:', JSON.stringify(error));
+          result.failed++;
+          result.errors.push(`${uniqueTitle}: ${error.message}`);
+        } else {
+          console.log(`  SUCCESS! Inserted ID: ${data?.[0]?.id}`);
+          console.log(`  Returned published_at: ${data?.[0]?.published_at}`);
+          articlesToInsert.push({
+            title: uniqueTitle,
+            published_at: data?.[0]?.published_at || 'N/A',
+            dayOffset
+          });
+          result.inserted++;
+        }
+      } catch (error) {
+        console.error(`  EXCEPTION: ${error}`);
+        result.failed++;
+      }
+    }
+  }
+
+  // Step 3: Verify what's in the database
+  console.log('\n=== VERIFICATION: Checking database ===');
+  try {
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('news_articles')
+      .select('id, title, published_at, created_at')
+      .order('published_at', { ascending: false })
+      .limit(30);
+
+    if (verifyError) {
+      console.error('Verification query failed:', verifyError);
+    } else {
+      console.log(`Found ${verifyData?.length || 0} articles in database:`);
+      verifyData?.forEach((article, idx) => {
+        console.log(`  ${idx + 1}. published_at: ${article.published_at} | title: ${article.title?.substring(0, 50)}...`);
+      });
+    }
+  } catch (e) {
+    console.error('Verification error:', e);
+  }
+
+  result.success = result.failed === 0;
+  console.log(`\n=== RESEED COMPLETE ===`);
+  console.log(`Deleted: ${result.deleted}, Inserted: ${result.inserted}, Failed: ${result.failed}`);
+
+  // Summary of dates inserted
+  console.log('\n=== DATE SUMMARY ===');
+  const dateGroups: Record<number, number> = {};
+  articlesToInsert.forEach(a => {
+    dateGroups[a.dayOffset] = (dateGroups[a.dayOffset] || 0) + 1;
+  });
+  Object.entries(dateGroups).forEach(([day, count]) => {
+    console.log(`  Day ${day}: ${count} articles`);
+  });
+
+  return result;
 }
