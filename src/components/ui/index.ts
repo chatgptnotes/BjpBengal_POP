@@ -46,3 +46,7 @@ export type { LoadingStateProps, SkeletonProps } from './LoadingState'
 // Empty state component
 export { EmptyState } from './EmptyState'
 export type { EmptyStateProps } from './EmptyState'
+
+// GlowIcon component (Gemini-style icons)
+export { GlowIcon } from './GlowIcon'
+export type { GlowIconProps, GlowIconVariant, GlowIconSize } from './GlowIcon'

@@ -21,6 +21,7 @@
     "backup-tenants": "tsx scripts/backup-tenants.ts",
     "manage-tenant": "tsx scripts/manage-tenant.ts",
     "_comment_database": "=== Database Scripts ===",
+    "seed:constituencies": "tsx scripts/seed-constituency-data.ts",
     "db:migrate": "psql $DATABASE_URL -f supabase/migrations/20251027_create_all_tables.sql",
     "db:migrate:registry": "psql $REGISTRY_DB_URL -f supabase/migrations/20251027_create_tenant_registry.sql",
     "db:reset": "echo 'WARNING: This will delete all data!' && read -p 'Are you sure? (yes/no) ' confirm && [ \"$confirm\" = \"yes\" ] && npm run db:drop && npm run db:migrate",

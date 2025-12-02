@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Users, Loader2 } from 'lucide-react';
+import { GlowIcon } from '../../../../components/ui/GlowIcon';
 import { getByConstituencyId, DemographicSentiment } from '@/services/supabase/demographicSentiment.service';
 
 interface Props {
@@ -50,7 +51,7 @@ export default function SentimentByDemographics({
     return (
       <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
         <div className="flex items-center gap-2 mb-5">
-          <Users size={18} className="text-blue-400" />
+          <GlowIcon icon={Users} variant="info" size="sm" glow />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Sentiment by Demographics
           </h3>
@@ -68,14 +69,14 @@ export default function SentimentByDemographics({
     return (
       <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
         <div className="flex items-center gap-2 mb-5">
-          <Users size={18} className="text-blue-400" />
+          <GlowIcon icon={Users} variant="info" size="sm" glow />
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Sentiment by Demographics
           </h3>
         </div>
         <div className="flex flex-col items-center justify-center py-12">
-          <Users size={48} className="text-slate-600 mb-4" />
-          <p className="text-slate-400 text-sm text-center">
+          <GlowIcon icon={Users} variant="neutral" size="lg" />
+          <p className="text-slate-400 text-sm text-center mt-4">
             No demographic data available
           </p>
           <p className="text-slate-500 text-xs text-center mt-1">
@@ -89,7 +90,7 @@ export default function SentimentByDemographics({
   return (
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
       <div className="flex items-center gap-2 mb-5">
-        <Users size={18} className="text-blue-400" />
+        <GlowIcon icon={Users} variant="info" size="sm" glow />
         <h3 className="text-sm font-bold text-white uppercase tracking-wider">
           Sentiment by Demographics
         </h3>

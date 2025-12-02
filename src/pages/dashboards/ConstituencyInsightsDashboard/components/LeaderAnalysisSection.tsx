@@ -19,6 +19,7 @@ import {
   User,
   ChevronRight,
 } from 'lucide-react';
+import { GlowIcon } from '../../../../components/ui/GlowIcon';
 import {
   LineChart,
   Line,
@@ -423,9 +424,7 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
       <div className="bg-slate-900/50 px-4 py-3 border-b border-slate-700">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-1.5 rounded-lg">
-              <Users size={16} className="text-white" />
-            </div>
+            <GlowIcon icon={Users} variant="primary" size="sm" glow />
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
               Leader's Analysis
             </h3>
@@ -690,7 +689,7 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
             {/* Party Strength Donut */}
             <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
               <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
-                <Award size={12} className="text-amber-400" />
+                <GlowIcon icon={Award} variant="warning" size="xs" glow />
                 Party Strength (Seats)
               </h4>
               <div className="h-40">
@@ -733,7 +732,7 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
           <div className="space-y-4">
             <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
               <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
-                <BarChart3 size={12} className="text-blue-400" />
+                <GlowIcon icon={BarChart3} variant="info" size="xs" glow />
                 Vote Share: 2016 vs 2021
               </h4>
               <div className="h-48">
@@ -769,9 +768,9 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
                   </div>
                   <div className="flex items-center gap-1">
                     {party.change >= 0 ? (
-                      <TrendingUp size={14} className="text-emerald-400" />
+                      <GlowIcon icon={TrendingUp} variant="positive" size="xs" glow />
                     ) : (
-                      <TrendingDown size={14} className="text-rose-400" />
+                      <GlowIcon icon={TrendingDown} variant="negative" size="xs" glow />
                     )}
                     <span className={`text-lg font-bold ${party.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {party.change >= 0 ? '+' : ''}{party.change.toFixed(1)}%
