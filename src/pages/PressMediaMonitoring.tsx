@@ -37,7 +37,7 @@ import { useNewsSentiment } from '../hooks/useNewsSentiment';
 import { NewsArticle as DBNewsArticle } from '../services/newsService';
 import constituenciesDataRaw from '../data/wb_constituencies_50.json';
 import { generatePredictions, calculatePredictionStats, filterPredictions, ConstituencyPrediction, PredictionStats } from '../services/predictionService';
-import { seedElectionData } from '../utils/seedElectionData';
+import { clearAndReseedElectionData } from '../utils/seedElectionData';
 
 // Transform constituency data
 const CONSTITUENCIES = constituenciesDataRaw.map((c: any) => ({
@@ -1224,18 +1224,18 @@ export default function PressMediaMonitoring() {
     loadPredictions();
   }, []);
 
-  // Handle seeding election data
+  // Handle seeding election data (clears duplicates and re-seeds)
   const handleSeedElectionData = async () => {
     if (isSeedingElection) return;
     setIsSeedingElection(true);
     try {
-      const result = await seedElectionData();
+      const result = await clearAndReseedElectionData();
       if (result.success) {
         // Reload predictions after seeding
         const predictions = await generatePredictions(50, 50);
         setConstituencyPredictions(predictions);
         setPredictionStats(calculatePredictionStats(predictions));
-        alert(`Seeded ${result.inserted} constituencies with real 2021+2024+2025 election data!`);
+        alert(`Cleared ${result.deleted} old records and seeded ${result.inserted} constituencies with fresh election data!`);
       } else {
         alert(`Seeding failed: ${result.errors.join(', ')}`);
       }
@@ -1943,14 +1943,14 @@ export default function PressMediaMonitoring() {
                 <div className="text-center">
                   <div className="text-3xl font-bold text-orange-600">{predictionStats.bjpLeading}</div>
                   <div className="text-xs text-orange-700 font-medium">BJP Leading</div>
-                  <div className="text-xs text-gray-500 mt-1">out of 50 seats</div>
+                  <div className="text-xs text-gray-500 mt-1">out of {constituencyPredictions.length} seats</div>
                 </div>
               </MobileCard>
               <MobileCard padding="compact" className="border-l-4 border-green-500 bg-gradient-to-r from-green-50 to-white">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-green-600">{predictionStats.tmcLeading}</div>
                   <div className="text-xs text-green-700 font-medium">TMC Leading</div>
-                  <div className="text-xs text-gray-500 mt-1">out of 50 seats</div>
+                  <div className="text-xs text-gray-500 mt-1">out of {constituencyPredictions.length} seats</div>
                 </div>
               </MobileCard>
               <MobileCard padding="compact" className="border-l-4 border-yellow-500 bg-gradient-to-r from-yellow-50 to-white">
@@ -1979,21 +1979,21 @@ export default function PressMediaMonitoring() {
               <div className="relative h-12 rounded-lg overflow-hidden flex">
                 <div
                   className="bg-orange-500 flex items-center justify-center text-white font-bold text-sm transition-all"
-                  style={{ width: `${(predictionStats.bjpLeading / 50) * 100}%` }}
+                  style={{ width: `${(predictionStats.bjpLeading / constituencyPredictions.length) * 100}%` }}
                 >
                   {predictionStats.bjpLeading > 3 && `BJP ${predictionStats.bjpLeading}`}
                 </div>
                 <div
                   className="bg-green-500 flex items-center justify-center text-white font-bold text-sm transition-all"
-                  style={{ width: `${(predictionStats.tmcLeading / 50) * 100}%` }}
+                  style={{ width: `${(predictionStats.tmcLeading / constituencyPredictions.length) * 100}%` }}
                 >
                   {predictionStats.tmcLeading > 3 && `TMC ${predictionStats.tmcLeading}`}
                 </div>
               </div>
               <div className="flex justify-between mt-2 text-xs text-gray-500">
                 <span>0</span>
-                <span className="text-center">Majority: 26 seats</span>
-                <span>50</span>
+                <span className="text-center">Majority: {Math.ceil(constituencyPredictions.length / 2) + 1} seats</span>
+                <span>{constituencyPredictions.length}</span>
               </div>
               <div className="flex justify-center mt-3 space-x-6">
                 <div className="flex items-center space-x-2">
@@ -2057,7 +2057,7 @@ export default function PressMediaMonitoring() {
                   <span className="text-sm text-gray-600">Filter:</span>
                   <div className="flex space-x-1">
                     {[
-                      { key: 'all', label: 'All (50)' },
+                      { key: 'all', label: `All (${constituencyPredictions.length})` },
                       { key: 'bjp', label: `BJP (${predictionStats.bjpLeading})` },
                       { key: 'tmc', label: `TMC (${predictionStats.tmcLeading})` },
                       { key: 'swing', label: `Swing (${predictionStats.swingSeats})` }

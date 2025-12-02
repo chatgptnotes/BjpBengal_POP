@@ -275,17 +275,22 @@ function getKeyIssues(district: string, winner2021: string): string[] {
 
 /**
  * Calculate prediction statistics
+ * Categories are mutually exclusive: BJP + TMC + Swing = Total
  */
 export function calculatePredictionStats(predictions: ConstituencyPrediction[]): PredictionStats {
-  const bjpLeading = predictions.filter(p => p.bjpWinProbability > 50).length;
-  const tmcLeading = predictions.filter(p => p.tmcWinProbability > 50).length;
+  // Swing seats = margin <= 10% (too close to call)
   const swingSeats = predictions.filter(p => Math.abs(p.margin) <= 10).length;
-  const safeBjp = predictions.filter(p => p.bjpWinProbability >= 55).length;
-  const safeTmc = predictions.filter(p => p.tmcWinProbability >= 55).length;
+  // BJP leading = clear BJP lead (margin > 10% in BJP favor)
+  const bjpLeading = predictions.filter(p => p.bjpWinProbability > 50 && Math.abs(p.margin) > 10).length;
+  // TMC leading = clear TMC lead (margin > 10% in TMC favor)
+  const tmcLeading = predictions.filter(p => p.tmcWinProbability > 50 && Math.abs(p.margin) > 10).length;
+  // Safe seats use higher threshold
+  const safeBjp = predictions.filter(p => p.bjpWinProbability >= 55 && Math.abs(p.margin) > 10).length;
+  const safeTmc = predictions.filter(p => p.tmcWinProbability >= 55 && Math.abs(p.margin) > 10).length;
 
   // Calculate seat projections with confidence intervals
-  // Using 50 constituencies as sample, extrapolate to 294 seats
-  const scaleFactor = 294 / 50;
+  // Using sample constituencies to extrapolate to 294 total seats
+  const scaleFactor = 294 / predictions.length;
 
   const predictedBjpSeats = {
     min: Math.round(bjpLeading * scaleFactor * 0.85),
@@ -310,6 +315,7 @@ export function calculatePredictionStats(predictions: ConstituencyPrediction[]):
 
 /**
  * Filter and sort predictions
+ * Categories are mutually exclusive: BJP + TMC + Swing = Total
  */
 export function filterPredictions(
   predictions: ConstituencyPrediction[],
@@ -318,12 +324,15 @@ export function filterPredictions(
 ): ConstituencyPrediction[] {
   let filtered = [...predictions];
 
-  // Apply filter
+  // Apply filter (mutually exclusive categories)
   if (filter === 'bjp') {
-    filtered = filtered.filter(p => p.bjpWinProbability > 50);
+    // BJP = clear BJP lead (margin > 10%)
+    filtered = filtered.filter(p => p.bjpWinProbability > 50 && Math.abs(p.margin) > 10);
   } else if (filter === 'tmc') {
-    filtered = filtered.filter(p => p.tmcWinProbability > 50);
+    // TMC = clear TMC lead (margin > 10%)
+    filtered = filtered.filter(p => p.tmcWinProbability > 50 && Math.abs(p.margin) > 10);
   } else if (filter === 'swing') {
+    // Swing = close race (margin <= 10%)
     filtered = filtered.filter(p => Math.abs(p.margin) <= 10);
   }
 
