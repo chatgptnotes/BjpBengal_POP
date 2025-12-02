@@ -24,6 +24,8 @@ import LeaderDeepDive from './components/LeaderDeepDive';
 import { ConstituencyLeader, constituencyLeaderService } from '@/services/leaderTracking';
 // Import seed function for auto-populating data
 import { seedConstituencyLeaders } from '@/utils/seedConstituencyData';
+// Import seed function for election results data
+import { seedElectionData, clearAndReseedElectionData } from '@/utils/seedElectionData';
 // Import Constituency Demographics component
 import ConstituencyDemographics from './components/ConstituencyDemographics';
 // Import Infographic Generator component
@@ -566,6 +568,11 @@ export default function PulseDashboard() {
         const leaders = await constituencyLeaderService.getAllLeaders();
         setAllConstituencyLeaders(leaders);
         console.log('[PulseDashboard] Loaded', leaders.length, 'constituency leaders');
+
+        // Auto-seed election results data
+        console.log('[PulseDashboard] Auto-seeding election results data...');
+        const electionSeedResult = await seedElectionData();
+        console.log('[PulseDashboard] Election seed result:', electionSeedResult);
       } catch (error) {
         console.error('[PulseDashboard] Auto-seed error:', error);
       }
@@ -848,6 +855,8 @@ export default function PulseDashboard() {
               <LeftSidebar
                 topIssues={data.top_issues}
                 constituencyId={selectedId}
+                constituencyName={activeConstituency?.name}
+                district={activeConstituency?.district}
                 party={currentLeader?.current_mla_party}
                 isSwing={currentLeader?.is_swing_constituency}
               />
@@ -889,6 +898,7 @@ export default function PulseDashboard() {
             <div className="lg:col-span-4">
               <RightSidebar
                 selectedConstituency={data.constituency_name}
+                constituencyId={selectedId}
                 constituencyLeaders={allConstituencyLeaders.map(l => ({
                   constituency_id: l.constituency_id,
                   constituency_name: l.constituency_name,

@@ -1,139 +1,178 @@
 /**
  * Historical Voting Trends Component
- * Shows voting patterns across past 3 elections
+ * Shows voting patterns for 2016 and 2021 elections using real data from database
+ * Displays as a grouped bar chart for easy comparison
  */
 
-import React from 'react';
-import { BarChart3 } from 'lucide-react';
-
-interface VotingData {
-  year: string;
-  TMC: number;
-  BJP: number;
-  CPIM: number;
-  INC: number;
-}
+import { BarChart3, Database, AlertCircle } from 'lucide-react';
+import { useHistoricalVoting } from '../hooks/useHistoricalVoting';
 
 interface Props {
-  data: VotingData[];
+  constituencyId?: string;
 }
 
-export default function HistoricalVotingTrends({ data }: Props) {
+export default function HistoricalVotingTrends({ constituencyId }: Props) {
+  const { data, loading, error, isFromDatabase } = useHistoricalVoting(constituencyId);
+
   const parties = [
-    { key: 'TMC', name: 'TMC', color: 'rgb(34, 197, 94)' }, // green
-    { key: 'BJP', name: 'BJP', color: 'rgb(249, 115, 22)' }, // orange
-    { key: 'CPIM', name: 'CPI(M)', color: 'rgb(220, 38, 38)' }, // red
-    { key: 'INC', name: 'INC', color: 'rgb(59, 130, 246)' }, // blue
+    { key: 'TMC', name: 'TMC', color: '#22c55e', bgColor: 'bg-green-500' },
+    { key: 'BJP', name: 'BJP', color: '#f97316', bgColor: 'bg-orange-500' },
+    { key: 'CPIM', name: 'CPI(M)', color: '#dc2626', bgColor: 'bg-red-600' },
+    { key: 'INC', name: 'INC', color: '#3b82f6', bgColor: 'bg-blue-500' },
   ];
 
-  const maxValue = 60;
-  const getYPosition = (value: number) => (1 - value / maxValue) * 100;
+  if (loading) {
+    return (
+      <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <div className="flex items-center gap-2 mb-5">
+          <BarChart3 size={18} className="text-purple-400" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            Historical Voting Trends
+          </h3>
+        </div>
+        <div className="h-48 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-xs text-slate-400">Loading election data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+        <div className="flex items-center gap-2 mb-5">
+          <BarChart3 size={18} className="text-purple-400" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            Historical Voting Trends
+          </h3>
+        </div>
+        <div className="h-48 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2 text-red-400">
+            <AlertCircle size={24} />
+            <span className="text-xs">{error}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Get 2016 and 2021 data
+  const data2016 = data.find(d => d.year === '2016');
+  const data2021 = data.find(d => d.year === '2021');
+
+  // Find max value for scaling
+  const maxValue = Math.max(
+    ...parties.map(p => Math.max(
+      (data2016?.[p.key as keyof typeof data2016] as number) || 0,
+      (data2021?.[p.key as keyof typeof data2021] as number) || 0
+    ))
+  );
+  const scaleMax = Math.ceil(maxValue / 10) * 10 + 10; // Round up to nearest 10 + buffer
 
   return (
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
-      <div className="flex items-center gap-2 mb-5">
+      <div className="flex items-center gap-2 mb-4">
         <BarChart3 size={18} className="text-purple-400" />
         <h3 className="text-sm font-bold text-white uppercase tracking-wider">
           Historical Voting Trends
         </h3>
-        <span className="text-xs text-slate-400 ml-auto">Past 3 Elections</span>
-      </div>
-
-      {/* Chart */}
-      <div className="relative h-48 bg-slate-900/50 rounded-lg p-4">
-        {/* Y-axis labels */}
-        <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-[10px] text-slate-500 pr-2">
-          <span>60%</span>
-          <span>40%</span>
-          <span>20%</span>
-          <span>0%</span>
-        </div>
-
-        {/* Grid lines */}
-        <div className="absolute left-10 right-4 top-0 bottom-0 flex flex-col justify-between">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="w-full border-t border-slate-700/30"></div>
-          ))}
-        </div>
-
-        {/* Chart area */}
-        <svg className="absolute left-10 right-4 top-0 bottom-6 w-[calc(100%-3.5rem)] h-[calc(100%-1.5rem)]" preserveAspectRatio="none">
-          {parties.map((party) => {
-            const points = data.map((d, i) => {
-              const x = (i / (data.length - 1)) * 100;
-              const y = getYPosition(d[party.key as keyof VotingData] as number);
-              return `${x},${y}`;
-            }).join(' ');
-
-            return (
-              <g key={party.key}>
-                {/* Area fill */}
-                <polygon
-                  points={`0,100 ${points} ${(data.length - 1) / (data.length - 1) * 100},100`}
-                  fill={party.color}
-                  fillOpacity="0.1"
-                />
-                {/* Line */}
-                <polyline
-                  points={points}
-                  fill="none"
-                  stroke={party.color}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                {/* Data points */}
-                {data.map((d, i) => {
-                  const x = (i / (data.length - 1)) * 100;
-                  const y = getYPosition(d[party.key as keyof VotingData] as number);
-                  return (
-                    <circle
-                      key={i}
-                      cx={`${x}%`}
-                      cy={`${y}%`}
-                      r="3"
-                      fill={party.color}
-                      className="hover:r-5 transition-all"
-                    />
-                  );
-                })}
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* X-axis labels */}
-        <div className="absolute left-10 right-4 bottom-0 flex justify-between text-[10px] text-slate-400">
-          {data.map((d, i) => (
-            <span key={i}>{d.year}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-700">
-        {parties.map((party) => (
-          <div key={party.key} className="flex items-center gap-2">
-            <div
-              className="w-3 h-1 rounded"
-              style={{ backgroundColor: party.color }}
-            ></div>
-            <span className="text-xs text-slate-300">{party.name}</span>
-            <span className="text-xs font-bold text-white">
-              {data[data.length - 1][party.key as keyof VotingData]}%
+        <div className="ml-auto flex items-center gap-1">
+          {isFromDatabase && (
+            <span title="Data from database">
+              <Database size={12} className="text-green-400" />
             </span>
-          </div>
-        ))}
+          )}
+          <span className="text-xs text-slate-400">Assembly Elections</span>
+        </div>
       </div>
+
+      {/* Year Legend */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-slate-600 border border-slate-500"></div>
+          <span className="text-xs text-slate-300">2016</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-gradient-to-r from-purple-500 to-pink-500"></div>
+          <span className="text-xs text-slate-300">2021</span>
+        </div>
+      </div>
+
+      {/* Bar Chart */}
+      <div className="space-y-4">
+        {parties.map((party) => {
+          const val2016 = (data2016?.[party.key as keyof typeof data2016] as number) || 0;
+          const val2021 = (data2021?.[party.key as keyof typeof data2021] as number) || 0;
+          const width2016 = (val2016 / scaleMax) * 100;
+          const width2021 = (val2021 / scaleMax) * 100;
+          const change = val2021 - val2016;
+
+          return (
+            <div key={party.key} className="space-y-1">
+              {/* Party name and values */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: party.color }}
+                  ></div>
+                  <span className="text-xs font-medium text-white">{party.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400">{val2016}%</span>
+                  <span className="text-[10px] text-slate-500">→</span>
+                  <span className="text-xs font-bold text-white">{val2021}%</span>
+                  {change !== 0 && (
+                    <span className={`text-[10px] font-medium ${change > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {change > 0 ? '+' : ''}{change}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Bars */}
+              <div className="space-y-1">
+                {/* 2016 bar */}
+                <div className="h-3 bg-slate-900/50 rounded overflow-hidden">
+                  <div
+                    className="h-full bg-slate-600 rounded transition-all duration-500"
+                    style={{ width: `${width2016}%` }}
+                  ></div>
+                </div>
+                {/* 2021 bar */}
+                <div className="h-3 bg-slate-900/50 rounded overflow-hidden">
+                  <div
+                    className="h-full rounded transition-all duration-500"
+                    style={{
+                      width: `${width2021}%`,
+                      backgroundColor: party.color,
+                      opacity: 0.9
+                    }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Scale indicator */}
+      <div className="flex justify-between mt-3 pt-2 border-t border-slate-700">
+        <span className="text-[10px] text-slate-500">0%</span>
+        <span className="text-[10px] text-slate-500">{scaleMax / 2}%</span>
+        <span className="text-[10px] text-slate-500">{scaleMax}%</span>
+      </div>
+
+      {/* Data source indicator */}
+      {!isFromDatabase && (
+        <div className="mt-2 text-[10px] text-amber-400/70 flex items-center gap-1">
+          <AlertCircle size={10} />
+          <span>Using estimated values (no DB data for this constituency)</span>
+        </div>
+      )}
     </div>
   );
-}
-
-// Generate mock data
-export function generateHistoricalData(): VotingData[] {
-  return [
-    { year: '2016', TMC: 45, BJP: 15, CPIM: 25, INC: 10 },
-    { year: '2021', TMC: 52, BJP: 28, CPIM: 12, INC: 5 },
-    { year: '2024', TMC: 48, BJP: 32, CPIM: 10, INC: 6 },
-  ];
 }
