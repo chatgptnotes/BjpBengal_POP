@@ -62,6 +62,7 @@ import {
   type LeaderProfile,
   type ParsedBiography,
 } from '@/services/supabase/leaderProfiles.service';
+import { refreshMLAProfile, calculateDataQuality } from '@/services/mlaProfileRefresh';
 
 // Refresh progress state
 interface RefreshProgress {
@@ -918,14 +919,42 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                 <AlertCircle size={24} className="text-amber-400 mx-auto mb-2" />
                 <p className="text-amber-400 text-sm mb-3">{profileError}</p>
                 <p className="text-slate-500 text-xs mb-3">
-                  Run <code className="bg-slate-800 px-1 rounded">npm run scrape:mlas</code> to populate MLA data
+                  Profile data can be fetched from MyNeta.info and Wikipedia.
                 </p>
-                <button
-                  onClick={loadMlaProfile}
-                  className="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm hover:bg-amber-500/30 transition-colors"
-                >
-                  Retry
-                </button>
+                <div className="flex gap-2 justify-center">
+                  <button
+                    onClick={loadMlaProfile}
+                    className="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-sm hover:bg-amber-500/30 transition-colors"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setProfileLoading(true);
+                      setProfileError(null);
+                      try {
+                        const result = await refreshMLAProfile(
+                          intel.constituency_id,
+                          intel.current_mla_name,
+                          intel.constituency_name
+                        );
+                        if (result.success && result.profile) {
+                          setMlaProfile(result.profile);
+                        } else {
+                          setProfileError(result.error || 'Failed to fetch profile');
+                        }
+                      } catch (err) {
+                        setProfileError('Failed to scrape profile data');
+                      } finally {
+                        setProfileLoading(false);
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-500/20 text-indigo-400 rounded-lg text-sm hover:bg-indigo-500/30 transition-colors flex items-center gap-2"
+                  >
+                    <RefreshCw size={14} />
+                    Scrape Now
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1072,6 +1101,33 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                   )}
                 </div>
 
+                {/* Data Quality Score */}
+                {(() => {
+                  const qualityScore = calculateDataQuality(mlaProfile);
+                  return (
+                    <div className="bg-slate-800/50 rounded-lg p-3 flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Data Quality</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 h-2 bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              qualityScore >= 70 ? 'bg-emerald-500' :
+                              qualityScore >= 40 ? 'bg-amber-500' : 'bg-rose-500'
+                            }`}
+                            style={{ width: `${qualityScore}%` }}
+                          />
+                        </div>
+                        <span className={`text-sm font-bold ${
+                          qualityScore >= 70 ? 'text-emerald-400' :
+                          qualityScore >= 40 ? 'text-amber-400' : 'text-rose-400'
+                        }`}>
+                          {qualityScore}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Last Updated */}
                 {mlaProfile.updated_at && (
                   <p className="text-center text-[10px] text-slate-600">
@@ -1079,18 +1135,53 @@ export default function LeaderDeepDive({ constituencyId, constituencyName }: Pro
                   </p>
                 )}
 
-                {/* Refresh Button */}
-                <button
-                  onClick={() => {
-                    setMlaProfile(null);
-                    setMlaBiography(null);
-                    loadMlaProfile();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs transition-colors"
-                >
-                  <RefreshCw size={12} />
-                  Refresh Profile
-                </button>
+                {/* Refresh Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setMlaProfile(null);
+                      setMlaBiography(null);
+                      loadMlaProfile();
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors"
+                  >
+                    <RefreshCw size={12} />
+                    Reload Cache
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setProfileLoading(true);
+                      try {
+                        const result = await refreshMLAProfile(
+                          intel.constituency_id,
+                          intel.current_mla_name,
+                          intel.constituency_name
+                        );
+                        if (result.success && result.profile) {
+                          setMlaProfile(result.profile);
+                          const bio = result.profile.positions_held
+                            ? {
+                                summary: result.profile.positions_held.find(p => p.startsWith('Biography:'))?.replace('Biography: ', '') || null,
+                                birthDate: result.profile.positions_held.find(p => p.startsWith('Birth:'))?.replace('Birth: ', '') || null,
+                                birthPlace: result.profile.positions_held.find(p => p.startsWith('Place:'))?.replace('Place: ', '') || null,
+                                mynetaUrl: result.profile.positions_held.find(p => p.startsWith('MyNeta:'))?.replace('MyNeta: ', '') || null,
+                                wikipediaUrl: result.profile.positions_held.find(p => p.startsWith('Wikipedia:'))?.replace('Wikipedia: ', '') || null,
+                              }
+                            : { summary: null, birthDate: null, birthPlace: null, mynetaUrl: null, wikipediaUrl: null };
+                          setMlaBiography(bio);
+                        }
+                      } catch (err) {
+                        console.error('Failed to scrape profile:', err);
+                      } finally {
+                        setProfileLoading(false);
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-xs transition-colors"
+                  >
+                    <RefreshCw size={12} />
+                    Scrape Fresh Data
+                  </button>
+                </div>
               </>
             )}
           </div>

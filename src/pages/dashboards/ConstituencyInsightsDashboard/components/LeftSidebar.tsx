@@ -1,10 +1,10 @@
 /**
  * Left Sidebar Component
- * Contains Demographics, Issue Tracker, and Historical Trends
+ * Contains Demographics, Issue Tracker (News-based), and Historical Trends
  */
 
 import SentimentByDemographics from './SentimentByDemographics';
-import BaseBoostSentiment, { generateIssueData } from './BaseBoostSentiment';
+import BaseBoostSentiment from './BaseBoostSentiment';
 import HistoricalVotingTrends from './HistoricalVotingTrends';
 
 interface Props {
@@ -17,15 +17,10 @@ interface Props {
 }
 
 export default function LeftSidebar({
-  topIssues,
   constituencyId,
   constituencyName,
   district,
-  party,
-  isSwing,
 }: Props) {
-  const issueData = generateIssueData(topIssues);
-
   return (
     <div className="space-y-6">
       <SentimentByDemographics
@@ -34,10 +29,8 @@ export default function LeftSidebar({
         district={district}
       />
       <BaseBoostSentiment
-        data={issueData}
         constituencyId={constituencyId}
-        party={party}
-        isSwing={isSwing}
+        daysBack={90}
       />
       <HistoricalVotingTrends constituencyId={constituencyId} />
     </div>

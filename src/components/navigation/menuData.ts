@@ -57,10 +57,15 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
   // MAIN DASHBOARD
   'dashboard': [
     {
-      name: 'POP Dashboard',
-      href: '/dashboard/legacy',
+      name: 'Constituency Insights',
+      href: '/dashboard/constituency-insights',
       icon: DashboardIcon,
       badge: 'Live'
+    },
+    {
+      name: 'POP Dashboard',
+      href: '/dashboard/legacy',
+      icon: DashboardIcon
     },
     {
       name: 'Role-Based Dashboard',

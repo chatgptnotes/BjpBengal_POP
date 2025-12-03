@@ -37,19 +37,9 @@ export default function RoleBasedDashboard() {
     return <Navigate to="/login" replace />;
   }
 
-  // Route based on user role
-  const roleRoutes: Record<string, string> = {
-    'superadmin': '/dashboard/superadmin',
-    'super_admin': '/dashboard/superadmin',
-    'admin': '/dashboard/admin',
-    'manager': '/dashboard/manager',
-    'analyst': '/dashboard/analyst',
-    'user': '/dashboard/user',
-    'volunteer': '/dashboard/volunteer',
-    'viewer': '/dashboard/viewer',
-  };
-
-  const dashboardRoute = roleRoutes[user.role] || '/dashboard/user';
+  // All users now go to Constituency Insights dashboard by default
+  // This is the main dashboard shown in the screenshot
+  const dashboardRoute = '/dashboard/constituency-insights';
 
   console.log('Redirecting to:', dashboardRoute);
 
