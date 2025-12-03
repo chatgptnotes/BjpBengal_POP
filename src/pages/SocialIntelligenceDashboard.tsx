@@ -42,11 +42,27 @@ export default function SocialIntelligenceDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const result = await bengalPoliticalDataService.getAllData(forceRefresh);
+
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 15000);
+      });
+
+      const dataPromise = bengalPoliticalDataService.getAllData(forceRefresh);
+
+      const result = await Promise.race([dataPromise, timeoutPromise]);
       setData(result);
-    } catch (err) {
-      setError('Failed to load data. Please try again.');
+    } catch (err: any) {
       console.error('[Dashboard] Load error:', err);
+      // Show error but don't block - try to show demo data
+      setError(err.message || 'Failed to load data. Showing cached data.');
+      // Try to get demo/cached data
+      try {
+        const fallbackData = await bengalPoliticalDataService.getAllData(false);
+        setData(fallbackData);
+      } catch {
+        // If even demo data fails, show empty state
+      }
     } finally {
       setLoading(false);
     }
