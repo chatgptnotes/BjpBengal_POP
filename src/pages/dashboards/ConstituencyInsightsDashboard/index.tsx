@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Activity, Users, MessageCircle, Tv, MapPin,
   History, Share2, Calendar, TrendingUp, AlertTriangle,
   Menu, X, ChevronDown, Check, Clock, Sparkles, Send, Loader2, Bot,
   Target, ShieldAlert, Zap, FileText, Lock, RefreshCw, ExternalLink
 } from 'lucide-react';
+// Import animated components
+import {
+  AnimatedVoterSegmentCard,
+  AnimatedPartyStrength,
+  SentimentDonut,
+  AnimatedProgressBar,
+  AnimatedCountUp,
+  AnimatedStatCard
+} from '@/components/animated';
 
 // Import the news service
 import { fetchConstituencyNewsWithCache, clearNewsCache } from '../../../services/constituencyNewsService';
@@ -261,129 +271,286 @@ const generateDashboardData = (
 
 const SentimentBar = ({ pos, neg, neu }: { pos: number; neg: number; neu: number }) => (
   <div className="w-full h-3 rounded-full flex overflow-hidden bg-gray-100 mt-2">
-    <div style={{ width: `${pos}%` }} className="bg-emerald-500 h-full" />
-    <div style={{ width: `${neu}%` }} className="bg-gray-400 h-full" />
-    <div style={{ width: `${neg}%` }} className="bg-rose-500 h-full" />
+    <motion.div
+      initial={{ width: 0 }}
+      animate={{ width: `${pos}%` }}
+      transition={{ duration: 0.8, ease: 'easeOut' }}
+      className="bg-emerald-500 h-full"
+    />
+    <motion.div
+      initial={{ width: 0 }}
+      animate={{ width: `${neu}%` }}
+      transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
+      className="bg-gray-400 h-full"
+    />
+    <motion.div
+      initial={{ width: 0 }}
+      animate={{ width: `${neg}%` }}
+      transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+      className="bg-rose-500 h-full"
+    />
   </div>
 );
 
-const SegmentCard = ({ data }: { data: DashboardData['segments'][0] }) => (
-  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+const SegmentCard = ({ data, index = 0 }: { data: DashboardData['segments'][0]; index?: number }) => (
+  <motion.div
+    className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md"
+    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ duration: 0.5, delay: index * 0.1, ease: 'easeOut' }}
+    whileHover={{ y: -4, boxShadow: '0 12px 40px rgba(0,0,0,0.12)' }}
+  >
     <div className="flex justify-between items-start mb-2">
-      <h4 className="font-bold text-gray-800 text-sm">{data.name}</h4>
-      <Users size={14} className="text-gray-400" />
+      <motion.h4
+        className="font-bold text-gray-800 text-sm"
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: index * 0.1 + 0.2 }}
+      >
+        {data.name}
+      </motion.h4>
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: index * 0.1 + 0.3, type: 'spring' }}
+      >
+        <Users size={14} className="text-gray-400" />
+      </motion.div>
     </div>
     <div className="mb-3">
       <div className="flex justify-between text-[10px] text-gray-500 uppercase font-bold tracking-wider">
         <span>Sentiment</span>
-        <span className="text-emerald-600">{data.sentiment.pos}% Pos</span>
+        <motion.span
+          className="text-emerald-600"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: index * 0.1 + 0.4 }}
+        >
+          {data.sentiment.pos}% Pos
+        </motion.span>
       </div>
       <SentimentBar {...data.sentiment} />
     </div>
     <div className="flex flex-wrap gap-1">
       {data.top.map((t, i) => (
-        <span key={i} className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-medium">
+        <motion.span
+          key={i}
+          className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-medium"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: index * 0.1 + 0.5 + i * 0.05 }}
+          whileHover={{ scale: 1.05, backgroundColor: '#e2e8f0' }}
+        >
           {t}
-        </span>
+        </motion.span>
       ))}
     </div>
-  </div>
+  </motion.div>
 );
 
-const PartyBar = ({ name, val, color }: { name: string; val: number; color: string }) => (
-  <div className="flex items-center gap-3 mb-2">
-    <div className="w-12 text-xs font-bold text-gray-600">{name}</div>
+const PartyBar = ({ name, val, color, index = 0 }: { name: string; val: number; color: string; index?: number }) => (
+  <motion.div
+    className="flex items-center gap-3 mb-2"
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ duration: 0.4, delay: index * 0.1 }}
+  >
+    <motion.div
+      className="w-12 text-xs font-bold text-gray-600"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.1 + 0.1 }}
+    >
+      {name}
+    </motion.div>
     <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-      <div className={`h-full ${color}`} style={{ width: `${val}%` }}></div>
+      <motion.div
+        className={`h-full ${color}`}
+        initial={{ width: 0 }}
+        animate={{ width: `${val}%` }}
+        transition={{ duration: 0.8, delay: index * 0.1 + 0.2, ease: [0.4, 0, 0.2, 1] }}
+      />
     </div>
-    <div className="w-8 text-xs font-bold text-right text-gray-800">{val}%</div>
-  </div>
+    <motion.div
+      className="w-8 text-xs font-bold text-right text-gray-800"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.1 + 0.5 }}
+    >
+      {val}%
+    </motion.div>
+  </motion.div>
 );
 
 const StrategicDeepDive = ({ strategy, lastUpdate }: { strategy: DashboardData['strategy']; lastUpdate?: string }) => (
-  <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-700 relative overflow-hidden">
-    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+  <motion.div
+    className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-700 relative overflow-hidden"
+    initial={{ opacity: 0, y: 30 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.6 }}
+  >
+    <motion.div
+      className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"
+      animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+    />
 
-    <div className="flex items-center justify-between mb-6 border-b border-slate-700 pb-4">
+    <motion.div
+      className="flex items-center justify-between mb-6 border-b border-slate-700 pb-4"
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+    >
       <div className="flex items-center gap-2">
-        <div className="bg-blue-600 p-2 rounded-lg">
+        <motion.div
+          className="bg-blue-600 p-2 rounded-lg"
+          whileHover={{ scale: 1.1, rotate: 5 }}
+          transition={{ type: 'spring' }}
+        >
           <Target size={20} className="text-white" />
-        </div>
+        </motion.div>
         <div>
           <h3 className="text-lg font-black uppercase tracking-wider">Strategic Intelligence Unit</h3>
           <p className="text-xs text-slate-400">War Room Diagnostic Report</p>
         </div>
       </div>
       {lastUpdate && (
-        <div className="flex items-center gap-2 bg-blue-900/30 px-3 py-1.5 rounded-lg">
+        <motion.div
+          className="flex items-center gap-2 bg-blue-900/30 px-3 py-1.5 rounded-lg"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4 }}
+        >
           <Activity size={12} className="text-blue-400 animate-pulse" />
-          <span className="text-[10px] text-blue-300 font-bold">LIVE • {lastUpdate}</span>
-        </div>
+          <span className="text-[10px] text-blue-300 font-bold">LIVE - {lastUpdate}</span>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
 
       {/* 1. Incumbent Shield */}
-      <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+      <motion.div
+        className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50"
+        initial={{ opacity: 0, x: -30 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.3 }}
+      >
         <h4 className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase mb-3">
           <ShieldAlert size={14} /> The Incumbent Shield (Why They Win)
         </h4>
         <div className="space-y-3">
           {strategy.incumbent_shield.map((item, i) => (
-            <div key={i} className="bg-slate-800 p-3 rounded border-l-2 border-emerald-500">
+            <motion.div
+              key={i}
+              className="bg-slate-800 p-3 rounded border-l-2 border-emerald-500"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 + i * 0.1 }}
+              whileHover={{ x: 4, borderColor: '#10b981' }}
+            >
               <div className="flex justify-between items-center mb-1">
                 <span className="font-bold text-sm text-slate-200">{item.name}</span>
-                <span className="text-[10px] bg-emerald-900/40 text-emerald-400 px-1.5 py-0.5 rounded uppercase">{item.effect} Impact</span>
+                <motion.span
+                  className="text-[10px] bg-emerald-900/40 text-emerald-400 px-1.5 py-0.5 rounded uppercase"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5 + i * 0.1, type: 'spring' }}
+                >
+                  {item.effect} Impact
+                </motion.span>
               </div>
               <p className="text-xs text-slate-400 leading-snug">{item.desc}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* 2. Friction Points */}
-      <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+      <motion.div
+        className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
         <h4 className="flex items-center gap-2 text-xs font-bold text-rose-400 uppercase mb-3">
           <AlertTriangle size={14} /> Friction Points (Why BJP Fails)
         </h4>
         <div className="space-y-3">
           {strategy.bjp_friction_points.map((item, i) => (
-            <div key={i} className="bg-slate-800 p-3 rounded border-l-2 border-rose-500">
+            <motion.div
+              key={i}
+              className="bg-slate-800 p-3 rounded border-l-2 border-rose-500"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 + i * 0.1 }}
+              whileHover={{ x: 4 }}
+            >
               <div className="flex justify-between items-center mb-1">
                 <span className="font-bold text-sm text-slate-200">{item.issue}</span>
-                <span className="text-[10px] bg-rose-900/40 text-rose-400 px-1.5 py-0.5 rounded uppercase">{item.severity}</span>
+                <motion.span
+                  className="text-[10px] bg-rose-900/40 text-rose-400 px-1.5 py-0.5 rounded uppercase"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.6 + i * 0.1, type: 'spring' }}
+                >
+                  {item.severity}
+                </motion.span>
               </div>
               <p className="text-xs text-slate-400 leading-snug">{item.desc}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* 3. Path to Victory */}
-      <div className="bg-gradient-to-br from-blue-900/20 to-indigo-900/20 rounded-xl p-4 border border-blue-500/20">
+      <motion.div
+        className="bg-gradient-to-br from-blue-900/20 to-indigo-900/20 rounded-xl p-4 border border-blue-500/20"
+        initial={{ opacity: 0, x: 30 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.5 }}
+      >
         <h4 className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase mb-3">
           <Zap size={14} /> Path to 51% (Winning Formula)
         </h4>
         <div className="space-y-3">
           {strategy.path_to_victory.map((step, i) => (
-            <div key={i} className="flex gap-3 items-start">
-              <div className="w-5 h-5 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+            <motion.div
+              key={i}
+              className="flex gap-3 items-start"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 + i * 0.1 }}
+            >
+              <motion.div
+                className="w-5 h-5 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.7 + i * 0.1, type: 'spring' }}
+              >
                 {i+1}
-              </div>
+              </motion.div>
               <p className="text-sm text-slate-300 font-medium leading-snug">{step}</p>
-            </div>
+            </motion.div>
           ))}
-          <div className="mt-4 pt-3 border-t border-blue-500/20">
-             <div className="flex items-center gap-2 text-[10px] text-blue-300 bg-blue-900/30 px-3 py-2 rounded">
+          <motion.div
+            className="mt-4 pt-3 border-t border-blue-500/20"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+          >
+             <motion.div
+               className="flex items-center gap-2 text-[10px] text-blue-300 bg-blue-900/30 px-3 py-2 rounded"
+               whileHover={{ scale: 1.02 }}
+             >
                 <Lock size={12} /> Confidential Strategy Note
-             </div>
-          </div>
+             </motion.div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
     </div>
-  </div>
+  </motion.div>
 );
 
 /* -------------------------------------------------------------------------
@@ -1039,131 +1206,292 @@ export default function PulseDashboard() {
               <Users className="text-blue-600" size={20} /> Voter Segments
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-               {data.segments.map((seg, i) => <SegmentCard key={i} data={seg} />)}
+               {data.segments.map((seg, i) => <SegmentCard key={i} data={seg} index={i} />)}
             </div>
           </div>
 
           {/* C. SOCIAL & MEDIA ANALYTICS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
              {/* Social Sentiment */}
-             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+             <motion.div
+               className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"
+               initial={{ opacity: 0, x: -30 }}
+               animate={{ opacity: 1, x: 0 }}
+               transition={{ duration: 0.5 }}
+             >
                 <div className="flex justify-between items-center mb-6">
                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
                      <Share2 size={18} className="text-blue-500" /> Social Sentiment
                    </h3>
-                   <span className="text-xs bg-slate-100 px-2 py-1 rounded-lg text-slate-500 font-bold">
+                   <motion.span
+                     className="text-xs bg-slate-100 px-2 py-1 rounded-lg text-slate-500 font-bold"
+                     initial={{ opacity: 0, scale: 0.8 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     transition={{ delay: 0.3 }}
+                   >
                      {data.social.total} Posts
-                   </span>
+                   </motion.span>
                 </div>
 
                 <div className="flex items-center gap-6">
-                   {/* Donut Chart Simulation */}
-                   <div className="relative w-32 h-32 flex-shrink-0">
+                   {/* Animated Donut Chart */}
+                   <motion.div
+                     className="relative w-32 h-32 flex-shrink-0"
+                     initial={{ scale: 0, rotate: -90 }}
+                     animate={{ scale: 1, rotate: 0 }}
+                     transition={{ duration: 0.6, type: 'spring' }}
+                   >
                       <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                         {/* Circle Background */}
                         <path className="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
                         {/* Positive Segment */}
-                        <path className="text-emerald-500" strokeDasharray={`${data.social.sentiment_split[0]}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                        <motion.path
+                          className="text-emerald-500"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          initial={{ strokeDasharray: '0, 100' }}
+                          animate={{ strokeDasharray: `${data.social.sentiment_split[0]}, 100` }}
+                          transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
+                        />
                         {/* Negative Segment (Offset roughly) */}
-                        <path className="text-rose-500" strokeDasharray={`${data.social.sentiment_split[1]}, 100`} strokeDashoffset={`-${data.social.sentiment_split[0]}`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                        <motion.path
+                          className="text-rose-500"
+                          strokeDashoffset={`-${data.social.sentiment_split[0]}`}
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          initial={{ strokeDasharray: '0, 100' }}
+                          animate={{ strokeDasharray: `${data.social.sentiment_split[1]}, 100` }}
+                          transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
+                        />
                       </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <motion.div
+                        className="absolute inset-0 flex flex-col items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                      >
                          <span className="text-xl font-bold text-slate-800">{data.social.sentiment_split[0]}%</span>
                          <span className="text-[8px] uppercase font-bold text-emerald-600">Positive</span>
-                      </div>
-                   </div>
+                      </motion.div>
+                   </motion.div>
 
                    {/* Hashtags */}
                    <div className="flex-1">
                       <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Trending Hashtags</h4>
                       <div className="flex flex-wrap gap-2">
                          {data.social.hashtags.map((tag, i) => (
-                           <span key={i} className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                           <motion.span
+                             key={i}
+                             className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded cursor-pointer"
+                             initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                             animate={{ opacity: 1, scale: 1, y: 0 }}
+                             transition={{ delay: 0.4 + i * 0.1 }}
+                             whileHover={{ scale: 1.1, backgroundColor: '#dbeafe' }}
+                           >
                              {tag}
-                           </span>
+                           </motion.span>
                          ))}
                       </div>
                    </div>
                 </div>
-             </div>
+             </motion.div>
 
              {/* TV Debates */}
-             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+             <motion.div
+               className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"
+               initial={{ opacity: 0, x: 30 }}
+               animate={{ opacity: 1, x: 0 }}
+               transition={{ duration: 0.5, delay: 0.2 }}
+             >
                 <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
                    <Tv size={18} className="text-purple-500" /> TV Debates
                 </h3>
                 <div className="space-y-4">
                    {data.debates.map((d, i) => (
-                     <div key={i} className="flex gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-500">
+                     <motion.div
+                       key={i}
+                       className="flex gap-3"
+                       initial={{ opacity: 0, x: 20 }}
+                       animate={{ opacity: 1, x: 0 }}
+                       transition={{ delay: 0.3 + i * 0.15 }}
+                       whileHover={{ x: 4 }}
+                     >
+                        <motion.div
+                          className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-500"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.4 + i * 0.15, type: 'spring' }}
+                        >
                            {d.channel.substring(0,2)}
-                        </div>
+                        </motion.div>
                         <div>
                            <div className="flex justify-between items-start">
                               <h4 className="text-sm font-bold text-slate-900">{d.show}</h4>
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${d.stance === 'Critical' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>{d.stance}</span>
+                              <motion.span
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${d.stance === 'Critical' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.5 + i * 0.15 }}
+                              >
+                                {d.stance}
+                              </motion.span>
                            </div>
                            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{d.summary}</p>
                         </div>
-                     </div>
+                     </motion.div>
                    ))}
                 </div>
-             </div>
+             </motion.div>
           </div>
 
           {/* D. BOTTOM GRID: HISTORY & INFRA */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
              {/* Party Strength */}
-             <div className="bg-white p-5 rounded-xl border border-slate-100">
+             <motion.div
+               className="bg-white p-5 rounded-xl border border-slate-100"
+               initial={{ opacity: 0, y: 30 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.5 }}
+             >
                 <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 flex gap-2 items-center"><BarChart size={14}/> Party Strength</h3>
                 {data.party_strength.map((p, i) => (
-                  <PartyBar key={i} {...p} />
+                  <PartyBar key={i} {...p} index={i} />
                 ))}
-             </div>
+             </motion.div>
 
              {/* Historical Results */}
-             <div className="bg-white p-5 rounded-xl border border-slate-100">
+             <motion.div
+               className="bg-white p-5 rounded-xl border border-slate-100"
+               initial={{ opacity: 0, y: 30 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.5, delay: 0.1 }}
+             >
                 <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 flex gap-2 items-center"><History size={14}/> Past Verdicts</h3>
                 <div className="grid grid-cols-2 gap-3">
-                   <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                   <motion.div
+                     className="bg-green-50 p-3 rounded-lg border border-green-100"
+                     initial={{ opacity: 0, scale: 0.9 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     transition={{ delay: 0.3, type: 'spring' }}
+                     whileHover={{ scale: 1.02 }}
+                   >
                       <div className="text-[10px] font-bold text-green-800 uppercase opacity-60">2021</div>
-                      <div className="font-bold text-slate-900">{data.history.last.party}</div>
+                      <motion.div
+                        className="font-bold text-slate-900"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                      >
+                        {data.history.last.party}
+                      </motion.div>
                       <div className="text-xs text-green-700">{data.history.last.margin}</div>
-                   </div>
-                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                   </motion.div>
+                   <motion.div
+                     className="bg-slate-50 p-3 rounded-lg border border-slate-200"
+                     initial={{ opacity: 0, scale: 0.9 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     transition={{ delay: 0.4, type: 'spring' }}
+                     whileHover={{ scale: 1.02 }}
+                   >
                       <div className="text-[10px] font-bold text-slate-500 uppercase opacity-60">2016</div>
-                      <div className="font-bold text-slate-900">{data.history.prev.party}</div>
+                      <motion.div
+                        className="font-bold text-slate-900"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        {data.history.prev.party}
+                      </motion.div>
                       <div className="text-xs text-slate-600">{data.history.prev.margin}</div>
-                   </div>
+                   </motion.div>
                 </div>
-             </div>
+             </motion.div>
 
              {/* Infra Info */}
-             <div className="bg-slate-800 text-slate-200 p-5 rounded-xl flex flex-col justify-between">
+             <motion.div
+               className="bg-slate-800 text-slate-200 p-5 rounded-xl flex flex-col justify-between"
+               initial={{ opacity: 0, y: 30 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.5, delay: 0.2 }}
+             >
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-slate-400 uppercase mb-1">Infrastructure</h3>
-                    <div className="text-2xl font-bold text-white">{activeConstituency.cluster}</div>
+                    <motion.div
+                      className="text-2xl font-bold text-white"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      {activeConstituency.cluster}
+                    </motion.div>
                   </div>
-                  <MapPin className="text-blue-500" />
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.5, type: 'spring' }}
+                  >
+                    <MapPin className="text-blue-500" />
+                  </motion.div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center mt-4">
-                   <div className="bg-slate-700/50 p-2 rounded">
-                      <div className="text-lg font-bold text-white">{data.infra.wards}</div>
+                   <motion.div
+                     className="bg-slate-700/50 p-2 rounded"
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     transition={{ delay: 0.4 }}
+                     whileHover={{ scale: 1.05 }}
+                   >
+                      <motion.div
+                        className="text-lg font-bold text-white"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        {data.infra.wards}
+                      </motion.div>
                       <div className="text-[10px] text-slate-400 uppercase">Wards</div>
-                   </div>
-                   <div className="bg-slate-700/50 p-2 rounded">
-                      <div className="text-lg font-bold text-white">{data.infra.booths}</div>
+                   </motion.div>
+                   <motion.div
+                     className="bg-slate-700/50 p-2 rounded"
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     transition={{ delay: 0.5 }}
+                     whileHover={{ scale: 1.05 }}
+                   >
+                      <motion.div
+                        className="text-lg font-bold text-white"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                      >
+                        {data.infra.booths}
+                      </motion.div>
                       <div className="text-[10px] text-slate-400 uppercase">Booths</div>
-                   </div>
-                   <div className="bg-slate-700/50 p-2 rounded border border-rose-500/30">
-                      <div className="text-lg font-bold text-rose-400 flex items-center justify-center gap-1">
+                   </motion.div>
+                   <motion.div
+                     className="bg-slate-700/50 p-2 rounded border border-rose-500/30"
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     transition={{ delay: 0.6 }}
+                     whileHover={{ scale: 1.05 }}
+                   >
+                      <motion.div
+                        className="text-lg font-bold text-rose-400 flex items-center justify-center gap-1"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.7 }}
+                      >
                         <AlertTriangle size={12} /> {data.infra.sensitive}
-                      </div>
+                      </motion.div>
                       <div className="text-[10px] text-rose-300 uppercase">Sensitive</div>
-                   </div>
+                   </motion.div>
                 </div>
-             </div>
+             </motion.div>
           </div>
 
           {/* Competitor Analysis Summary Card */}
