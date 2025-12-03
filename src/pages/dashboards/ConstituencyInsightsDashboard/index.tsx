@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Activity, Users, MessageCircle, Tv, MapPin,
@@ -710,7 +711,21 @@ const PulseAIStrategist = ({ data }: { data: DashboardData }) => {
    ------------------------------------------------------------------------- */
 
 export default function PulseDashboard() {
-  const [selectedId, setSelectedId] = useState(MOCK_CONSTITUENCIES[0].id);
+  // Read constituency ID from URL params
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlConstituencyId = searchParams.get('id');
+
+  // Initialize selectedId from URL param or default to first constituency
+  const getInitialSelectedId = () => {
+    if (urlConstituencyId) {
+      // Verify the ID exists in our constituencies list
+      const exists = MOCK_CONSTITUENCIES.some(c => c.id === urlConstituencyId);
+      if (exists) return urlConstituencyId;
+    }
+    return MOCK_CONSTITUENCIES[0].id;
+  };
+
+  const [selectedId, setSelectedId] = useState(getInitialSelectedId);
   const [timeRangeIdx, setTimeRangeIdx] = useState(0);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
@@ -722,6 +737,22 @@ export default function PulseDashboard() {
   // State for all constituency leaders (for real data in sidebars)
   const [allConstituencyLeaders, setAllConstituencyLeaders] = useState<ConstituencyLeader[]>([]);
   const [currentLeader, setCurrentLeader] = useState<ConstituencyLeader | null>(null);
+
+  // Sync URL when constituency selection changes (from dropdown)
+  const handleConstituencyChange = (newId: string) => {
+    setSelectedId(newId);
+    setSearchParams({ id: newId });
+  };
+
+  // Update selectedId if URL param changes (e.g., from map click)
+  useEffect(() => {
+    if (urlConstituencyId && urlConstituencyId !== selectedId) {
+      const exists = MOCK_CONSTITUENCIES.some(c => c.id === urlConstituencyId);
+      if (exists) {
+        setSelectedId(urlConstituencyId);
+      }
+    }
+  }, [urlConstituencyId]);
 
   // Auto-seed constituency leaders data on mount and fetch all leaders
   useEffect(() => {
@@ -921,7 +952,7 @@ export default function PulseDashboard() {
                 <select
                   className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full text-sm font-semibold transition-colors cursor-pointer appearance-none pr-8 border border-slate-200"
                   value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
+                  onChange={(e) => handleConstituencyChange(e.target.value)}
                 >
                   {MOCK_CONSTITUENCIES.map(c => (
                     <option key={c.id} value={c.id}>{c.name} - {c.district}</option>
@@ -942,7 +973,7 @@ export default function PulseDashboard() {
              <select
                 className="w-full mt-2 p-2 bg-slate-100 rounded-lg text-sm font-bold"
                 value={selectedId}
-                onChange={(e) => { setSelectedId(e.target.value); setMobileMenuOpen(false); }}
+                onChange={(e) => { handleConstituencyChange(e.target.value); setMobileMenuOpen(false); }}
               >
                 {MOCK_CONSTITUENCIES.map(c => (
                   <option key={c.id} value={c.id}>{c.name} - {c.district}</option>
