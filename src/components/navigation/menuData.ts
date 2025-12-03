@@ -209,16 +209,6 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       href: '/competitors/sentiment',
       icon: BarChartIcon
     },
-    {
-      name: 'Competitor Analysis',
-      href: '/competitor-analysis',
-      icon: ComparisonIcon
-    },
-    {
-      name: 'Competitor Tracking',
-      href: '/competitor-tracking',
-      icon: ComparisonIcon
-    },
   ],
 
   // MAPS & TERRITORY
@@ -293,11 +283,6 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       name: 'Data Capture Kit',
       href: '/data-kit',
       icon: DataCaptureIcon
-    },
-    {
-      name: 'Data Tracking',
-      href: '/data-tracking',
-      icon: TrackingIcon
     },
   ],
 

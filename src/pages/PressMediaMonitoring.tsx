@@ -1045,7 +1045,7 @@ export default function PressMediaMonitoring() {
   }, [articlesSource, selectedConstituency]);
 
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedTimeframe, setSelectedTimeframe] = useState('24h');
+  const [selectedTimeframe, setSelectedTimeframe] = useState('7d');
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [selectedLanguage, setSelectedLanguage] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1102,6 +1102,34 @@ export default function PressMediaMonitoring() {
       }
     }
 
+    // Filter by timeframe
+    if (selectedTimeframe) {
+      const now = new Date();
+      let cutoffDate: Date;
+
+      switch (selectedTimeframe) {
+        case '1h':
+          cutoffDate = new Date(now.getTime() - 1 * 60 * 60 * 1000);
+          break;
+        case '6h':
+          cutoffDate = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+          break;
+        case '24h':
+          cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case '7d':
+          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      }
+
+      filtered = filtered.filter(article => {
+        const articleDate = new Date(article.timestamp);
+        return articleDate >= cutoffDate;
+      });
+    }
+
     setFilteredArticles(filtered);
 
     // Update analytics based on constituency-filtered data
@@ -1156,7 +1184,7 @@ export default function PressMediaMonitoring() {
         bjpMentions: 0
       });
     }
-  }, [searchQuery, selectedRegion, selectedLanguage, selectedConstituency, articlesSource]);
+  }, [searchQuery, selectedRegion, selectedLanguage, selectedConstituency, articlesSource, selectedTimeframe]);
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -1402,6 +1430,7 @@ export default function PressMediaMonitoring() {
                 <ChevronDown size={14} className="text-orange-600 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
               </div>
             )}
+
           </div>
 
           {/* Seed Result Notification */}
