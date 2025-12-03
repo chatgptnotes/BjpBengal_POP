@@ -112,6 +112,20 @@ interface TrendingHashtag {
 
 const socialPlatforms: SocialPlatform[] = [
   {
+    id: 'twitter',
+    name: 'Twitter/X',
+    icon: MessageCircle,
+    color: 'bg-black',
+    followers: 3500000,
+    dailyPosts: 24500,
+    engagement: 65,
+    sentiment: 58,
+    reach: 15600000,
+    isActive: true,
+    apiStatus: 'limited',
+    lastUpdated: new Date(Date.now() - 420000) // 7 minutes ago
+  },
+  {
     id: 'facebook',
     name: 'Facebook',
     icon: Globe,
@@ -138,20 +152,6 @@ const socialPlatforms: SocialPlatform[] = [
     isActive: true,
     apiStatus: 'connected',
     lastUpdated: new Date(Date.now() - 180000) // 3 minutes ago
-  },
-  {
-    id: 'twitter',
-    name: 'Twitter/X',
-    icon: MessageCircle,
-    color: 'bg-black',
-    followers: 3500000,
-    dailyPosts: 24500,
-    engagement: 65,
-    sentiment: 58,
-    reach: 15600000,
-    isActive: true,
-    apiStatus: 'limited',
-    lastUpdated: new Date(Date.now() - 420000) // 7 minutes ago
   },
   {
     id: 'youtube',
@@ -370,6 +370,10 @@ export default function SocialMediaChannels() {
   const [bjpBengalTweets, setBjpBengalTweets] = useState<Tweet[]>([]);
   const [bjpBengalLoading, setBjpBengalLoading] = useState(false);
   const [bjpBengalError, setBjpBengalError] = useState<string | null>(null);
+
+  // Twitter posts from database
+  const [twitterDbPosts, setTwitterDbPosts] = useState<DBSocialMediaPost[]>([]);
+  const [twitterDbLoading, setTwitterDbLoading] = useState(true);
   const [twitterApiStatus, setTwitterApiStatus] = useState({
     remainingCalls: 1500,
     limitReached: false,
@@ -395,6 +399,22 @@ export default function SocialMediaChannels() {
   // Fetch real posts from Supabase
   useEffect(() => {
     fetchSocialPosts();
+  }, []);
+
+  // Fetch Twitter posts from database
+  useEffect(() => {
+    const fetchTwitterFromDb = async () => {
+      setTwitterDbLoading(true);
+      try {
+        const posts = await socialMediaService.fetchPostsByPlatform('twitter', 50);
+        setTwitterDbPosts(posts);
+      } catch (error) {
+        console.error('Error fetching Twitter posts from DB:', error);
+      } finally {
+        setTwitterDbLoading(false);
+      }
+    };
+    fetchTwitterFromDb();
   }, []);
 
   // BJP Bengal Twitter auto-refresh
@@ -598,11 +618,9 @@ export default function SocialMediaChannels() {
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: BarChart3 },
-    { key: 'bjp-bengal', label: 'BJP Bengal', icon: Target },
+    { key: 'bjp-bengal', label: 'Twitter/X', icon: Target },
     { key: 'platforms', label: 'Platforms', icon: Globe },
-    { key: 'posts', label: 'Posts', icon: MessageCircle },
-    { key: 'hashtags', label: 'Hashtags', icon: Hash },
-    { key: 'insights', label: 'Insights', icon: Activity }
+    { key: 'posts', label: 'Posts', icon: MessageCircle }
   ];
 
   return (
@@ -1000,6 +1018,123 @@ export default function SocialMediaChannels() {
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Fetch Tweets
                 </MobileButton>
+              </MobileCard>
+            )}
+
+            {/* Database Twitter Posts Section */}
+            <MobileCard padding="default" className="mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <MessageCircle className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-responsive-lg font-semibold text-gray-900">Twitter Posts from Database</h3>
+                    <p className="text-responsive-sm text-gray-600">Stored tweets from social_media_posts table</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-responsive-xl font-bold text-blue-600">{twitterDbPosts.length}</div>
+                  <div className="text-responsive-sm text-gray-600">Posts</div>
+                </div>
+              </div>
+            </MobileCard>
+
+            {/* Database Posts Loading */}
+            {twitterDbLoading && (
+              <MobileCard padding="default" className="text-center">
+                <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+                <p className="text-responsive-sm text-gray-600">Loading posts from database...</p>
+              </MobileCard>
+            )}
+
+            {/* Database Posts Feed */}
+            {!twitterDbLoading && twitterDbPosts.length > 0 && (
+              <div className="space-y-4">
+                {twitterDbPosts.map(post => (
+                  <MobileCard key={post.id} padding="default" className="hover:shadow-md transition-shadow border-l-4 border-blue-500">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                          <MessageCircle className="w-6 h-6 text-blue-600" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="font-semibold text-gray-900">Twitter Post</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            post.sentiment_score >= 0.6 ? 'bg-green-100 text-green-700' :
+                            post.sentiment_score >= 0.4 ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {post.sentiment_score >= 0.6 ? 'Positive' :
+                             post.sentiment_score >= 0.4 ? 'Neutral' : 'Negative'}
+                          </span>
+                        </div>
+
+                        <p className="text-responsive-sm text-gray-800 mb-3 whitespace-pre-wrap">
+                          {post.post_content}
+                        </p>
+
+                        {/* Hashtags */}
+                        {post.hashtags && post.hashtags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {post.hashtags.map((tag, idx) => (
+                              <span key={idx} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Engagement Metrics */}
+                        <div className="flex items-center space-x-6 text-gray-500">
+                          <div className="flex items-center space-x-1">
+                            <Heart className="w-4 h-4" />
+                            <span className="text-xs">{post.likes}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Share2 className="w-4 h-4" />
+                            <span className="text-xs">{post.shares}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <MessageCircle className="w-4 h-4" />
+                            <span className="text-xs">{post.comments_count}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Eye className="w-4 h-4" />
+                            <span className="text-xs">{post.reach?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-xs">
+                              {new Date(post.posted_at).toLocaleDateString('en-IN')}
+                            </span>
+                          </div>
+                          {post.post_url && (
+                            <a
+                              href={post.post_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center space-x-1 text-blue-600 hover:text-blue-800"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              <span className="text-xs">View</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </MobileCard>
+                ))}
+              </div>
+            )}
+
+            {/* No Database Posts */}
+            {!twitterDbLoading && twitterDbPosts.length === 0 && (
+              <MobileCard padding="default" className="text-center">
+                <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-responsive-sm text-gray-600">No Twitter posts found in database.</p>
               </MobileCard>
             )}
           </div>

@@ -296,7 +296,7 @@ export default function NewsApiTab() {
               <Newspaper className="w-8 h-8 text-red-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">News API - Bengal Local News</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Bengal Local News</h1>
               <p className="text-sm text-gray-500">
                 {selectedConstituency === 'all'
                   ? 'Real-time West Bengal news tracking and analysis'

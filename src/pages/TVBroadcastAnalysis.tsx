@@ -499,38 +499,7 @@ export default function TVBroadcastAnalysis() {
                     </div>
                   </div>
 
-                  <div className="relative w-full rounded-lg overflow-hidden bg-black" style={{ paddingTop: '56.25%' }}>
-                    <iframe
-                      className="absolute top-0 left-0 w-full h-full"
-                      src={`https://www.youtube.com/embed/live_stream?channel=${selectedLiveChannel.youtubeChannelId}&autoplay=0`}
-                      title={selectedLiveChannel.name}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center space-x-4">
-                      <span className="text-xs text-gray-500 flex items-center space-x-1">
-                        <Globe className="w-3 h-3" />
-                        <span>{selectedLiveChannel.language}</span>
-                      </span>
-                      <span className="text-xs text-gray-500 flex items-center space-x-1">
-                        <Radio className="w-3 h-3" />
-                        <span>24/7 Live News</span>
-                      </span>
-                    </div>
-                    <a
-                      href={`https://www.youtube.com/channel/${selectedLiveChannel.youtubeChannelId}/live`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center space-x-1"
-                    >
-                      <span>Watch on YouTube</span>
-                      <Share2 className="w-3 h-3" />
-                    </a>
-                  </div>
+{/* Video Player Hidden */}
 
                   {/* Live Transcript Panel */}
                   <div className="mt-4">

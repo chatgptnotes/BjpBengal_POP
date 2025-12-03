@@ -67,11 +67,6 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       href: '/dashboard/legacy',
       icon: DashboardIcon
     },
-    {
-      name: 'Role-Based Dashboard',
-      href: '/dashboard/legacy',
-      icon: DashboardIcon
-    },
   ],
 
   // DATA INTELLIGENCE
@@ -82,13 +77,6 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       href: '/voter-personas',
       icon: PersonaIcon,
       badge: 'ML'
-    },
-    // Social Intelligence - Aggregated Data
-    {
-      name: 'Social Intelligence',
-      href: '/social-intelligence',
-      icon: HubIcon,
-      badge: 'AI'
     },
     // Other Data Intelligence Items
     {
@@ -107,7 +95,7 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       icon: NewspaperIcon
     },
     {
-      name: 'News API',
+      name: 'Bengal Local News',
       href: '/news-api',
       icon: NewspaperIcon,
       badge: 'Live'
@@ -159,21 +147,10 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       icon: AnalyticsIcon
     },
     {
-      name: 'Constituency Insights',
-      href: '/insights/constituency/wb_kolkata_bhowanipore',
-      icon: InsightsIcon,
-      badge: 'New'
-    },
-    {
       name: "Leader's Analysis",
       href: '/leaders-analysis',
       icon: PeopleIcon,
       badge: 'New'
-    },
-    {
-      name: 'Advanced Charts',
-      href: '/advanced-charts',
-      icon: AssessmentIcon
     },
     {
       name: 'AI Insights',
@@ -238,13 +215,7 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       href: '/constituency',
       icon: PlaceIcon
     },
-    // Geography Management - Constituencies, Wards & Booths
-    {
-      name: 'Constituencies List',
-      href: '/constituencies',
-      icon: PlaceIcon,
-      badge: 'New'
-    },
+    // Geography Management - Wards & Booths
     {
       name: 'Wards List',
       href: '/wards',

@@ -137,7 +137,7 @@ export default function DataCaptureKit() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Animal-I Party Worker Data Capture Kit
+            Party Worker Data Capture Kit
           </h1>
           <p className="text-gray-600">
             Structured ground intelligence collection system for campaign workers
@@ -587,7 +587,7 @@ export default function DataCaptureKit() {
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-blue-900 mb-4">
-                    Animal-I Dashboard Support Team
+                    Dashboard Support Team
                   </h3>
                   <p className="text-blue-800 mb-4">
                     For help with submissions, technical issues, or training questions, 
