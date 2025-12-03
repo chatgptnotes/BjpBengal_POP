@@ -1,27 +1,62 @@
 /**
  * Ready-to-Use Mapbox Interactive Map for West Bengal
  * Displays all 234 constituencies with clickable boundaries
+ * 50 constituencies with data are highlighted and clickable
  */
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import westBengalGeoJSON from '../../assets/maps/westbengal-constituencies.json';
+import constituencies50Data from '../../data/wb_constituencies_50.json';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYmttdXJhbGkiLCJhIjoiY21ocDhoNXhiMGhodDJrcW94OGptdDg0MiJ9.dq6OU3jiKKntjhIDD9sxWQ';
+
+// Create a lookup map for the 50 constituencies with data
+// Key: normalized name (lowercase, spaces removed), Value: constituency object
+const constituencyLookup = new Map<string, typeof constituencies50Data[0]>();
+constituencies50Data.forEach(c => {
+  // Normalize name for matching: lowercase, remove spaces and special chars
+  const normalizedName = c.name.toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+  constituencyLookup.set(normalizedName, c);
+});
+
+// Get list of clickable constituency names for map styling
+const clickableConstituencyNames = new Set(
+  constituencies50Data.map(c => c.name.toUpperCase())
+);
 
 interface MapboxWestBengalProps {
   height?: string;
   onConstituencyClick?: (constituency: any) => void;
 }
 
+// Helper function to find constituency by name
+const findConstituencyByName = (acName: string): typeof constituencies50Data[0] | undefined => {
+  if (!acName) return undefined;
+  const normalizedName = acName.toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+  return constituencyLookup.get(normalizedName);
+};
+
+// Check if a constituency is clickable (has data)
+const isClickableConstituency = (acName: string): boolean => {
+  if (!acName) return false;
+  // Try exact match first
+  if (clickableConstituencyNames.has(acName.toUpperCase())) return true;
+  // Try normalized match
+  return findConstituencyByName(acName) !== undefined;
+};
+
 export const MapboxWestBengal: React.FC<MapboxWestBengalProps> = React.memo(({
   height = '700px',
   onConstituencyClick
 }) => {
+  const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [selectedConstituency, setSelectedConstituency] = useState<any>(null);
+  const [showToast, setShowToast] = useState<string | null>(null);
 
   // Use ref to store callback to avoid map re-initialization
   const onConstituencyClickRef = useRef(onConstituencyClick);
@@ -30,6 +65,14 @@ export const MapboxWestBengal: React.FC<MapboxWestBengalProps> = React.memo(({
   useEffect(() => {
     onConstituencyClickRef.current = onConstituencyClick;
   }, [onConstituencyClick]);
+
+  // Auto-hide toast after 3 seconds
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -48,41 +91,80 @@ export const MapboxWestBengal: React.FC<MapboxWestBengalProps> = React.memo(({
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // Add constituency boundaries as a source
+      // Add constituency boundaries as a source with feature IDs
+      // Add 'isClickable' property to each feature based on whether it has data
+      const geoJSONWithClickable = {
+        ...westBengalGeoJSON,
+        features: (westBengalGeoJSON as any).features.map((feature: any, index: number) => ({
+          ...feature,
+          id: index,
+          properties: {
+            ...feature.properties,
+            isClickable: isClickableConstituency(feature.properties?.AC_NAME || '')
+          }
+        }))
+      };
+
       map.current.addSource('constituencies', {
         type: 'geojson',
-        data: westBengalGeoJSON as any
+        data: geoJSONWithClickable as any
       });
 
-      // Add constituency fill layer (colored areas)
+      // Add constituency fill layer for NON-CLICKABLE (greyed out)
+      map.current.addLayer({
+        id: 'constituency-fills-inactive',
+        type: 'fill',
+        source: 'constituencies',
+        filter: ['==', ['get', 'isClickable'], false],
+        paint: {
+          'fill-color': '#9E9E9E', // Grey for inactive
+          'fill-opacity': 0.3
+        }
+      });
+
+      // Add constituency fill layer for CLICKABLE (highlighted)
       map.current.addLayer({
         id: 'constituency-fills',
         type: 'fill',
         source: 'constituencies',
+        filter: ['==', ['get', 'isClickable'], true],
         paint: {
           'fill-color': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
-            '#2196F3', // Blue on hover
-            '#4CAF50'  // Green default
+            '#FF5722', // Orange on hover
+            '#FF9800'  // Saffron/Orange default - BJP color
           ],
           'fill-opacity': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
-            0.7,
-            0.4
+            0.8,
+            0.6
           ]
         }
       });
 
-      // Add constituency outline layer (borders)
+      // Add constituency outline layer for non-clickable (light border)
+      map.current.addLayer({
+        id: 'constituency-borders-inactive',
+        type: 'line',
+        source: 'constituencies',
+        filter: ['==', ['get', 'isClickable'], false],
+        paint: {
+          'line-color': '#BDBDBD',
+          'line-width': 0.5
+        }
+      });
+
+      // Add constituency outline layer for CLICKABLE (prominent border)
       map.current.addLayer({
         id: 'constituency-borders',
         type: 'line',
         source: 'constituencies',
+        filter: ['==', ['get', 'isClickable'], true],
         paint: {
-          'line-color': '#333',
-          'line-width': 1
+          'line-color': '#E65100', // Dark orange border
+          'line-width': 2
         }
       });
 
@@ -113,7 +195,7 @@ export const MapboxWestBengal: React.FC<MapboxWestBengalProps> = React.memo(({
 
       let hoveredStateId: string | number | null = null;
 
-      // Mouse enter event
+      // Mouse enter event for CLICKABLE constituencies
       map.current.on('mouseenter', 'constituency-fills', (e) => {
         if (!map.current || !e.features || e.features.length === 0) return;
 
@@ -138,18 +220,46 @@ export const MapboxWestBengal: React.FC<MapboxWestBengalProps> = React.memo(({
         const properties = e.features[0].properties;
         const coordinates = e.lngLat;
 
-        // Show popup on hover
+        // Show popup on hover - CLICKABLE
         const html = `
-          <div style="padding: 8px; min-width: 200px;">
-            <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #333;">
+          <div style="padding: 10px; min-width: 220px; border-left: 4px solid #FF9800;">
+            <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #E65100;">
               ${properties?.AC_NAME || 'Unknown'}
             </h3>
             <div style="font-size: 12px; color: #666;">
               <p style="margin: 4px 0;"><strong>District:</strong> ${properties?.DIST_NAME || 'N/A'}</p>
               <p style="margin: 4px 0;"><strong>AC No:</strong> ${properties?.AC_NO || 'N/A'}</p>
             </div>
-            <div style="margin-top: 8px; font-size: 11px; color: #999;">
-              Click for more details
+            <div style="margin-top: 10px; padding: 6px 10px; background: #FFF3E0; border-radius: 4px; font-size: 12px; color: #E65100; font-weight: 500;">
+              Click to view insights
+            </div>
+          </div>
+        `;
+
+        popup.setLngLat(coordinates).setHTML(html).addTo(map.current);
+      });
+
+      // Mouse enter event for NON-CLICKABLE constituencies
+      map.current.on('mouseenter', 'constituency-fills-inactive', (e) => {
+        if (!map.current || !e.features || e.features.length === 0) return;
+
+        map.current.getCanvas().style.cursor = 'default';
+
+        const properties = e.features[0].properties;
+        const coordinates = e.lngLat;
+
+        // Show popup on hover - NON-CLICKABLE
+        const html = `
+          <div style="padding: 10px; min-width: 200px; border-left: 4px solid #9E9E9E;">
+            <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #616161;">
+              ${properties?.AC_NAME || 'Unknown'}
+            </h3>
+            <div style="font-size: 12px; color: #666;">
+              <p style="margin: 4px 0;"><strong>District:</strong> ${properties?.DIST_NAME || 'N/A'}</p>
+              <p style="margin: 4px 0;"><strong>AC No:</strong> ${properties?.AC_NO || 'N/A'}</p>
+            </div>
+            <div style="margin-top: 10px; padding: 6px 10px; background: #F5F5F5; border-radius: 4px; font-size: 11px; color: #9E9E9E;">
+              Data coming soon
             </div>
           </div>
         `;
@@ -174,11 +284,28 @@ export const MapboxWestBengal: React.FC<MapboxWestBengalProps> = React.memo(({
         popup.remove();
       });
 
-      // Click event
+      // Mouse leave event for inactive
+      map.current.on('mouseleave', 'constituency-fills-inactive', () => {
+        if (!map.current) return;
+        map.current.getCanvas().style.cursor = '';
+        popup.remove();
+      });
+
+      // Click event for CLICKABLE constituencies - Navigate to insights
       map.current.on('click', 'constituency-fills', (e) => {
         if (!e.features || e.features.length === 0) return;
 
         const feature = e.features[0];
+        const acName = feature.properties?.AC_NAME;
+
+        // Find the constituency in our 50 data
+        const constituencyData = findConstituencyByName(acName);
+
+        if (constituencyData) {
+          // Navigate to insights page with constituency ID
+          navigate(`/dashboard/constituency-insights?id=${constituencyData.id}`);
+        }
+
         setSelectedConstituency(feature.properties);
 
         // Use ref to call callback without triggering re-initialization
