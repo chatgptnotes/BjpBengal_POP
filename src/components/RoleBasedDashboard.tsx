@@ -37,9 +37,9 @@ export default function RoleBasedDashboard() {
     return <Navigate to="/login" replace />;
   }
 
-  // All users now go to Constituency Insights dashboard by default
-  // This is the main dashboard shown in the screenshot
-  const dashboardRoute = '/dashboard/constituency-insights';
+  // All users now go to Main Dashboard (legacy) by default
+  // This is the Pulse of People Dashboard with the map view
+  const dashboardRoute = '/dashboard/legacy';
 
   console.log('Redirecting to:', dashboardRoute);
 
