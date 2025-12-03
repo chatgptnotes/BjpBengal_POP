@@ -1,9 +1,15 @@
-import { useState } from 'react';
-import { FileText, Download, Calendar, Filter, BarChart3, PieChart, TrendingUp } from 'lucide-react';
-import { useSentimentData, useTrendData, useCompetitorData } from '../hooks/useSentimentData';
-import { exportToCSV } from '../utils/dataProcessing';
-import { apiService } from '../services/api';
+import { useState, useEffect } from 'react';
+import { FileText, Download, Calendar, Filter, BarChart3, PieChart, TrendingUp, Loader2 } from 'lucide-react';
 import { TIME_RANGES, EXPORT_FORMATS } from '../utils/constants';
+import {
+  reportService,
+  type ReportFilters as ServiceReportFilters,
+  type SentimentReportData,
+  type TrendReportData,
+  type CompetitiveReportData,
+  type RegionalReportData
+} from '../services/reportService';
+import { exportReport, downloadBlob } from '../lib/reportExport';
 
 interface ReportFilters {
   timeRange: string;
@@ -11,6 +17,8 @@ interface ReportFilters {
   regions: string[];
   format: 'pdf' | 'excel' | 'csv';
 }
+
+type ReportPreviewData = SentimentReportData | TrendReportData | CompetitiveReportData | RegionalReportData | null;
 
 export default function Reports() {
   const [filters, setFilters] = useState<ReportFilters>({
@@ -20,11 +28,52 @@ export default function Reports() {
     format: 'pdf'
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [activeReport, setActiveReport] = useState('sentiment');
+  const [previewData, setPreviewData] = useState<ReportPreviewData>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: sentimentData } = useSentimentData();
-  const { data: trendData } = useTrendData(filters.timeRange);
-  const { data: competitorData } = useCompetitorData();
+  // Fetch preview data when report type or filters change
+  useEffect(() => {
+    const fetchPreviewData = async () => {
+      setIsLoadingPreview(true);
+      setError(null);
+
+      const serviceFilters: ServiceReportFilters = {
+        timeRange: filters.timeRange,
+        issues: filters.issues,
+        regions: filters.regions
+      };
+
+      try {
+        let data: ReportPreviewData = null;
+
+        switch (activeReport) {
+          case 'sentiment':
+            data = await reportService.getSentimentReportData(serviceFilters);
+            break;
+          case 'trends':
+            data = await reportService.getTrendReportData(serviceFilters);
+            break;
+          case 'competitor':
+            data = await reportService.getCompetitiveReportData(serviceFilters);
+            break;
+          case 'regional':
+            data = await reportService.getRegionalReportData(serviceFilters);
+            break;
+        }
+
+        setPreviewData(data);
+      } catch (err) {
+        console.error('[Reports] Error fetching preview data:', err);
+        setError('Failed to load report preview');
+      } finally {
+        setIsLoadingPreview(false);
+      }
+    };
+
+    fetchPreviewData();
+  }, [activeReport, filters.timeRange, filters.issues, filters.regions]);
 
   const reportTypes = [
     {
@@ -58,44 +107,37 @@ export default function Reports() {
   ];
 
   const handleGenerateReport = async () => {
+    if (!previewData) {
+      setError('No report data available. Please wait for preview to load.');
+      return;
+    }
+
     setIsGenerating(true);
-    
+    setError(null);
+
     try {
-      if (filters.format === 'csv') {
-        let data: any[];
-        switch (activeReport) {
-          case 'sentiment':
-            data = sentimentData || [];
-            break;
-          case 'trends':
-            data = trendData || [];
-            break;
-          case 'competitor':
-            data = competitorData || [];
-            break;
-          default:
-            data = [] as any[];
-        }
-        exportToCSV(data, `${activeReport}-report-${new Date().toISOString().split('T')[0]}`);
-      } else {
-        const blob = await apiService.exportReport(filters.format, {
-          reportType: activeReport,
-          timeRange: filters.timeRange,
-          issues: filters.issues,
-          regions: filters.regions
-        });
-        
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${activeReport}-report.${filters.format}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }
-    } catch (error) {
-      console.error('Failed to generate report:', error);
+      // Generate report using the export service
+      const blob = await exportReport(activeReport, previewData, filters.format);
+
+      // Determine file extension
+      const extensions: Record<string, string> = {
+        pdf: 'pdf',
+        excel: 'xlsx',
+        csv: 'csv'
+      };
+      const ext = extensions[filters.format] || filters.format;
+
+      // Create filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${activeReport}-report-${timestamp}.${ext}`;
+
+      // Download the file
+      downloadBlob(blob, filename);
+
+      console.log(`[Reports] Successfully generated ${filename}`);
+    } catch (err) {
+      console.error('[Reports] Failed to generate report:', err);
+      setError('Failed to generate report. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -153,70 +195,166 @@ export default function Reports() {
 
             <div className="mt-8">
               <h4 className="text-md font-semibold text-gray-900 mb-4">Report Preview</h4>
-              <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                {activeReport === 'sentiment' && (
-                  <div className="space-y-4">
-                    <h5 className="font-medium text-gray-900">Sentiment Analysis Summary</h5>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {sentimentData?.slice(0, 4).map((item, index) => (
-                        <div key={index} className="text-center">
-                          <div className="text-2xl font-bold text-gray-900">
-                            {Math.round(item.sentiment * 100)}%
+              <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 min-h-[200px]">
+                {isLoadingPreview ? (
+                  <div className="flex items-center justify-center h-40">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <span className="ml-2 text-gray-600">Loading preview...</span>
+                  </div>
+                ) : error ? (
+                  <div className="text-center text-red-600 py-8">{error}</div>
+                ) : (
+                  <>
+                    {activeReport === 'sentiment' && previewData && 'summary' in previewData && previewData.reportType === 'sentiment' && (
+                      <div className="space-y-4">
+                        <h5 className="font-medium text-gray-900">Sentiment Analysis Summary</h5>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-2xl font-bold text-blue-600">
+                              {previewData.summary.overallSentiment}%
+                            </div>
+                            <div className="text-sm text-gray-600">Overall Sentiment</div>
                           </div>
-                          <div className="text-sm text-gray-600">{item.issue}</div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-2xl font-bold text-gray-900">
+                              {previewData.summary.totalIssues}
+                            </div>
+                            <div className="text-sm text-gray-600">Issues Analyzed</div>
+                          </div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-2xl font-bold text-green-600">
+                              {previewData.summary.positiveCount}
+                            </div>
+                            <div className="text-sm text-gray-600">Positive Issues</div>
+                          </div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-2xl font-bold text-red-600">
+                              {previewData.summary.negativeCount}
+                            </div>
+                            <div className="text-sm text-gray-600">Negative Issues</div>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {activeReport === 'trends' && (
-                  <div className="space-y-4">
-                    <h5 className="font-medium text-gray-900">Trend Analysis Summary</h5>
-                    <div className="text-sm text-gray-600">
-                      Analysis of sentiment trends over {TIME_RANGES[filters.timeRange as keyof typeof TIME_RANGES]?.label.toLowerCase() || 'selected period'}
-                    </div>
-                    <div className="flex space-x-4 text-sm">
-                      <span className="text-green-600">↑ Improving: Health, Education</span>
-                      <span className="text-red-600">↓ Declining: Jobs</span>
-                      <span className="text-gray-600">→ Stable: Infrastructure</span>
-                    </div>
-                  </div>
-                )}
-
-                {activeReport === 'competitor' && (
-                  <div className="space-y-4">
-                    <h5 className="font-medium text-gray-900">Competitive Analysis Summary</h5>
-                    <div className="text-sm text-gray-600">
-                      Head-to-head comparison across key political issues
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium">Leading Issues:</span>
-                        <div className="text-green-600">Jobs, Health, Infrastructure</div>
+                        <div className="mt-4 text-sm">
+                          <span className="text-green-600">Top Positive: {previewData.summary.topPositiveIssue}</span>
+                          <span className="mx-3">|</span>
+                          <span className="text-red-600">Top Negative: {previewData.summary.topNegativeIssue}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-medium">Areas for Improvement:</span>
-                        <div className="text-orange-600">Education, Law & Order</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {activeReport === 'regional' && (
-                  <div className="space-y-4">
-                    <h5 className="font-medium text-gray-900">Regional Analysis Summary</h5>
-                    <div className="text-sm text-gray-600">
-                      Geographic breakdown of sentiment across regions
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                      <div>Ward 1: <span className="text-green-600">72%</span></div>
-                      <div>Ward 2: <span className="text-yellow-600">58%</span></div>
-                      <div>Ward 3: <span className="text-green-600">81%</span></div>
-                      <div>Ward 4: <span className="text-orange-600">65%</span></div>
-                      <div>Ward 5: <span className="text-red-600">42%</span></div>
-                    </div>
-                  </div>
+                    {activeReport === 'trends' && previewData && 'summary' in previewData && previewData.reportType === 'trends' && (
+                      <div className="space-y-4">
+                        <h5 className="font-medium text-gray-900">Trend Analysis Summary</h5>
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className={`text-xl font-bold ${
+                              previewData.summary.overallTrend === 'improving' ? 'text-green-600' :
+                              previewData.summary.overallTrend === 'declining' ? 'text-red-600' : 'text-gray-600'
+                            }`}>
+                              {previewData.summary.overallTrend === 'improving' ? '↑ Improving' :
+                               previewData.summary.overallTrend === 'declining' ? '↓ Declining' : '→ Stable'}
+                            </div>
+                            <div className="text-sm text-gray-600">Overall Trend</div>
+                          </div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-xl font-bold text-gray-900">
+                              {previewData.summary.dataPoints}
+                            </div>
+                            <div className="text-sm text-gray-600">Data Points</div>
+                          </div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className={`text-xl font-bold ${previewData.summary.avgChange > 0 ? 'text-green-600' : previewData.summary.avgChange < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                              {previewData.summary.avgChange > 0 ? '+' : ''}{previewData.summary.avgChange}%
+                            </div>
+                            <div className="text-sm text-gray-600">Avg Change</div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Time Period: {previewData.summary.timeRangeLabel}
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-sm mt-2">
+                          {previewData.weekOverWeek.map((item, idx) => (
+                            <span key={idx} className={
+                              item.trend === 'up' ? 'text-green-600' :
+                              item.trend === 'down' ? 'text-red-600' : 'text-gray-600'
+                            }>
+                              {item.trend === 'up' ? '↑' : item.trend === 'down' ? '↓' : '→'} {item.issue}: {item.change > 0 ? '+' : ''}{item.change}%
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeReport === 'competitor' && previewData && 'summary' in previewData && previewData.reportType === 'competitor' && (
+                      <div className="space-y-4">
+                        <h5 className="font-medium text-gray-900">Competitive Analysis Summary</h5>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-xl font-bold text-gray-900">
+                              {previewData.summary.totalCompetitors}
+                            </div>
+                            <div className="text-sm text-gray-600">Competitors Analyzed</div>
+                          </div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-xl font-bold text-blue-600">
+                              #{previewData.summary.bjpRank}
+                            </div>
+                            <div className="text-sm text-gray-600">BJP Rank</div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium">Leading In:</span>
+                            <div className="text-green-600">{previewData.summary.leadingIn.join(', ') || 'None'}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium">Trailing In:</span>
+                            <div className="text-orange-600">{previewData.summary.trailingIn.join(', ') || 'None'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeReport === 'regional' && previewData && 'summary' in previewData && previewData.reportType === 'regional' && (
+                      <div className="space-y-4">
+                        <h5 className="font-medium text-gray-900">Regional Analysis Summary</h5>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-xl font-bold text-gray-900">
+                              {previewData.summary.totalConstituencies}
+                            </div>
+                            <div className="text-sm text-gray-600">Constituencies</div>
+                          </div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-xl font-bold text-blue-600">
+                              {previewData.summary.avgSentiment}%
+                            </div>
+                            <div className="text-sm text-gray-600">Avg Sentiment</div>
+                          </div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-xl font-bold text-purple-600">
+                              {previewData.summary.urbanCount}
+                            </div>
+                            <div className="text-sm text-gray-600">Urban</div>
+                          </div>
+                          <div className="text-center bg-white p-3 rounded-lg shadow-sm">
+                            <div className="text-xl font-bold text-green-600">
+                              {previewData.summary.ruralCount}
+                            </div>
+                            <div className="text-sm text-gray-600">Rural</div>
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-green-600">Top: {previewData.summary.topPerforming}</span>
+                          <span className="mx-3">|</span>
+                          <span className="text-red-600">Needs Attention: {previewData.summary.needsAttention}</span>
+                        </div>
+                        <div className="text-sm text-gray-600 mt-2">
+                          Urban Avg: {previewData.urbanVsRural.urban.avgSentiment}% | Rural Avg: {previewData.urbanVsRural.rural.avgSentiment}%
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
