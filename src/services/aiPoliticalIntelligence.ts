@@ -6,6 +6,7 @@
 import { supabase } from '../lib/supabase';
 import { WEST_BENGAL_CONSTITUENCIES } from '../data/westBengalConstituencies';
 import { constituencyIntelligenceService } from './constituencyIntelligenceService';
+import { electionWinningStrategy } from './electionWinningStrategy';
 
 // Types
 export interface ConstituencyContext {
@@ -623,6 +624,9 @@ Format your response as JSON array with the structure matching AIInsight interfa
     const constituencyId = context.basic.id;
     const intelligence = await constituencyIntelligenceService.getConstituencyIntelligence(constituencyId);
 
+    // Get winning strategy
+    const strategy = await electionWinningStrategy.generateWinningStrategy(constituencyId);
+
     // Use real data for insights
     const antiIncumbency = intelligence.swingFactors.antiIncumbency;
     const bjpVoteShare = intelligence.political.bjpVoteShare2021;
@@ -635,14 +639,14 @@ Format your response as JSON array with the structure matching AIInsight interfa
         id: 'anti-incumbency-' + Date.now(),
         category: 'opportunity',
         priority: 'high',
-        title: `Convert ${antiIncumbency}% Anti-Incumbency into BJP Votes`,
-        description: `${intelligence.political.currentParty} MLA ${intelligence.political.currentMLA} facing backlash. Key issues: ${intelligence.political.keyIssues.join(', ')}.`,
+        title: `Convert ${antiIncumbency}% Anti-Incumbency into ${strategy.voteBank.swing.dissatisfiedTMC.toLocaleString()} Votes`,
+        description: `${intelligence.political.currentParty} MLA ${intelligence.political.currentMLA} vulnerable. ${strategy.oppositionWeakness.tmcVulnerabilities[0] || intelligence.political.keyIssues[0]}`,
 
         analysis: {
-          situation: `${context.sentiment.antiIncumbency}% voters express dissatisfaction with current MLA ${context.political.currentMLA}`,
-          impact: 'Potential to swing 15-20% votes if properly channeled',
-          urgency: 'Must act within 2 weeks to capture momentum',
-          confidence: 75
+          situation: `Need ${strategy.winningFormula.gapToVictory.toLocaleString()} votes. ${strategy.voteBank.convertible.targetGroups.length} voter groups identified`,
+          impact: `Win probability: ${strategy.winningFormula.confidence}%. Status: ${strategy.constituency.currentStatus}`,
+          urgency: strategy.constituency.currentStatus === 'WINNABLE' ? 'High priority winnable seat!' : 'Sustained campaign needed',
+          confidence: strategy.winningFormula.confidence
         },
 
         recommendations: {
