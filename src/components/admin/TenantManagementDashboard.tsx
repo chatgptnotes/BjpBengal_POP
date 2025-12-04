@@ -371,7 +371,7 @@ function HealthIndicator({ score }: { score?: number }) {
   }
 
   let color = 'text-green-600';
-  let icon = '●';
+  const icon = '●';
 
   if (score < 50) {
     color = 'text-red-600';

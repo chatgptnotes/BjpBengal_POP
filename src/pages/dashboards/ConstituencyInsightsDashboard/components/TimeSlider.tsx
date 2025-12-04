@@ -26,7 +26,7 @@ export default function TimeSlider({ value, onChange }: TimeSliderProps) {
 
   const handlePresetClick = (preset: typeof presets[0]) => {
     const to = new Date();
-    let from = new Date();
+    const from = new Date();
 
     if (preset.days) {
       from.setDate(to.getDate() - preset.days);

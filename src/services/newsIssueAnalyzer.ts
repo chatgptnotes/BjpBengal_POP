@@ -267,7 +267,7 @@ export async function analyzeNewsForConstituency(
   console.log(`[NewsIssueAnalyzer] Analyzing issues for ${constituencyName || constituencyId}`);
 
   // Fetch news articles (only columns that exist in the table)
-  let { data: articles, error } = await supabase
+  const { data: articles, error } = await supabase
     .from('news_articles')
     .select('id, title, content, summary, source, published_at, tags, sentiment_score, sentiment_polarity, bjp_mentioned')
     .gte('published_at', startDate.toISOString())
