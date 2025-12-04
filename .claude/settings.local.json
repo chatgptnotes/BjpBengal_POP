@@ -10,7 +10,10 @@
       "Bash(git merge:*)",
       "Bash(cat:*)",
       "Bash(curl:*)",
-      "Bash(npm run dev:all:*)"
+      "Bash(npm run dev:all:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
