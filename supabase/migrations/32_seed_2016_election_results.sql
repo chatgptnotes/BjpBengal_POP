@@ -199,6 +199,7 @@ UPDATE election_results SET
     WHEN 'wb_howrah_shibpur' THEN 'CPI(M)'
     WHEN 'wb_howrah_bally' THEN 'CPI(M)'
     WHEN 'wb_howrah_uttarpara' THEN 'CPI(M)'
+     
     WHEN 'wb_darjeeling_darjeeling' THEN 'INC'
     WHEN 'wb_darjeeling_siliguri' THEN 'AITC'
     ELSE runner_up_party_2016
