@@ -209,13 +209,18 @@ export async function fetchConstituencyNews(
 ): Promise<ConstituencyNews> {
   console.log(`📰 Fetching news for ${constituencyName}, ${district}...`);
 
+  // Handle state-level view with better search terms
+  const isStateLevel = constituencyId === 'all_west_bengal' || district === 'State Level';
+  const searchName = isStateLevel ? 'West Bengal BJP' : constituencyName;
+  const searchDistrict = isStateLevel ? 'politics election' : district;
+
   try {
     // Fetch from multiple sources in parallel
     const [newsApiData, googleNewsData, twitterData, facebookData] = await Promise.allSettled([
-      fetchNewsAPI(constituencyName, district),
-      fetchGoogleNews(constituencyName, district),
-      fetchTwitterMentions(constituencyName, district),
-      fetchFacebookPosts(constituencyName)
+      fetchNewsAPI(searchName, searchDistrict),
+      fetchGoogleNews(searchName, searchDistrict),
+      fetchTwitterMentions(searchName, searchDistrict),
+      fetchFacebookPosts(searchName)
     ]);
 
     // Combine all news items

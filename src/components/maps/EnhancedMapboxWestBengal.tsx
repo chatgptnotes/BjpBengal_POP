@@ -14,7 +14,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import westBengalGeoJSON from '../../assets/maps/westbengal-constituencies.json';
-import { Layers, TrendingUp, AlertTriangle, Briefcase, Heart, Building, Users, Sprout, Map as MapIcon } from 'lucide-react';
+import { Layers, TrendingUp, AlertTriangle, Briefcase, Heart, Building, Users, Sprout, Map as MapIcon, Vote } from 'lucide-react';
 import { defaultConstituencySentiment, getConstituencySentiment, buildDistrictSentimentMap, getStateSentiment } from '../../data/defaultConstituencySentiment';
 import { getIssueScore, getConstituencyIssueScores } from '../../data/constituencyIssueData';
 import { MapDrillDownLevel } from '../../types/geography';
@@ -22,12 +22,32 @@ import { useMemo } from 'react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiYmttdXJhbGkiLCJhIjoiY21ocDhoNXhiMGhodDJrcW94OGptdDg0MiJ9.dq6OU3jiKKntjhIDD9sxWQ';
 
+// Political party colors for West Bengal
+const PARTY_COLORS: Record<string, string> = {
+  'TMC': '#00A86B',      // Green - Trinamool Congress
+  'AITC': '#00A86B',     // Same as TMC (All India Trinamool Congress)
+  'BJP': '#FF9933',      // Saffron - Bharatiya Janata Party
+  'INC': '#00BFFF',      // Blue - Indian National Congress
+  'CONGRESS': '#00BFFF', // Same as INC
+  'CPM': '#FF0000',      // Red - Communist Party of India (Marxist)
+  'CPIM': '#FF0000',     // Same as CPM
+  'CPI': '#E51C23',      // Darker Red - Communist Party of India
+  'RSP': '#FF5722',      // Orange-Red - Revolutionary Socialist Party
+  'AIFB': '#D32F2F',     // Red - All India Forward Bloc
+  'IND': '#808080',      // Gray - Independent
+  'OTHERS': '#9E9E9E',   // Gray - Other parties
+};
+
+type ViewMode = 'sentiment' | 'party';
+
 interface EnhancedMapboxWestBengalProps {
   height?: string;
   onConstituencyClick?: (constituency: any) => void;
   sentimentData?: { [constituency: string]: number }; // Constituency name -> sentiment score
   issueData?: { [constituency: string]: { [issue: string]: number } }; // Issue-wise scores
   alertsData?: Array<{ lat: number; lng: number; title: string; severity: string; description: string }>;
+  selectedConstituencyId?: string; // External selection to zoom to
+  partyData?: { [constituencyName: string]: string }; // Constituency name -> party (TMC, BJP, etc.)
 }
 
 type MapLayer = 'sentiment' | 'jobs' | 'healthcare' | 'infrastructure' | 'education' | 'agriculture' | 'alerts';
@@ -37,7 +57,9 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
   onConstituencyClick,
   sentimentData = {},
   issueData = {},
-  alertsData = []
+  alertsData = [],
+  selectedConstituencyId,
+  partyData = {}
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -46,10 +68,13 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
   const [showLayerControl, setShowLayerControl] = useState(false);
   const [geographicLevel, setGeographicLevel] = useState<MapDrillDownLevel>('constituency');
   const [showLevelControl, setShowLevelControl] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('sentiment');
   const alertMarkers = useRef<mapboxgl.Marker[]>([]);
 
   const onConstituencyClickRef = useRef(onConstituencyClick);
   const activeLayerRef = useRef<MapLayer>('sentiment'); // Ref to track current layer for event handlers
+  const viewModeRef = useRef<ViewMode>('sentiment'); // Ref to track view mode for event handlers
+  const partyDataRef = useRef(partyData); // Ref to access party data in event handlers
 
   useEffect(() => {
     onConstituencyClickRef.current = onConstituencyClick;
@@ -60,10 +85,73 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
     activeLayerRef.current = activeLayer;
   }, [activeLayer]);
 
+  // Sync viewModeRef with viewMode state
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+  }, [viewMode]);
+
+  // Sync partyDataRef with partyData prop
+  useEffect(() => {
+    partyDataRef.current = partyData;
+  }, [partyData]);
+
   // Ensure map always starts with 'sentiment' layer on mount/refresh
   useEffect(() => {
     setActiveLayer('sentiment');
   }, []);
+
+  // Fly to selected constituency when it changes
+  useEffect(() => {
+    if (!map.current || !selectedConstituencyId) return;
+
+    // If "all_west_bengal", reset to full state view
+    if (selectedConstituencyId === 'all_west_bengal') {
+      map.current.flyTo({
+        center: [88.3639, 22.5726],
+        zoom: 6.5,
+        duration: 1000
+      });
+      return;
+    }
+
+    // Find the constituency in GeoJSON by matching the ID pattern
+    const features = (westBengalGeoJSON as any).features;
+    const matchingFeature = features.find((f: any) => {
+      const acNo = f.properties.AC_NO;
+      const acName = f.properties.AC_NAME?.toLowerCase().replace(/[^a-z]/g, '');
+      const searchId = selectedConstituencyId.toLowerCase();
+
+      // Match by wb_{district}_{name} pattern or direct name match
+      return searchId.includes(acName) || acName?.includes(searchId.split('_').pop());
+    });
+
+    if (matchingFeature && matchingFeature.geometry) {
+      // Calculate bounds of the constituency
+      const coordinates = matchingFeature.geometry.type === 'MultiPolygon'
+        ? matchingFeature.geometry.coordinates.flat(2)
+        : matchingFeature.geometry.coordinates.flat(1);
+
+      if (coordinates.length > 0) {
+        const bounds = coordinates.reduce(
+          (acc: any, coord: number[]) => {
+            return {
+              minLng: Math.min(acc.minLng, coord[0]),
+              maxLng: Math.max(acc.maxLng, coord[0]),
+              minLat: Math.min(acc.minLat, coord[1]),
+              maxLat: Math.max(acc.maxLat, coord[1])
+            };
+          },
+          { minLng: Infinity, maxLng: -Infinity, minLat: Infinity, maxLat: -Infinity }
+        );
+
+        // Fly to the constituency bounds
+        map.current.fitBounds(
+          [[bounds.minLng, bounds.minLat], [bounds.maxLng, bounds.maxLat]],
+          { padding: 50, duration: 1000 }
+        );
+      }
+    }
+  }, [selectedConstituencyId]);
 
   // Build district sentiment map from GeoJSON (calculated once)
   const districtSentimentMap = useMemo(() => {
@@ -89,7 +177,19 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
   }, []);
 
   // Get color based on active layer, geographic level, and data
+  // Helper function to get party color
+  const getPartyColor = useCallback((constituencyName: string): string => {
+    // Try direct match first, then uppercase (GeoJSON uses uppercase AC_NAME)
+    const party = (partyData[constituencyName] || partyData[constituencyName?.toUpperCase()])?.toUpperCase() || '';
+    return PARTY_COLORS[party] || PARTY_COLORS['OTHERS'] || '#9E9E9E';
+  }, [partyData]);
+
   const getLayerColor = useCallback((constituencyName: string, districtName?: string, acNo?: number): string => {
+    // If in party view mode, return party color directly
+    if (viewMode === 'party') {
+      return getPartyColor(constituencyName);
+    }
+
     // Generate constituency code from AC_NO (e.g., AC_NO=1 -> WB001)
     const constituencyCode = acNo ? `WB${String(acNo).padStart(3, '0')}` : '';
 
@@ -127,7 +227,7 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
     }
 
     return getSentimentColor(score);
-  }, [activeLayer, geographicLevel, sentimentData, issueData, getSentimentColor, stateSentiment, districtSentimentMap]);
+  }, [activeLayer, geographicLevel, viewMode, sentimentData, issueData, partyData, getSentimentColor, getPartyColor, stateSentiment, districtSentimentMap]);
 
   // Initialize map
   useEffect(() => {
@@ -743,10 +843,14 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
         colorExpression.push(constituencyName, color); // Color by constituency
       }
 
-      // Add score label based on geographic level
+      // Add score label based on view mode and geographic level
       let labelScore = 50;
 
-      if (geographicLevel === 'state') {
+      if (viewMode === 'party') {
+        // Party mode - show party abbreviation
+        const party = partyData[constituencyName]?.toUpperCase() || '';
+        labelExpression.push(constituencyName, party || '');
+      } else if (geographicLevel === 'state') {
         // State level - show state-wide score
         labelScore = typeof stateSentiment === 'object' ? stateSentiment.positive : stateSentiment;
         labelExpression.push(constituencyName, ``); // Hide labels at state level (too cluttered)
@@ -777,12 +881,12 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
     labelExpression.push(''); // Empty label for unmatched
 
     console.log('[Map] Updating colors. Sample:', colorExpression.slice(0, 10));
-    console.log('[Map] Sentiment data keys:', Object.keys(sentimentData).slice(0, 5));
+    console.log('[Map] View mode:', viewMode, 'Sentiment data keys:', Object.keys(sentimentData).slice(0, 5));
 
     map.current.setPaintProperty('constituency-fills', 'fill-color', colorExpression);
     map.current.setLayoutProperty('sentiment-labels', 'text-field', labelExpression);
 
-  }, [activeLayer, geographicLevel, getLayerColor, sentimentData, issueData, stateSentiment, districtSentimentMap]);
+  }, [activeLayer, geographicLevel, viewMode, getLayerColor, sentimentData, issueData, partyData, stateSentiment, districtSentimentMap]);
 
   // Handle alert markers
   useEffect(() => {
@@ -938,6 +1042,50 @@ export const EnhancedMapboxWestBengal: React.FC<EnhancedMapboxWestBengalProps> =
                 )}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* View Mode Toggle: Sentiment vs Party */}
+        <button
+          onClick={() => setViewMode(viewMode === 'sentiment' ? 'party' : 'sentiment')}
+          className={`w-full rounded-lg shadow-lg p-3 transition-colors flex items-center space-x-2 ${
+            viewMode === 'party'
+              ? 'bg-purple-600 hover:bg-purple-700'
+              : 'bg-white hover:bg-gray-50'
+          }`}
+        >
+          <Vote className={`w-5 h-5 ${viewMode === 'party' ? 'text-white' : 'text-purple-600'}`} />
+          <span className={`text-sm font-medium ${viewMode === 'party' ? 'text-white' : 'text-gray-700'}`}>
+            {viewMode === 'sentiment' ? 'Show Party Colors' : 'Show Sentiment'}
+          </span>
+        </button>
+
+        {/* Party Legend - only shown in party mode */}
+        {viewMode === 'party' && (
+          <div className="bg-white rounded-lg shadow-lg p-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Party Colors</p>
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PARTY_COLORS.TMC }}></div>
+                <span className="text-xs text-gray-600">TMC - Trinamool Congress</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PARTY_COLORS.BJP }}></div>
+                <span className="text-xs text-gray-600">BJP - Bharatiya Janata Party</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PARTY_COLORS.INC }}></div>
+                <span className="text-xs text-gray-600">INC - Indian National Congress</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PARTY_COLORS.CPM }}></div>
+                <span className="text-xs text-gray-600">CPM - Communist Party</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PARTY_COLORS.IND }}></div>
+                <span className="text-xs text-gray-600">IND - Independent</span>
+              </div>
+            </div>
           </div>
         )}
       </div>

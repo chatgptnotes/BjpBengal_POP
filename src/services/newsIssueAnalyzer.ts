@@ -216,12 +216,17 @@ function calculateIssueScore(issue: {
 }): number {
   let score = 0;
 
+  // Clamp sentiment_score to valid range
+  const clampedSentiment = Math.max(-1, Math.min(1, issue.sentiment_score || 0));
+
   // Frequency (40 pts max) - more mentions = more important
-  score += Math.min(40, issue.frequency * 4);
+  score += Math.min(40, Math.max(0, issue.frequency) * 4);
 
   // Negative Sentiment (30 pts max) - problems need attention
-  const negativeFactor = (1 - issue.sentiment_score) / 2; // 0-1 scale
-  score += negativeFactor * 30;
+  // clampedSentiment: -1 (negative) to 1 (positive)
+  // negativeFactor: 0 (positive) to 1 (negative)
+  const negativeFactor = (1 - clampedSentiment) / 2;
+  score += Math.min(30, negativeFactor * 30);
 
   // Severity (20 pts max)
   const severityPts: Record<string, number> = { critical: 20, high: 15, medium: 10, low: 5 };
@@ -233,7 +238,8 @@ function calculateIssueScore(issue: {
   );
   score += Math.max(0, 10 - (daysSinceMention * 0.33));
 
-  return Math.round(score);
+  // Ensure final score is in valid range (0-100)
+  return Math.round(Math.max(0, Math.min(100, score)));
 }
 
 /**
@@ -385,7 +391,9 @@ export async function analyzeNewsForConstituency(
       agg.article_ids.push(article.id);
 
       // Get sentiment score from article or use HF fallback
-      const sentimentScore = article.sentiment_score ?? polarityToScore(article.sentiment_polarity);
+      // Clamp to valid range (-1 to 1) in case of bad data
+      const rawScore = article.sentiment_score ?? polarityToScore(article.sentiment_polarity);
+      const sentimentScore = Math.max(-1, Math.min(1, rawScore || 0));
       agg.sentiment_scores.push(sentimentScore);
       agg.severities.push(issue.severity);
 
