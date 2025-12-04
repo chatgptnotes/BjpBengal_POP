@@ -7,7 +7,7 @@ import { fetchConstituencyNewsWithCache } from './constituencyNewsService';
 import { upsertDemographicSentiment } from './supabase/demographicSentiment.service';
 
 // Gemini API for sentiment analysis (already configured in dashboard)
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API || '';
 
 // Demographic keywords for filtering news
 const DEMOGRAPHIC_KEYWORDS = {

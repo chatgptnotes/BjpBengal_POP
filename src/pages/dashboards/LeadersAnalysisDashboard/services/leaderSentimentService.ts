@@ -91,7 +91,7 @@ export async function analyzeWithGemini(
   leaderName: string,
   apiKey?: string
 ): Promise<SentimentAnalysisResult> {
-  const key = apiKey || import.meta.env.VITE_GEMINI_API_KEY;
+  const key = apiKey || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API;
 
   if (!key) {
     console.warn('Gemini API key not found, falling back to keyword analysis');

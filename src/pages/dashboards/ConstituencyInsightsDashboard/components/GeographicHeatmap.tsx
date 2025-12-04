@@ -34,6 +34,7 @@ interface MapMarkerData {
 interface Props {
   data?: MapMarkerData[];
   selectedConstituency?: string;
+  selectedConstituencyId?: string;
   constituencyLeaders?: Array<{
     constituency_id: string;
     constituency_name: string;
@@ -46,6 +47,7 @@ interface Props {
 export default function GeographicHeatmap({
   data,
   selectedConstituency,
+  selectedConstituencyId,
   constituencyLeaders
 }: Props) {
   // State for news data and tooltip
@@ -53,6 +55,9 @@ export default function GeographicHeatmap({
   const [loadingNews, setLoadingNews] = useState(false);
   const [hoveredConstituency, setHoveredConstituency] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+  // Check if viewing state level (All West Bengal)
+  const isStateLevelView = !selectedConstituencyId || selectedConstituencyId === 'all_west_bengal';
 
   // Use real data if constituencyLeaders is provided
   const mapData: MapMarkerData[] = constituencyLeaders
@@ -66,6 +71,34 @@ export default function GeographicHeatmap({
         is_swing: c.is_swing
       }))
     : (data || []);
+
+  // Calculate viewBox for zooming
+  const getViewBox = (): string => {
+    if (isStateLevelView) {
+      return "0 0 300 400"; // Full state view
+    }
+
+    // Find selected constituency coordinates
+    const selectedData = mapData.find(c =>
+      c.name === selectedConstituency || c.id === selectedConstituencyId
+    );
+
+    if (selectedData) {
+      // Zoom to constituency area (100x133 centered on the point)
+      const zoomWidth = 100;
+      const zoomHeight = 133;
+      let x = selectedData.x - zoomWidth / 2;
+      let y = selectedData.y - zoomHeight / 2;
+
+      // Clamp to bounds
+      x = Math.max(0, Math.min(200, x));
+      y = Math.max(0, Math.min(267, y));
+
+      return `${x} ${y} ${zoomWidth} ${zoomHeight}`;
+    }
+
+    return "0 0 300 400"; // Fallback to full view
+  };
 
   // Fetch news data for all constituencies
   useEffect(() => {
@@ -156,7 +189,9 @@ export default function GeographicHeatmap({
           {loadingNews && (
             <div className="animate-spin w-3 h-3 border border-emerald-500 border-t-transparent rounded-full"></div>
           )}
-          <span className="text-xs text-slate-400">West Bengal</span>
+          <span className="text-xs text-slate-400">
+            {isStateLevelView ? 'West Bengal' : selectedConstituency || 'West Bengal'}
+          </span>
         </div>
       </div>
 
@@ -164,8 +199,8 @@ export default function GeographicHeatmap({
       <div className="relative bg-slate-900/50 rounded-lg p-4 aspect-[3/4]">
         {/* West Bengal SVG Outline */}
         <svg
-          viewBox="0 0 300 400"
-          className="w-full h-full"
+          viewBox={getViewBox()}
+          className="w-full h-full transition-all duration-500 ease-in-out"
           style={{ filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.5))' }}
         >
           {/* Simplified WB outline - top to bottom */}

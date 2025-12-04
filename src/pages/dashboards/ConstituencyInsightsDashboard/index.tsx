@@ -55,7 +55,7 @@ import { getElectionHistory, getPartyStrength, type ElectionHistory, type PartyS
 /* -------------------------------------------------------------------------
    GEMINI API UTILITIES
    ------------------------------------------------------------------------- */
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ""; // API Key from environment
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API || ""; // API Key from environment
 
 const callGeminiAPI = async (prompt: string, systemInstruction = "") => {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
@@ -1083,9 +1083,11 @@ export default function PulseDashboard() {
         </div>
       </div>
 
-      {/* 3. INFOGRAPHIC CARD - Directly below Time Window (only for specific constituency, not state-level) */}
+      {/* 3. INFOGRAPHIC CARD - Full page view (only for specific constituency, not state-level) */}
       {!isStateLevelView && (
-        <ConstituencyInfographicCard constituencyId={selectedId} />
+        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+          <ConstituencyInfographicCard constituencyId={selectedId} />
+        </div>
       )}
 
       {/* 4. MAIN DASHBOARD CONTENT */}
@@ -1128,32 +1130,32 @@ export default function PulseDashboard() {
             <div className="lg:col-span-5 space-y-6">
               {/* State-Level View Summary - shown only for "All West Bengal" */}
               {isStateLevelView && (
-                <div className="bg-gradient-to-br from-orange-50 to-green-50 rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-lg">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-green-500 rounded-xl flex items-center justify-center">
                       <span className="material-icons text-white text-xl">public</span>
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-slate-800">All West Bengal</h3>
-                      <p className="text-sm text-slate-500">State-wide Sentiment Analysis</p>
+                      <h3 className="text-xl font-bold text-white">All West Bengal</h3>
+                      <p className="text-sm text-slate-400">State-wide Sentiment Analysis</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="bg-white/80 rounded-xl p-4 border border-slate-200">
-                      <div className="text-xs text-slate-500 font-medium">Total Constituencies</div>
-                      <div className="text-2xl font-bold text-slate-800">294</div>
+                    <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                      <div className="text-xs text-slate-400 font-medium">Total Constituencies</div>
+                      <div className="text-2xl font-bold text-white">294</div>
                     </div>
-                    <div className="bg-white/80 rounded-xl p-4 border border-slate-200">
-                      <div className="text-xs text-slate-500 font-medium">Total Voters</div>
-                      <div className="text-2xl font-bold text-slate-800">7.3 Cr</div>
+                    <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                      <div className="text-xs text-slate-400 font-medium">Total Voters</div>
+                      <div className="text-2xl font-bold text-white">7.3 Cr</div>
                     </div>
-                    <div className="bg-white/80 rounded-xl p-4 border border-slate-200">
-                      <div className="text-xs text-orange-600 font-medium">BJP Mentions</div>
-                      <div className="text-2xl font-bold text-orange-600">{sentimentStats?.bjpMentions || 0}</div>
+                    <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                      <div className="text-xs text-orange-400 font-medium">BJP Mentions</div>
+                      <div className="text-2xl font-bold text-orange-400">{sentimentStats?.bjpMentions || 0}</div>
                     </div>
-                    <div className="bg-white/80 rounded-xl p-4 border border-slate-200">
-                      <div className="text-xs text-green-600 font-medium">TMC Mentions</div>
-                      <div className="text-2xl font-bold text-green-600">{sentimentStats?.tmcMentions || 0}</div>
+                    <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600">
+                      <div className="text-xs text-emerald-400 font-medium">TMC Mentions</div>
+                      <div className="text-2xl font-bold text-emerald-400">{sentimentStats?.tmcMentions || 0}</div>
                     </div>
                   </div>
                 </div>

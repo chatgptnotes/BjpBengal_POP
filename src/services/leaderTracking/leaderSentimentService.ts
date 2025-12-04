@@ -63,7 +63,7 @@ export const leaderSentimentService = {
    * Analyze sentiment using Gemini AI
    */
   async analyzeWithGemini(text: string, leaderName: string, party: string): Promise<SentimentResult | null> {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API;
     if (!apiKey) {
       console.warn('Gemini API key not configured, using fallback');
       return null;

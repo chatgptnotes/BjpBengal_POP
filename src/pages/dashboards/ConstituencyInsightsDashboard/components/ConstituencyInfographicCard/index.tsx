@@ -178,12 +178,12 @@ export default function ConstituencyInfographicCard({
 
   return (
     <motion.div
-      className="min-h-screen bg-slate-900 p-2 md:p-6 text-slate-800 font-sans"
+      className="min-h-screen w-full bg-slate-900 px-4 py-6 md:px-8 md:py-8 lg:px-12 lg:py-10 text-slate-800 font-sans"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      <div className="max-w-7xl mx-auto space-y-4">
+      <div className="w-full space-y-4">
 
         {/* --- HEADER --- */}
         <motion.div
