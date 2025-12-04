@@ -43,7 +43,9 @@ class TranscriptionSocketService {
 
       this.socket = io(this.serverUrl, {
         path: '/transcription',
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        reconnection: false,
+        timeout: 10000
       });
 
       this.socket.on('connect', () => {

@@ -89,7 +89,8 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
   const loadFromDatabase = useCallback(async () => {
     setIsLoadingDb(true);
     try {
-      const result = await getTranscripts(channelName, undefined, undefined, 50);
+      // Fetch all transcripts (no channel filter) to show any available data
+      const result = await getTranscripts(undefined, undefined, undefined, 50);
       if (result.data && result.data.length > 0) {
         const lines: TranscriptLine[] = result.data.map((r, index) => ({
           id: r.id || `db_${index}`,
@@ -110,9 +111,10 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
       }
     } catch (error) {
       console.error('[TranscriptPanel] Error loading from DB:', error);
+      setDbCount(0);
     }
     setIsLoadingDb(false);
-  }, [channelName]);
+  }, []);
 
   // Real transcription WebSocket listeners
   useEffect(() => {
