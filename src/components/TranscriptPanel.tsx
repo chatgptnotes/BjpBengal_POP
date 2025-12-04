@@ -18,7 +18,7 @@ import {
   CloudOff
 } from 'lucide-react';
 import transcriptionSocket, { TranscriptLine } from '../services/transcriptionSocket';
-import { saveTranscript } from '../services/transcriptStorageService';
+import { saveTranscript, getTranscripts } from '../services/transcriptStorageService';
 
 export type { TranscriptLine };
 
@@ -46,6 +46,8 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
   const [autoSaveToSupabase, setAutoSaveToSupabase] = useState(true); // Auto-save transcripts to Supabase
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const [savedCount, setSavedCount] = useState(0);
+  const [isLoadingDb, setIsLoadingDb] = useState(false);
+  const [dbCount, setDbCount] = useState(0);
 
   // Generate timestamp based on current time minus offset
   const generateTimestamp = (offsetSeconds: number): string => {
@@ -82,6 +84,35 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
     setIsRealMode(false);
     setConnectionStatus('disconnected');
   }, []);
+
+  // Load transcripts from Supabase database
+  const loadFromDatabase = useCallback(async () => {
+    setIsLoadingDb(true);
+    try {
+      const result = await getTranscripts(channelName, undefined, undefined, 50);
+      if (result.data && result.data.length > 0) {
+        const lines: TranscriptLine[] = result.data.map((r, index) => ({
+          id: r.id || `db_${index}`,
+          timestamp: r.transcript_time || new Date(r.created_at || '').toLocaleTimeString('en-IN', { hour12: false }),
+          bengali: r.bengali_text || '',
+          hindi: r.hindi_text || '',
+          english: r.english_text || '',
+          sentiment: r.sentiment as 'positive' | 'negative' | 'neutral' | undefined,
+          bjpMention: r.bjp_mention,
+          tmcMention: r.tmc_mention
+        }));
+        setTranscriptLines(lines);
+        setDbCount(result.data.length);
+        console.log(`[TranscriptPanel] Loaded ${result.data.length} transcripts from DB`);
+      } else {
+        console.log('[TranscriptPanel] No transcripts found in DB');
+        setDbCount(0);
+      }
+    } catch (error) {
+      console.error('[TranscriptPanel] Error loading from DB:', error);
+    }
+    setIsLoadingDb(false);
+  }, [channelName]);
 
   // Real transcription WebSocket listeners
   useEffect(() => {
@@ -138,6 +169,11 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
       isMountedRef.current = false;
     };
   }, [channelId]);
+
+  // Auto-load from database on mount
+  useEffect(() => {
+    loadFromDatabase();
+  }, [loadFromDatabase]);
 
   // Auto-scroll to bottom when new lines are added
   useEffect(() => {
@@ -243,6 +279,23 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
               <span>{filterPolitical ? 'Political' : 'All'}</span>
             </button>
 
+            {/* Load from Database Button */}
+            <button
+              onClick={loadFromDatabase}
+              disabled={isLoadingDb}
+              className={`flex items-center space-x-1 px-2 py-1.5 rounded text-sm ${
+                isLoadingDb
+                  ? 'bg-blue-100 text-blue-600'
+                  : dbCount > 0
+                    ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={`Load transcripts from database (${dbCount} loaded). Click to refresh.`}
+            >
+              {isLoadingDb ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
+              <span>DB ({dbCount})</span>
+            </button>
+
             {/* Supabase Auto-Save Toggle */}
             <button
               onClick={() => setAutoSaveToSupabase(!autoSaveToSupabase)}
@@ -253,14 +306,14 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
                     : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
-              title={autoSaveToSupabase ? `Auto-saving to Supabase (${savedCount} saved)` : 'Enable auto-save to Supabase'}
+              title={autoSaveToSupabase ? `Auto-saving enabled (${savedCount} saved this session)` : 'Enable auto-save to Supabase'}
             >
               {autoSaveToSupabase ? (
                 saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> :
                 saveStatus === 'error' ? <CloudOff className="w-4 h-4" /> :
                 <Database className="w-4 h-4" />
-              ) : <Database className="w-4 h-4" />}
-              <span>{autoSaveToSupabase ? `DB (${savedCount})` : 'DB Off'}</span>
+              ) : <CloudOff className="w-4 h-4" />}
+              <span>{autoSaveToSupabase ? 'Save On' : 'Save Off'}</span>
             </button>
 
             {/* Real Transcription Toggle */}
