@@ -39,8 +39,8 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
   const scrollRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true); // Track if component is mounted
 
-  // Real transcription state - always real mode, no demo
-  const [isRealMode, setIsRealMode] = useState(true);
+  // Real transcription state - starts disconnected, user must click to connect
+  const [isRealMode, setIsRealMode] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [filterPolitical, setFilterPolitical] = useState(false); // false = show all, true = BJP/TMC only
   const [autoSaveToSupabase, setAutoSaveToSupabase] = useState(true); // Auto-save transcripts to Supabase
@@ -131,22 +131,13 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
     };
   }, [autoSaveToSupabase, channelName, channelId]);
 
-  // Auto-start transcription when channelId is available
+  // Don't auto-start - transcription requires ffmpeg/yt-dlp on server
+  // User must click "Real Mode" button to start manually
   useEffect(() => {
-    // Small delay to handle React StrictMode double-mount
-    const startTimeout = setTimeout(() => {
-      if (channelId && !transcriptionSocket.isConnected()) {
-        startRealTranscription();
-      }
-    }, 100);
-
     return () => {
-      clearTimeout(startTimeout);
-      // Don't disconnect on cleanup - let the connection persist
-      // Only disconnect when user clicks Stop button
       isMountedRef.current = false;
     };
-  }, [channelId]); // Run only when channelId changes
+  }, [channelId]);
 
   // Auto-scroll to bottom when new lines are added
   useEffect(() => {

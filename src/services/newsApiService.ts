@@ -74,7 +74,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 class NewsApiService {
   private apiKey: string;
   private baseUrl: string = 'https://newsapi.org/v2';
-  private proxyUrl: string = 'http://localhost:3001';
+  private proxyUrl: string = import.meta.env.VITE_PROXY_SERVER_URL || 'http://localhost:3001';
 
   constructor() {
     this.apiKey = import.meta.env.VITE_NEWSAPI_KEY || '';

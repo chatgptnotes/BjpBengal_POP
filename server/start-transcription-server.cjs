@@ -9,11 +9,23 @@ const http = require('http');
 const cors = require('cors');
 const { setupSocketIO, initOpenAI } = require('./transcription-service.cjs');
 
-const PORT = process.env.TRANSCRIPTION_PORT || 3002;
+// Use PORT (Render's default) or TRANSCRIPTION_PORT or fallback to 3002
+const PORT = process.env.PORT || process.env.TRANSCRIPTION_PORT || 3002;
 
 // Create Express app
 const app = express();
-app.use(cors());
+
+// CORS configuration - Allow Vercel deployments and local development
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    /\.vercel\.app$/,  // All Vercel preview/production URLs
+    /\.onrender\.com$/  // Render URLs
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Create HTTP server
@@ -42,12 +54,14 @@ app.post('/api/transcription/init', (req, res) => {
 });
 
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
+  const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  const wsUrl = baseUrl.replace('http', 'ws');
   console.log(`\n========================================`);
   console.log(`Transcription Server - Port ${PORT}`);
   console.log(`========================================`);
-  console.log(`Health: http://localhost:${PORT}/health`);
-  console.log(`WebSocket: ws://localhost:${PORT}/transcription`);
+  console.log(`Health: ${baseUrl}/health`);
+  console.log(`WebSocket: ${wsUrl}/transcription`);
   console.log(`========================================`);
 
   // Auto-initialize if env key exists
@@ -57,5 +71,6 @@ server.listen(PORT, () => {
   } else {
     console.log(`OpenAI: NOT CONFIGURED - Set OPENAI_API_KEY`);
   }
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`========================================\n`);
 });

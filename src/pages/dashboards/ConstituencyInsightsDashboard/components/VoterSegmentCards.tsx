@@ -62,7 +62,7 @@ function SegmentCard({ segment }: { segment: VoterSegment }) {
 
   const getSentimentColor = (score: number) => {
     if (score >= 70) return 'bg-green-500';
-    if (score >= 50) return 'bg-yellow-500';
+    if (score >= 50) return 'bg-slate-400';
     return 'bg-red-500';
   };
 
@@ -104,7 +104,7 @@ function SegmentCard({ segment }: { segment: VoterSegment }) {
         </div>
         <div className="text-center">
           <div className="text-xs text-gray-600">Neutral</div>
-          <div className="text-sm font-semibold text-yellow-600">{segment.neutral_percent}%</div>
+          <div className="text-sm font-semibold text-gray-600">{segment.neutral_percent}%</div>
         </div>
         <div className="text-center">
           <div className="text-xs text-gray-600">Negative</div>

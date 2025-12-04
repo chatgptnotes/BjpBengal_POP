@@ -1309,7 +1309,7 @@ export default function PulseDashboard() {
                              </div>
                              <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase flex-shrink-0 ${
                                item.impact === 'High' ? 'bg-rose-50 text-rose-600' :
-                               item.impact === 'Medium' ? 'bg-amber-50 text-amber-600' :
+                               item.impact === 'Medium' ? 'bg-slate-200 text-slate-600' :
                                'bg-slate-100 text-slate-500'
                              }`}>
                                {item.impact} Impact

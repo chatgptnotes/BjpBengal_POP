@@ -25,13 +25,13 @@ interface Props {
 export default function KeyLeaderPerformance({ data }: Props) {
   const getApprovalColor = (approval: number) => {
     if (approval >= 70) return 'text-emerald-400';
-    if (approval >= 50) return 'text-amber-400';
+    if (approval >= 50) return 'text-white';
     return 'text-rose-400';
   };
 
   const getApprovalBg = (approval: number) => {
     if (approval >= 70) return 'bg-emerald-500/20';
-    if (approval >= 50) return 'bg-amber-500/20';
+    if (approval >= 50) return 'bg-slate-500/20';
     return 'bg-rose-500/20';
   };
 
