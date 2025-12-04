@@ -11,6 +11,9 @@ import { MapPin, Newspaper, TrendingUp, TrendingDown, Minus } from 'lucide-react
 import { GlowIcon } from '../../../../components/ui/GlowIcon';
 import { getMapData, ConstituencyMapData } from '@/utils/constituencyExtendedData';
 
+// Backend proxy server URL
+const PROXY_SERVER_URL = import.meta.env.VITE_PROXY_SERVER_URL || 'http://localhost:3001';
+
 // News data interface
 interface ConstituencyNewsData {
   constituency_id: string;
@@ -105,7 +108,7 @@ export default function GeographicHeatmap({
     const fetchNewsData = async () => {
       setLoadingNews(true);
       try {
-        const response = await fetch('http://localhost:3001/api/news/all-constituencies');
+        const response = await fetch(`${PROXY_SERVER_URL}/api/news/all-constituencies`);
         const result = await response.json();
         if (result.success && result.data) {
           setNewsData(result.data);
@@ -144,14 +147,14 @@ export default function GeographicHeatmap({
       switch (news.sentiment_label) {
         case 'positive': return 'rgb(16, 185, 129)'; // emerald-500
         case 'negative': return 'rgb(239, 68, 68)'; // red-500
-        case 'neutral': return 'rgb(245, 158, 11)'; // amber-500
+        case 'neutral': return 'rgb(148, 163, 184)'; // slate-400
       }
     }
 
     // Fallback to party-based sentiment
     switch (sentiment) {
       case 'strong': return 'rgb(34, 197, 94)'; // green
-      case 'moderate': return 'rgb(251, 191, 36)'; // amber
+      case 'moderate': return 'rgb(148, 163, 184)'; // slate-400
       case 'weak': return 'rgb(239, 68, 68)'; // red
       default: return 'rgb(107, 114, 128)'; // gray-500
     }
@@ -303,7 +306,7 @@ export default function GeographicHeatmap({
                         <span className={`text-xs capitalize ${
                           news.sentiment_label === 'positive' ? 'text-emerald-400' :
                           news.sentiment_label === 'negative' ? 'text-red-400' :
-                          'text-amber-400'
+                          'text-white'
                         }`}>
                           {news.sentiment_label}
                         </span>
@@ -349,7 +352,7 @@ export default function GeographicHeatmap({
             <span className="text-[10px] text-slate-400">Positive</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+            <div className="w-2 h-2 rounded-full bg-slate-400"></div>
             <span className="text-[10px] text-slate-400">Neutral</span>
           </div>
           <div className="flex items-center gap-1.5">

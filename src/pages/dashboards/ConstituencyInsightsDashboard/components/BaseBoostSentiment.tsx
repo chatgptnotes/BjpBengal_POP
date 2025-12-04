@@ -85,7 +85,7 @@ export default function BaseBoostSentiment({
       <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Crosshair size={16} className="text-amber-400" />
+            <Crosshair size={16} className="text-white" />
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
               Base-Boost Sentiment
             </h3>
@@ -105,7 +105,7 @@ export default function BaseBoostSentiment({
       <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Crosshair size={16} className="text-amber-400" />
+            <Crosshair size={16} className="text-white" />
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
               Base-Boost Sentiment
             </h3>

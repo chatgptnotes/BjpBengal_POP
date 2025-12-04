@@ -44,6 +44,9 @@ import { fetchNewsForConstituency } from '@/services/leaderIntelligence/newsInte
 import { refreshAllNews } from '@/services/leaderIntelligence/leaderIntelligenceService';
 import { usePartySentimentTrend } from '../hooks/usePartySentimentTrend';
 
+// Backend proxy server URL
+const PROXY_SERVER_URL = import.meta.env.VITE_PROXY_SERVER_URL || 'http://localhost:3001';
+
 // Types
 interface PartyStrength {
   party: string;
@@ -270,7 +273,7 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
 
           // Fetch news from proxy server (Google News RSS)
           try {
-            const proxyUrl = `http://localhost:3001/api/news/constituency/${leaderData.constituency_id}`;
+            const proxyUrl = `${PROXY_SERVER_URL}/api/news/constituency/${leaderData.constituency_id}`;
             console.log('[LeaderAnalysis] Fetching news from:', proxyUrl);
             const response = await fetch(proxyUrl);
             const result = await response.json();
@@ -331,7 +334,7 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
     // Re-fetch data from proxy
     if (leader) {
       try {
-        const proxyUrl = `http://localhost:3001/api/news/constituency/${leader.constituency_id}`;
+        const proxyUrl = `${PROXY_SERVER_URL}/api/news/constituency/${leader.constituency_id}`;
         console.log('[LeaderAnalysis] Refreshing news from:', proxyUrl);
         const response = await fetch(proxyUrl);
         const result = await response.json();

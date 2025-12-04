@@ -1,4 +1,5 @@
 services:
+  # Frontend (if deploying to Render instead of Vercel)
   - type: web
     name: pulseofpeople-frontend
     runtime: node
@@ -6,7 +7,7 @@ services:
     startCommand: npm run preview
     envVars:
       - key: NODE_VERSION
-        value: 18
+        value: 22
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
@@ -15,3 +16,31 @@ services:
         sync: false
       - key: VITE_APP_NAME
         value: Pulse of People
+      - key: VITE_PROXY_SERVER_URL
+        sync: false
+      - key: VITE_TRANSCRIPTION_SERVER_URL
+        sync: false
+
+  # Twitter/News Proxy Server (Port 3001)
+  - type: web
+    name: bjp-bengal-proxy
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile.proxy
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_TWITTER_BEARER_TOKEN
+        sync: false
+
+  # Transcription Server with WebSocket (Port 3002)
+  - type: web
+    name: bjp-bengal-transcription
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile.transcription
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
