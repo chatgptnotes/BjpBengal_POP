@@ -92,7 +92,6 @@ export default function ConstituenciesList() {
   // Re-load when sort changes
   useEffect(() => {
     loadConstituencies();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortField, sortDirection]);
 
   useEffect(() => {

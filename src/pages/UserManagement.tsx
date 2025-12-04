@@ -124,7 +124,6 @@ export default function UserManagement() {
   // Re-load when sort changes
   useEffect(() => {
     loadUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortField, sortDirection]);
 
   useEffect(() => {

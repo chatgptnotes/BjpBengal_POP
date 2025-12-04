@@ -97,7 +97,6 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
       console.log('[PermissionContext] Still initializing, keeping loading state');
       setLoading(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, isInitializing]); // Watch both user ID and initialization state
 
   // Build permissions from Django user data (no Supabase needed)

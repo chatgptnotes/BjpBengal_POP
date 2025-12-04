@@ -100,7 +100,6 @@ export default function WardsList() {
   // Re-load when sort changes
   useEffect(() => {
     loadWards();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortField, sortDirection]);
 
   useEffect(() => {

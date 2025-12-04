@@ -146,7 +146,6 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
       // Only disconnect when user clicks Stop button
       isMountedRef.current = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]); // Run only when channelId changes
 
   // Auto-scroll to bottom when new lines are added
