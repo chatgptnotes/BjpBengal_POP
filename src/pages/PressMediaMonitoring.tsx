@@ -3118,7 +3118,7 @@ export default function PressMediaMonitoring() {
             </div>
 
             {/* Row 1: State-Level Summary */}
-            <ResponsiveGrid cols={{ sm: 2, md: 4 }}>
+            <ResponsiveGrid cols={{ sm: 2, md: 3 }}>
               <MobileCard padding="compact" className="border-l-4 border-orange-500 bg-gradient-to-r from-orange-50 to-white">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-orange-600">{predictionStats.bjpLeading}</div>
@@ -3138,15 +3138,6 @@ export default function PressMediaMonitoring() {
                   <div className="text-3xl font-bold text-yellow-600">{predictionStats.swingSeats}</div>
                   <div className="text-xs text-yellow-700 font-medium">Swing Seats</div>
                   <div className="text-xs text-gray-500 mt-1">margin under 10%</div>
-                </div>
-              </MobileCard>
-              <MobileCard padding="compact" className="border-l-4 border-purple-500 bg-gradient-to-r from-purple-50 to-white">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600">
-                    {predictionStats.safeBjp + predictionStats.safeTmc}
-                  </div>
-                  <div className="text-xs text-purple-700 font-medium">Safe Seats</div>
-                  <div className="text-xs text-gray-500 mt-1">margin over 10%</div>
                 </div>
               </MobileCard>
             </ResponsiveGrid>
