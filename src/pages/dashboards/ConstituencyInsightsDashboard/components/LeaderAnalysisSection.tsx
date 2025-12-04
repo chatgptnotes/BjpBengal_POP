@@ -256,7 +256,7 @@ export default function LeaderAnalysisSection({ selectedConstituency, onLeaderCl
         }
 
         // Try to find by name first
-        let leaderData = await constituencyLeaderService.getLeaderByConstituencyName(selectedConstituency);
+        const leaderData = await constituencyLeaderService.getLeaderByConstituencyName(selectedConstituency);
         console.log('[LeaderAnalysis] Leader data result:', leaderData);
 
         // If not found, the database tables might not exist yet

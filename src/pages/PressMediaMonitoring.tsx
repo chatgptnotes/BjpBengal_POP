@@ -227,7 +227,7 @@ function mapDBArticleToComponent(dbArticle: DBNewsArticle): NewsArticle {
   const detected = detectConstituencyFromContent(dbArticle.title, articleSummary);
 
   // Use database district if available, otherwise use auto-detected or default to 'West Bengal'
-  let district = dbDistrict || detected.district || 'West Bengal';
+  const district = dbDistrict || detected.district || 'West Bengal';
   let constituency: string | undefined = detected.constituency;
 
   // If we have a dbDistrict but no constituency from content detection, find one in that district

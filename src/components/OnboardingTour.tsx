@@ -112,7 +112,7 @@ export function OnboardingTour({ userId, tour, onComplete, onSkip }: OnboardingT
     const tooltipHeight = 200;
     const gap = 16;
 
-    let style: React.CSSProperties = {
+    const style: React.CSSProperties = {
       position: 'fixed',
       zIndex: 10001,
     };

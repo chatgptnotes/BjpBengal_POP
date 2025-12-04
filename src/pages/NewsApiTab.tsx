@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 
 import { newsApiService, NewsApiArticle, NewsApiSource } from '../services/newsApiService';
+import { saveLocalNewsBatch } from '../services/localNewsStorageService';
 
 // Tab types
 type TabType = 'headlines' | 'search' | 'sources' | 'analytics';
@@ -209,6 +210,18 @@ export default function NewsApiTab() {
       if (response.status === 'ok') {
         setArticles(response.articles);
         setLastUpdated(new Date());
+
+        // Save articles to database
+        if (response.articles.length > 0) {
+          const region = selectedConstituency === 'all' ? 'West Bengal' : selectedConstituency;
+          saveLocalNewsBatch(response.articles, region)
+            .then(result => {
+              if (result.success) {
+                console.log(`[NewsApiTab] Saved ${result.count} articles to local_news table`);
+              }
+            })
+            .catch(err => console.error('[NewsApiTab] Error saving to DB:', err));
+        }
       } else {
         setError('Failed to fetch news. Please try again.');
       }
@@ -237,6 +250,17 @@ export default function NewsApiTab() {
       if (response.status === 'ok') {
         setArticles(response.articles);
         setLastUpdated(new Date());
+
+        // Save search results to database
+        if (response.articles.length > 0) {
+          saveLocalNewsBatch(response.articles, 'West Bengal')
+            .then(result => {
+              if (result.success) {
+                console.log(`[NewsApiTab] Saved ${result.count} search results to local_news table`);
+              }
+            })
+            .catch(err => console.error('[NewsApiTab] Error saving search results:', err));
+        }
       }
     } catch (err) {
       setError('Search failed. Please try again.');

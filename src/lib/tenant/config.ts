@@ -232,8 +232,8 @@ export function createTenantSupabaseClient(config: TenantConfig): SupabaseClient
 /**
  * Get Supabase client for current tenant
  */
-let currentTenantClient: SupabaseClient | null = null;
-let currentTenantSlug: string | null = null;
+const currentTenantClient: SupabaseClient | null = null;
+const currentTenantSlug: string | null = null;
 
 export async function getTenantSupabaseClient(tenantSlug: string): Promise<SupabaseClient> {
   // In single-database mode, always return the shared client

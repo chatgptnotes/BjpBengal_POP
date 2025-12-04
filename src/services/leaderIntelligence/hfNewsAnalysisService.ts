@@ -278,7 +278,7 @@ class HFNewsAnalysisService {
       if (attackPattern.pattern.test(text)) {
         // Extract a concise attack point
         let point = '';
-        let evidence = headline;
+        const evidence = headline;
 
         switch (attackPattern.type) {
           case 'corruption':

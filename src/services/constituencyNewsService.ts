@@ -220,7 +220,7 @@ export async function fetchConstituencyNews(
 
     // Combine all news items
     const allNews: NewsItem[] = [];
-    let sourceCounts = { newsapi: 0, google: 0, twitter: 0, facebook: 0 };
+    const sourceCounts = { newsapi: 0, google: 0, twitter: 0, facebook: 0 };
 
     if (newsApiData.status === 'fulfilled') {
       allNews.push(...newsApiData.value);

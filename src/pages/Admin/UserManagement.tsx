@@ -89,7 +89,7 @@ export function UserManagement() {
       setOrganizationId(orgId);
 
       // Load organization users
-      let userQuery = supabase
+      const userQuery = supabase
         .from('user_organizations')
         .select(`
           user_id,
