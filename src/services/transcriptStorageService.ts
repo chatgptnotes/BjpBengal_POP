@@ -1,9 +1,56 @@
 /**
- * Service for storing transcripts in Supabase
+ * Service for storing transcripts in Supabase with AI sentiment analysis
  */
 
 import supabase from '../lib/supabase';
 import { TranscriptLine } from './transcriptionSocket';
+import { sentimentEngine } from './sentimentAnalysis';
+
+// BJP keywords for detection
+const BJP_KEYWORDS = [
+  'bjp', 'bharatiya janata', 'modi', 'narendra modi', 'pm modi',
+  'amit shah', 'jp nadda', 'nda', 'lotus', 'kamal',
+  'sukanta majumdar', 'dilip ghosh', 'suvendu adhikari'
+];
+
+// TMC keywords for detection
+const TMC_KEYWORDS = [
+  'tmc', 'trinamool', 'mamata', 'mamata banerjee', 'abhishek banerjee',
+  'trinamool congress', 'didi', 'tmc', 'grassroots'
+];
+
+/**
+ * Detect BJP mentions in text
+ */
+function detectBJP(text: string): boolean {
+  if (!text) return false;
+  const lowerText = text.toLowerCase();
+  return BJP_KEYWORDS.some(keyword => lowerText.includes(keyword));
+}
+
+/**
+ * Detect TMC mentions in text
+ */
+function detectTMC(text: string): boolean {
+  if (!text) return false;
+  const lowerText = text.toLowerCase();
+  return TMC_KEYWORDS.some(keyword => lowerText.includes(keyword));
+}
+
+/**
+ * Analyze sentiment using AI engine
+ */
+async function analyzeSentiment(text: string): Promise<{ sentiment: string; score: number }> {
+  try {
+    const result = await sentimentEngine.analyzeSentiment(text);
+    return {
+      sentiment: result.polarity,
+      score: (result.sentiment + 1) / 2
+    };
+  } catch {
+    return { sentiment: 'neutral', score: 0.5 };
+  }
+}
 
 export interface TranscriptRecord {
   id?: string;
@@ -20,7 +67,7 @@ export interface TranscriptRecord {
 }
 
 /**
- * Save a transcript line to Supabase
+ * Save a transcript line to Supabase with AI sentiment analysis
  */
 export async function saveTranscript(
   channelName: string,
@@ -28,6 +75,16 @@ export async function saveTranscript(
   line: TranscriptLine
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Combine all text for analysis
+    const fullText = `${line.english || ''} ${line.hindi || ''} ${line.bengali || ''}`.trim();
+
+    // AI Sentiment Analysis
+    const sentimentResult = await analyzeSentiment(fullText);
+
+    // Detect political mentions
+    const bjpMentioned = line.bjpMention || detectBJP(fullText);
+    const tmcMentioned = line.tmcMention || detectTMC(fullText);
+
     const record: TranscriptRecord = {
       channel_name: channelName,
       channel_id: channelId || null,
@@ -35,9 +92,9 @@ export async function saveTranscript(
       bengali_text: line.bengali,
       hindi_text: line.hindi,
       english_text: line.english,
-      sentiment: line.sentiment || 'neutral',
-      bjp_mention: line.bjpMention || false,
-      tmc_mention: line.tmcMention || false,
+      sentiment: sentimentResult.sentiment,
+      bjp_mention: bjpMentioned,
+      tmc_mention: tmcMentioned,
     };
 
     const { error } = await supabase
@@ -49,7 +106,7 @@ export async function saveTranscript(
       return { success: false, error: error.message };
     }
 
-    console.log('[TranscriptStorage] Saved transcript:', line.timestamp);
+    console.log('[TranscriptStorage] Saved with sentiment:', sentimentResult.sentiment, '| BJP:', bjpMentioned, '| TMC:', tmcMentioned);
     return { success: true };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -59,7 +116,7 @@ export async function saveTranscript(
 }
 
 /**
- * Save multiple transcript lines (batch insert)
+ * Save multiple transcript lines (batch insert) with AI sentiment analysis
  */
 export async function saveTranscriptBatch(
   channelName: string,
@@ -67,17 +124,25 @@ export async function saveTranscriptBatch(
   lines: TranscriptLine[]
 ): Promise<{ success: boolean; error?: string; count: number }> {
   try {
-    const records: TranscriptRecord[] = lines.map(line => ({
-      channel_name: channelName,
-      channel_id: channelId || null,
-      transcript_time: line.timestamp,
-      bengali_text: line.bengali,
-      hindi_text: line.hindi,
-      english_text: line.english,
-      sentiment: line.sentiment || 'neutral',
-      bjp_mention: line.bjpMention || false,
-      tmc_mention: line.tmcMention || false,
-    }));
+    // Process each line with AI sentiment analysis
+    const records: TranscriptRecord[] = await Promise.all(
+      lines.map(async (line) => {
+        const fullText = `${line.english || ''} ${line.hindi || ''} ${line.bengali || ''}`.trim();
+        const sentimentResult = await analyzeSentiment(fullText);
+
+        return {
+          channel_name: channelName,
+          channel_id: channelId || null,
+          transcript_time: line.timestamp,
+          bengali_text: line.bengali,
+          hindi_text: line.hindi,
+          english_text: line.english,
+          sentiment: sentimentResult.sentiment,
+          bjp_mention: line.bjpMention || detectBJP(fullText),
+          tmc_mention: line.tmcMention || detectTMC(fullText),
+        };
+      })
+    );
 
     const { error } = await supabase
       .from('tv_transcripts')
@@ -88,7 +153,7 @@ export async function saveTranscriptBatch(
       return { success: false, error: error.message, count: 0 };
     }
 
-    console.log('[TranscriptStorage] Saved batch:', lines.length, 'transcripts');
+    console.log('[TranscriptStorage] Saved batch with sentiment:', lines.length, 'transcripts');
     return { success: true, count: lines.length };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
