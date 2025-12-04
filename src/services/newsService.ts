@@ -50,6 +50,11 @@ export interface NewsArticle {
   bjp_sentiment_score?: number;
   bjp_sentiment_polarity?: 'positive' | 'negative' | 'neutral';
 
+  // TMC Specific
+  tmc_mentioned?: boolean;
+  tmc_mention_count?: number;
+  tmc_context?: string;
+
   // Metadata
   word_count?: number;
   reading_time_minutes?: number;
