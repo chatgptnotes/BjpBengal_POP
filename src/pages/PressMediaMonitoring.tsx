@@ -114,6 +114,39 @@ function isBJPArticle(article: NewsArticle): boolean {
   return BJP_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
 }
 
+// TMC Keywords for filtering
+const TMC_KEYWORDS = [
+  'TMC', 'tmc', 'Trinamool', 'All India Trinamool Congress', 'AITC',
+  'Mamata', 'Mamata Banerjee', 'Didi',
+  'Abhishek Banerjee', 'Abhishek',
+  // West Bengal TMC leaders
+  'Firhad Hakim', 'Partha Chatterjee', 'Anubrata Mondal',
+  'Kunal Ghosh', 'Saugata Roy', 'Derek O\'Brien',
+  // Bengali
+  'তৃণমূল', 'মমতা', 'দিদি',
+  // Hindi
+  'तृणमूल', 'ममता बनर्जी'
+];
+
+// Check if article mentions TMC
+function isTMCArticle(article: NewsArticle): boolean {
+  const text = (article.title + ' ' + article.summary).toLowerCase();
+  return TMC_KEYWORDS.some(kw => text.includes(kw.toLowerCase()));
+}
+
+// Party-wise sentiment stats interface
+interface PartySentimentStats {
+  party: string;
+  total: number;
+  positive: number;
+  negative: number;
+  neutral: number;
+  positivePercent: number;
+  negativePercent: number;
+  neutralPercent: number;
+  favorabilityScore: number;
+}
+
 // District keywords for auto-detection (including common variations)
 // Note: Keywords must match district names in wb_constituencies_50.json
 const DISTRICT_KEYWORDS: Record<string, string[]> = {
@@ -1283,6 +1316,43 @@ export default function PressMediaMonitoring() {
     return filterPredictions(constituencyPredictions, predictionFilter, predictionSort);
   }, [constituencyPredictions, predictionFilter, predictionSort]);
 
+  // Calculate party-wise sentiment stats for Analytics tab
+  const partyStats = useMemo(() => {
+    const bjpArticles = articlesSource.filter(a => isBJPArticle(a));
+    const tmcArticles = articlesSource.filter(a => isTMCArticle(a));
+
+    const calculateStats = (articles: NewsArticle[], party: string): PartySentimentStats => {
+      const total = articles.length;
+      const positive = articles.filter(a => a.sentiment === 'positive').length;
+      const negative = articles.filter(a => a.sentiment === 'negative').length;
+      const neutral = articles.filter(a => a.sentiment === 'neutral').length;
+
+      const positivePercent = total > 0 ? Math.round((positive / total) * 100) : 0;
+      const negativePercent = total > 0 ? Math.round((negative / total) * 100) : 0;
+      const neutralPercent = total > 0 ? Math.round((neutral / total) * 100) : 0;
+
+      // Favorability = (positive - negative) / total * 100, normalized to 0-100 scale
+      const favorabilityScore = total > 0 ? Math.round(50 + ((positive - negative) / total) * 50) : 50;
+
+      return {
+        party,
+        total,
+        positive,
+        negative,
+        neutral,
+        positivePercent,
+        negativePercent,
+        neutralPercent,
+        favorabilityScore
+      };
+    };
+
+    return {
+      bjp: calculateStats(bjpArticles, 'BJP'),
+      tmc: calculateStats(tmcArticles, 'TMC')
+    };
+  }, [articlesSource]);
+
   // Handle saving daily articles to database (preserves existing articles)
   const handleSeedDatabase = async () => {
     if (isSeeding) return;
@@ -1808,7 +1878,10 @@ export default function PressMediaMonitoring() {
                         )}
                       </div>
                       
-                      <h4 className="text-responsive-sm font-semibold text-gray-900 mb-2">
+                      <h4
+                        className="text-responsive-sm font-semibold text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition-colors"
+                        onClick={() => article.url && article.url !== '#' && window.open(article.url, '_blank')}
+                      >
                         {article.title}
                       </h4>
                       
@@ -1818,7 +1891,7 @@ export default function PressMediaMonitoring() {
                       
                       <div className="flex items-center flex-wrap gap-2 mb-3">
                         <span className={`text-xs px-2 py-1 rounded ${getSentimentColor(article.sentiment)}`}>
-                          {article.sentiment} ({(article.sentimentScore * 100).toFixed(0)}%)
+                          {article.sentiment} ({(article.sentimentScore > 1 ? article.sentimentScore : article.sentimentScore * 100).toFixed(0)}%)
                         </span>
                         <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(article.priority)}`}>
                           {article.priority} priority
@@ -1849,7 +1922,11 @@ export default function PressMediaMonitoring() {
                           <MobileButton variant="ghost" size="small">
                             <Share2 className="w-4 h-4" />
                           </MobileButton>
-                          <MobileButton variant="ghost" size="small">
+                          <MobileButton
+                            variant="ghost"
+                            size="small"
+                            onClick={() => article.url && article.url !== '#' && window.open(article.url, '_blank')}
+                          >
                             <ExternalLink className="w-4 h-4" />
                           </MobileButton>
                         </div>
@@ -1928,11 +2005,97 @@ export default function PressMediaMonitoring() {
         {/* Predictions Tab */}
         {activeTab === 'predictions' && (
           <div className="space-responsive">
+            {/* Party-wise Media Sentiment Analysis */}
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Media Sentiment Analysis by Party</h2>
+              <p className="text-sm text-gray-500 mb-4">Based on {articlesSource.length} news articles</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* BJP Sentiment Card */}
+                <div className="bg-white border border-orange-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-orange-600">BJP</h3>
+                    <span className="text-sm text-gray-500">{partyStats.bjp.total} articles</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="text-center p-2 bg-green-50 rounded">
+                      <div className="text-xl font-bold text-green-600">{partyStats.bjp.positivePercent}%</div>
+                      <div className="text-xs text-green-700">Positive</div>
+                      <div className="text-xs text-gray-500">({partyStats.bjp.positive})</div>
+                    </div>
+                    <div className="text-center p-2 bg-red-50 rounded">
+                      <div className="text-xl font-bold text-red-600">{partyStats.bjp.negativePercent}%</div>
+                      <div className="text-xs text-red-700">Negative</div>
+                      <div className="text-xs text-gray-500">({partyStats.bjp.negative})</div>
+                    </div>
+                    <div className="text-center p-2 bg-gray-50 rounded">
+                      <div className="text-xl font-bold text-gray-600">{partyStats.bjp.neutralPercent}%</div>
+                      <div className="text-xs text-gray-700">Neutral</div>
+                      <div className="text-xs text-gray-500">({partyStats.bjp.neutral})</div>
+                    </div>
+                  </div>
+
+                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden flex">
+                    <div className="bg-green-500" style={{ width: `${partyStats.bjp.positivePercent}%` }}></div>
+                    <div className="bg-red-500" style={{ width: `${partyStats.bjp.negativePercent}%` }}></div>
+                    <div className="bg-gray-400" style={{ width: `${partyStats.bjp.neutralPercent}%` }}></div>
+                  </div>
+
+                  <div className="mt-3 text-center">
+                    <span className="text-sm text-gray-600">Media Favorability: </span>
+                    <span className={`text-lg font-bold ${partyStats.bjp.favorabilityScore >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+                      {partyStats.bjp.favorabilityScore}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* TMC Sentiment Card */}
+                <div className="bg-white border border-green-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-green-600">TMC</h3>
+                    <span className="text-sm text-gray-500">{partyStats.tmc.total} articles</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="text-center p-2 bg-green-50 rounded">
+                      <div className="text-xl font-bold text-green-600">{partyStats.tmc.positivePercent}%</div>
+                      <div className="text-xs text-green-700">Positive</div>
+                      <div className="text-xs text-gray-500">({partyStats.tmc.positive})</div>
+                    </div>
+                    <div className="text-center p-2 bg-red-50 rounded">
+                      <div className="text-xl font-bold text-red-600">{partyStats.tmc.negativePercent}%</div>
+                      <div className="text-xs text-red-700">Negative</div>
+                      <div className="text-xs text-gray-500">({partyStats.tmc.negative})</div>
+                    </div>
+                    <div className="text-center p-2 bg-gray-50 rounded">
+                      <div className="text-xl font-bold text-gray-600">{partyStats.tmc.neutralPercent}%</div>
+                      <div className="text-xs text-gray-700">Neutral</div>
+                      <div className="text-xs text-gray-500">({partyStats.tmc.neutral})</div>
+                    </div>
+                  </div>
+
+                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden flex">
+                    <div className="bg-green-500" style={{ width: `${partyStats.tmc.positivePercent}%` }}></div>
+                    <div className="bg-red-500" style={{ width: `${partyStats.tmc.negativePercent}%` }}></div>
+                    <div className="bg-gray-400" style={{ width: `${partyStats.tmc.neutralPercent}%` }}></div>
+                  </div>
+
+                  <div className="mt-3 text-center">
+                    <span className="text-sm text-gray-600">Media Favorability: </span>
+                    <span className={`text-lg font-bold ${partyStats.tmc.favorabilityScore >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+                      {partyStats.tmc.favorabilityScore}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Header with Title and Seed Button */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-800">2026 WB Assembly Election Prediction</h2>
-                <p className="text-sm text-gray-500">Based on 2021 Assembly + 2024 Lok Sabha + 2025 By-Election results</p>
+                <p className="text-sm text-gray-500">Based on 2021 Assembly + 2025 By-Election results</p>
               </div>
               <div className="flex items-center gap-2">
                 {isPredictionsLoading && (
