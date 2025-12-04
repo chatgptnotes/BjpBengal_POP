@@ -267,7 +267,10 @@ export async function generateConstituencyInfographic(
     }],
     generationConfig: {
       responseModalities: ["TEXT", "IMAGE"],
-      responseMimeType: "text/plain"
+      imageConfig: {
+        aspectRatio: "16:9",
+        imageSize: "4K"
+      }
     }
   };
 

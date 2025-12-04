@@ -29,6 +29,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { Gauge } from '@/components/ui/Gauge';
 import { useInfographicData } from '../../hooks/useInfographicData';
+import InfographicHero from '../InfographicHero';
 
 // Animation variants
 const containerVariants = {
@@ -176,6 +177,7 @@ export default function ConstituencyInfographicCard({
   const literacyRate = demographics?.literacy_rate || 0;
   const urbanPercentage = demographics?.urban_percentage || (constituency.isUrban ? 100 : 50);
 
+<<<<<<< HEAD
   return (
     <motion.div
       className="min-h-screen w-full bg-slate-900 px-4 py-6 md:px-8 md:py-8 lg:px-12 lg:py-10 text-slate-800 font-sans"
@@ -184,8 +186,36 @@ export default function ConstituencyInfographicCard({
       variants={containerVariants}
     >
       <div className="w-full space-y-4">
+=======
+  // Scroll to generate infographic section
+  const scrollToGenerateButton = () => {
+    // Scroll to bottom where the FAB button is
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: 'smooth'
+    });
+  };
+>>>>>>> origin/main
 
-        {/* --- HEADER --- */}
+  return (
+    <>
+      {/* Fullscreen Infographic Hero */}
+      <InfographicHero
+        constituencyId={constituencyId}
+        constituencyName={constituency.name}
+        onGenerateClick={scrollToGenerateButton}
+      />
+
+      {/* Rest of the dashboard content */}
+      <motion.div
+        className="min-h-screen bg-slate-900 p-2 md:p-6 text-slate-800 font-sans"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <div className="max-w-7xl mx-auto space-y-4">
+
+          {/* --- HEADER --- */}
         <motion.div
           className="relative bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-4 md:p-6 text-white shadow-xl border border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center overflow-hidden"
           variants={itemVariants}
@@ -749,5 +779,6 @@ export default function ConstituencyInfographicCard({
 
       </div>
     </motion.div>
+    </>
   );
 }

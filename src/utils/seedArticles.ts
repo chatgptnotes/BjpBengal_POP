@@ -62,6 +62,12 @@ export function mapComponentArticleToDBArticle(
       t.toLowerCase().includes('modi') ||
       t.toLowerCase().includes('suvendu')
     ),
+    // TMC detection
+    tmc_mentioned: article.topics.some(t =>
+      t.toLowerCase().includes('tmc') ||
+      t.toLowerCase().includes('trinamool') ||
+      t.toLowerCase().includes('mamata')
+    ),
   };
 }
 
@@ -89,9 +95,34 @@ async function checkArticleExists(title: string, source: string): Promise<boolea
   }
 }
 
+/**
+ * Get existing article ID by title and source (returns ID or null)
+ */
+async function getExistingArticleId(title: string, source: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('news_articles')
+      .select('id')
+      .eq('title', title)
+      .eq('source', source)
+      .limit(1);
+
+    if (error) {
+      console.error('Error getting article ID:', error);
+      return null;
+    }
+
+    return data && data.length > 0 ? data[0].id : null;
+  } catch (error) {
+    console.error('Error in getExistingArticleId:', error);
+    return null;
+  }
+}
+
 export interface SeedResult {
   success: boolean;
   inserted: number;
+  updated: number;
   skipped: number;
   failed: number;
   errors: string[];
@@ -107,6 +138,7 @@ export async function seedMockArticles(
   const result: SeedResult = {
     success: true,
     inserted: 0,
+    updated: 0,
     skipped: 0,
     failed: 0,
     errors: []
@@ -166,6 +198,7 @@ export async function seedMockArticlesBatch(
   const result: SeedResult = {
     success: true,
     inserted: 0,
+    updated: 0,
     skipped: 0,
     failed: 0,
     errors: []
@@ -328,11 +361,10 @@ export async function refreshArticlesIfStale(): Promise<boolean> {
 }
 
 /**
- * Seed daily articles - adds new articles for today WITHOUT deleting existing ones
+ * Seed daily articles - updates existing articles with today's timestamp
  * This is the function called by the Save button
- * - Does NOT delete existing articles
- * - Only adds new articles with today's timestamp
- * - Checks for duplicates by title+source
+ * - Updates existing articles' published_at to today
+ * - Inserts new articles with today's timestamp
  */
 export async function seedDailyArticles(
   articles: ComponentNewsArticle[],
@@ -341,16 +373,16 @@ export async function seedDailyArticles(
   const result: SeedResult = {
     success: true,
     inserted: 0,
+    updated: 0,
     skipped: 0,
     failed: 0,
     errors: []
   };
 
-  console.log(`Seeding ${articles.length} daily articles (preserving existing)...`);
+  console.log(`Seeding ${articles.length} daily articles with today's date...`);
 
   // Generate articles with today's timestamps (spread across last few hours)
   const now = Date.now();
-  const ONE_HOUR = 60 * 60 * 1000;
 
   const todaysArticles: ComponentNewsArticle[] = articles.map((article, index) => ({
     ...article,
@@ -358,45 +390,62 @@ export async function seedDailyArticles(
     timestamp: new Date(now - (index * 30 * 60 * 1000)) // 30 min increments
   }));
 
-  // Filter out duplicates and insert only new ones
+  // Update existing articles or collect new ones for insertion
   const articlesToInsert: DBNewsArticle[] = [];
 
   for (const article of todaysArticles) {
-    const exists = await checkArticleExists(article.title, article.source);
-    if (exists) {
-      result.skipped++;
-      continue;
-    }
-    articlesToInsert.push(mapComponentArticleToDBArticle(article, organizationId));
-  }
+    const existingId = await getExistingArticleId(article.title, article.source);
 
-  if (articlesToInsert.length === 0) {
-    console.log('No new articles to insert (all duplicates)');
-    return result;
-  }
+    if (existingId) {
+      // UPDATE existing article's timestamp to today
+      try {
+        const { error } = await supabase
+          .from('news_articles')
+          .update({ published_at: article.timestamp.toISOString() })
+          .eq('id', existingId);
 
-  // Batch insert new articles only
-  try {
-    const { data, error } = await supabase
-      .from('news_articles')
-      .insert(articlesToInsert)
-      .select();
-
-    if (error) {
-      console.error('Daily seed failed:', error);
-      result.failed = articlesToInsert.length;
-      result.errors.push(error.message);
-      result.success = false;
+        if (error) {
+          console.error(`Failed to update article "${article.title}":`, error);
+          result.failed++;
+        } else {
+          result.updated++;
+        }
+      } catch (error) {
+        console.error(`Error updating article "${article.title}":`, error);
+        result.failed++;
+      }
     } else {
-      result.inserted = data?.length || 0;
-      console.log(`Daily seed complete: ${result.inserted} new articles added`);
+      // New article - add to insert batch
+      articlesToInsert.push(mapComponentArticleToDBArticle(article, organizationId));
     }
-  } catch (error) {
-    console.error('Error in daily seed:', error);
-    result.failed = articlesToInsert.length;
-    result.errors.push(error instanceof Error ? error.message : 'Unknown error');
-    result.success = false;
   }
+
+  // Batch insert new articles
+  if (articlesToInsert.length > 0) {
+    try {
+      const { data, error } = await supabase
+        .from('news_articles')
+        .insert(articlesToInsert)
+        .select();
+
+      if (error) {
+        console.error('Daily seed insert failed:', error);
+        result.failed += articlesToInsert.length;
+        result.errors.push(error.message);
+        result.success = false;
+      } else {
+        result.inserted = data?.length || 0;
+      }
+    } catch (error) {
+      console.error('Error in daily seed insert:', error);
+      result.failed += articlesToInsert.length;
+      result.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      result.success = false;
+    }
+  }
+
+  console.log(`Daily seed complete: ${result.updated} updated, ${result.inserted} inserted`);
+  result.success = result.failed === 0;
 
   return result;
 }
@@ -413,6 +462,7 @@ export async function seedHistorical7Days(
   const result: SeedResult = {
     success: true,
     inserted: 0,
+    updated: 0,
     skipped: 0,
     failed: 0,
     errors: []
@@ -515,6 +565,7 @@ export async function clearAndReseed7Days(
   const result: SeedResult & { deleted: number } = {
     success: true,
     inserted: 0,
+    updated: 0,
     skipped: 0,
     failed: 0,
     errors: [],
