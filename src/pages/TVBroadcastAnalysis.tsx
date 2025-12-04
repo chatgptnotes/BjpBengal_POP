@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { MobileCard, ResponsiveGrid, MobileButton, MobileTabs } from '../components/MobileResponsive';
 import TranscriptPanel from '../components/TranscriptPanel';
+import PartySentimentAnalytics from '../components/PartySentimentAnalytics';
 
 interface TVChannel {
   id: string;
@@ -445,6 +446,20 @@ export default function TVBroadcastAnalysis() {
           onChange={setActiveTab}
         />
 
+        {/* Live Transcript Panel - Always mounted to prevent WebSocket disconnect on tab switch */}
+        {selectedLiveChannel && (
+          <div className={`${activeTab !== 'live' ? 'hidden' : ''}`}>
+            <MobileCard padding="default" className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 mt-4">
+              <TranscriptPanel
+                channelName={selectedLiveChannel.name}
+                channelId={selectedLiveChannel.youtubeChannelId}
+                isLive={true}
+                maxHeight="300px"
+              />
+            </MobileCard>
+          </div>
+        )}
+
         {/* Live TV Tab */}
         {activeTab === 'live' && (
           <div className="space-responsive">
@@ -500,18 +515,9 @@ export default function TVBroadcastAnalysis() {
                   </div>
 
 {/* Video Player Hidden */}
-
-                  {/* Live Transcript Panel */}
-                  <div className="mt-4">
-                    <TranscriptPanel
-                      channelName={selectedLiveChannel.name}
-                      channelId={selectedLiveChannel.youtubeChannelId}
-                      isLive={true}
-                      maxHeight="300px"
-                    />
-                  </div>
                 </div>
               )}
+
             </MobileCard>
 
             {/* Key Metrics */}
@@ -859,6 +865,9 @@ export default function TVBroadcastAnalysis() {
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
           <div className="space-responsive">
+            {/* Party Sentiment Analytics - BJP vs TMC */}
+            <PartySentimentAnalytics />
+
             <ResponsiveGrid cols={{ sm: 1, md: 2 }}>
               <MobileCard padding="default">
                 <h3 className="text-responsive-base font-semibold text-gray-900 mb-4">
