@@ -29,6 +29,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { Gauge } from '@/components/ui/Gauge';
 import { useInfographicData } from '../../hooks/useInfographicData';
+import InfographicViewer from '../InfographicViewer';
 
 // Animation variants
 const containerVariants = {
@@ -216,19 +217,27 @@ export default function ConstituencyInfographicCard({
               <span>Cluster: <span className="text-white font-medium">{constituency.cluster}</span></span>
             </motion.div>
           </div>
-          <motion.div
-            className="mt-4 md:mt-0 bg-slate-700/50 backdrop-blur-sm p-3 rounded-lg border border-slate-600 flex items-center gap-3"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, type: 'spring' }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <Building2 className="text-blue-400" size={32} />
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider">Type</p>
-              <p className="font-bold text-lg">{constituency.isUrban ? 'Urban Constituency' : 'Rural Constituency'}</p>
-            </div>
-          </motion.div>
+          <div className="flex items-center gap-3 mt-4 md:mt-0">
+            {/* Infographic Viewer Button */}
+            <InfographicViewer
+              constituencyId={constituencyId}
+              constituencyName={constituency.name}
+            />
+
+            <motion.div
+              className="bg-slate-700/50 backdrop-blur-sm p-3 rounded-lg border border-slate-600 flex items-center gap-3"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5, type: 'spring' }}
+              whileHover={{ scale: 1.05 }}
+            >
+              <Building2 className="text-blue-400" size={32} />
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">Type</p>
+                <p className="font-bold text-lg">{constituency.isUrban ? 'Urban Constituency' : 'Rural Constituency'}</p>
+              </div>
+            </motion.div>
+          </div>
         </motion.div>
 
         {/* --- STAT CARDS --- */}

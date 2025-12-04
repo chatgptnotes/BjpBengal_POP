@@ -16,7 +16,10 @@ import {
   Database,
   BarChart3,
   Layout,
-  CheckCircle
+  CheckCircle,
+  UploadCloud,
+  Check,
+  Copy
 } from 'lucide-react';
 
 import {
@@ -26,6 +29,7 @@ import {
   type GenerationStage,
   type InfographicData
 } from '@/services/geminiImageService';
+import { uploadInfographic } from '@/services/infographicStorageService';
 import { collectInfographicData } from '../utils/collectInfographicData';
 import type { ConstituencyLeader } from '@/services/leaderTracking/constituencyLeaderService';
 
@@ -73,7 +77,7 @@ const loadingStages: Array<{
 }> = [
   { stage: 'collecting-data', label: 'Collecting constituency data...', icon: Database, progress: 20 },
   { stage: 'generating-prompt', label: 'Preparing visual layout...', icon: Layout, progress: 40 },
-  { stage: 'calling-api', label: 'Generating with Gemini AI...', icon: BarChart3, progress: 60 },
+  { stage: 'calling-api', label: 'Generating AI Image...', icon: BarChart3, progress: 60 },
   { stage: 'processing-response', label: 'Rendering infographic...', icon: ImageIcon, progress: 80 },
   { stage: 'complete', label: 'Complete!', icon: CheckCircle, progress: 100 },
 ];
@@ -93,6 +97,9 @@ export default function InfographicGenerator({
   const [imageMimeType, setImageMimeType] = useState<string>('image/png');
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   // Get current stage info
   const currentStageInfo = loadingStages.find(s => s.stage === currentStage) || loadingStages[0];
@@ -165,6 +172,42 @@ export default function InfographicGenerator({
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
 
+  // Save to Supabase Storage
+  const handleSave = async () => {
+    if (!generatedImage) return;
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const result = await uploadInfographic(constituencyId, generatedImage, imageMimeType);
+
+      if (result.success && result.url) {
+        setSavedUrl(result.url);
+        console.log('[InfographicGenerator] Saved successfully:', result.url);
+        if (result.compressionInfo) {
+          console.log(`[InfographicGenerator] Compression: ${(result.compressionInfo.originalSize / 1024).toFixed(0)}KB -> ${(result.compressionInfo.compressedSize / 1024).toFixed(0)}KB (quality: ${result.compressionInfo.quality.toFixed(2)})`);
+        }
+      } else {
+        setError(result.error || 'Failed to save image');
+      }
+    } catch (err) {
+      console.error('[InfographicGenerator] Save error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save image');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Copy URL to clipboard
+  const handleCopyUrl = async () => {
+    if (savedUrl) {
+      await navigator.clipboard.writeText(savedUrl);
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2000);
+    }
+  };
+
   // Close and reset
   const handleClose = () => {
     setIsModalOpen(false);
@@ -175,6 +218,8 @@ export default function InfographicGenerator({
         setProgress(0);
         setError(null);
         setZoom(1);
+        setSavedUrl(null);
+        setUrlCopied(false);
       }
     }, 300);
   };
@@ -387,25 +432,75 @@ export default function InfographicGenerator({
               )}
             </div>
 
-            {/* Footer - Download Buttons */}
+            {/* Footer - Download and Save Buttons */}
             {generatedImage && !isGenerating && (
-              <div className="border-t border-slate-100 p-4 bg-slate-50 flex justify-end gap-3">
-                <button
-                  onClick={handleDownloadPNG}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-100
-                             hover:bg-slate-200 rounded-lg transition-colors text-slate-700"
-                >
-                  <Download size={16} />
-                  PNG
-                </button>
-                <button
-                  onClick={handleDownloadJPG}
-                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600
-                             hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  <Download size={16} />
-                  Download JPG
-                </button>
+              <div className="border-t border-slate-100 p-4 bg-slate-50">
+                {/* Saved URL Display */}
+                {savedUrl && (
+                  <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-emerald-700">
+                      <Check size={16} className="flex-shrink-0" />
+                      <span className="text-sm font-medium">Saved!</span>
+                      <span className="text-xs text-emerald-600 truncate max-w-[200px] md:max-w-[400px]">
+                        {savedUrl}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleCopyUrl}
+                      className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-100
+                                 hover:bg-emerald-200 text-emerald-700 rounded transition-colors"
+                    >
+                      {urlCopied ? <Check size={14} /> : <Copy size={14} />}
+                      {urlCopied ? 'Copied!' : 'Copy URL'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={handleDownloadPNG}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100
+                               hover:bg-slate-200 rounded-lg transition-colors text-slate-700"
+                  >
+                    <Download size={16} />
+                    PNG
+                  </button>
+                  <button
+                    onClick={handleDownloadJPG}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100
+                               hover:bg-slate-200 rounded-lg transition-colors text-slate-700"
+                  >
+                    <Download size={16} />
+                    JPG
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving || !!savedUrl}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors font-medium
+                               ${savedUrl
+                                 ? 'bg-emerald-100 text-emerald-700 cursor-default'
+                                 : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                               } disabled:opacity-70`}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Saving...
+                      </>
+                    ) : savedUrl ? (
+                      <>
+                        <Check size={16} />
+                        Saved
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud size={16} />
+                        Save
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
           </div>
