@@ -39,6 +39,7 @@ import { NewsArticle as DBNewsArticle } from '../services/newsService';
 import constituenciesDataRaw from '../data/wb_constituencies_50.json';
 import { generatePredictions, calculatePredictionStats, filterPredictions, ConstituencyPrediction, PredictionStats } from '../services/predictionService';
 import { clearAndReseedElectionData, electionData } from '../utils/seedElectionData';
+import { hfNewsAnalysisService, HFSentimentResult } from '../services/leaderIntelligence/hfNewsAnalysisService';
 
 // Transform constituency data
 const CONSTITUENCIES = constituenciesDataRaw.map((c: any) => ({
@@ -1779,34 +1780,34 @@ export default function PressMediaMonitoring() {
     [dbArticles]
   );
 
-  // Combine mock articles (BJP + TMC) with real articles from database
+  // Use real articles from database when available, fallback to mock only if empty
   const articlesSource = useMemo(() => {
-    // Always use mockArticles which has both BJP and TMC articles
-    // Combine with real articles if available (avoiding duplicates by title)
+    // Prioritize real articles from external sources (ABP, Ei Samay, NewsAPI, etc.)
     if (realArticles && realArticles.length > 0) {
-      const mockTitles = new Set(mockArticles.map(a => a.title.toLowerCase()));
-      const uniqueRealArticles = realArticles.filter(
-        a => !mockTitles.has(a.title.toLowerCase())
-      );
-      return [...mockArticles, ...uniqueRealArticles];
+      console.log(`[ArticlesSource] Using ${realArticles.length} real articles from database`);
+      return realArticles; // Use only real articles
     }
+    // Fallback to mock data only when no real articles available
+    console.log('[ArticlesSource] No real articles, using mock data');
     return mockArticles;
   }, [realArticles]);
 
   // Constituency filter state (must be declared before useMemo hooks that use it)
   const [selectedConstituency, setSelectedConstituency] = useState('all');
 
-  // BJP Work Categories with sentiment tracking
-  const BJP_WORK_CATEGORIES = [
-    { name: 'BJP Rally & Events', keywords: ['rally', 'sabha', 'meeting', 'gathering', 'event', 'program'] },
-    { name: 'Modi Leadership', keywords: ['modi', 'prime minister', 'speech', 'address', 'pm'] },
-    { name: 'Suvendu Campaign', keywords: ['suvendu', 'adhikari', 'nandigram', 'leader'] },
-    { name: 'Bengal Elections', keywords: ['election', 'vote', 'polling', 'booth', 'candidate', 'ballot'] },
-    { name: 'BJP vs TMC', keywords: ['tmc', 'trinamool', 'mamata', 'clash', 'attack', 'oppose'] },
-    { name: 'Development Work', keywords: ['development', 'scheme', 'project', 'infrastructure', 'welfare'] }
+  // AI Sentiment Results - must be declared before useMemo that uses it
+  const [aiSentimentResults, setAiSentimentResults] = useState<Map<string, HFSentimentResult>>(new Map());
+  const [aiAnalysisComplete, setAiAnalysisComplete] = useState(false);
+
+  // REAL Trending Topics - Extract from actual article content
+  // These keywords will be dynamically counted from real articles
+  const TRENDING_KEYWORDS = [
+    'modi', 'bjp', 'rally', 'election', 'vote', 'mamata', 'tmc', 'suvendu',
+    'development', 'corruption', 'protest', 'kolkata', 'bengal', 'candidate',
+    'campaign', 'speech', 'amit shah', 'dilip ghosh', 'sukanta', 'assembly'
   ];
 
-  // Calculate BJP work categories with sentiment from constituency-filtered articles
+  // Calculate REAL trending topics from actual articles
   const trendingTopics: TrendingTopic[] = useMemo(() => {
     // First apply constituency filter to get relevant articles
     let relevantArticles = articlesSource;
@@ -1820,45 +1821,97 @@ export default function PressMediaMonitoring() {
       }
     }
 
-    // Analyze filtered articles for BJP work categories
-    const categoryStats = BJP_WORK_CATEGORIES.map((category, index) => {
-      // Find articles matching this category
+    // Extract real trending topics from article titles
+    const keywordCounts = new Map<string, {
+      count: number;
+      articles: typeof relevantArticles;
+      recent24h: number;
+      previous24h: number;
+    }>();
+
+    const now = new Date();
+    const h24ago = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const h48ago = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+    // Count keyword occurrences in real articles
+    TRENDING_KEYWORDS.forEach(keyword => {
       const matchingArticles = relevantArticles.filter(article => {
         const text = (article.title + ' ' + (article.summary || '')).toLowerCase();
-        return category.keywords.some(kw => text.includes(kw.toLowerCase()));
+        return text.includes(keyword.toLowerCase());
       });
 
-      // Calculate sentiment distribution
-      const positive = matchingArticles.filter(a => a.sentiment === 'positive').length;
-      const negative = matchingArticles.filter(a => a.sentiment === 'negative').length;
-      const total = matchingArticles.length;
+      if (matchingArticles.length > 0) {
+        const recent = matchingArticles.filter(a => new Date(a.timestamp) >= h24ago).length;
+        const previous = matchingArticles.filter(a => {
+          const t = new Date(a.timestamp);
+          return t >= h48ago && t < h24ago;
+        }).length;
 
-      // Calculate net sentiment percentage (-100 to +100)
-      let sentimentPercent = 0;
-      if (total > 0) {
-        sentimentPercent = Math.round(((positive - negative) / total) * 100);
+        keywordCounts.set(keyword, {
+          count: matchingArticles.length,
+          articles: matchingArticles,
+          recent24h: recent,
+          previous24h: previous
+        });
       }
-
-      // Normalized sentiment for progress bar (0 to 1)
-      const normalizedSentiment = total > 0 ? (sentimentPercent + 100) / 200 : 0.5;
-
-      return {
-        id: String(index + 1),
-        topic: category.name,
-        mentions: total,
-        sentiment: normalizedSentiment,
-        sentimentPercent: sentimentPercent, // -100 to +100
-        growth: total > 0 ? Math.floor(Math.random() * 80) + 20 : 0,
-        relatedKeywords: category.keywords.slice(0, 4),
-        timeframe: '24h' as const
-      };
     });
 
-    // Sort by mentions (most talked about first), filter out zero mentions
-    return categoryStats
-      .filter(cat => cat.mentions > 0 || true) // Show all categories even with 0
-      .sort((a, b) => b.mentions - a.mentions);
-  }, [articlesSource, selectedConstituency]);
+    // Convert to trending topics with real data
+    const trendingData = Array.from(keywordCounts.entries())
+      .map(([keyword, data], index) => {
+        // Calculate REAL growth
+        let growth = 0;
+        if (data.previous24h > 0) {
+          growth = Math.round(((data.recent24h - data.previous24h) / data.previous24h) * 100);
+        } else if (data.recent24h > 0) {
+          growth = 100;
+        }
+
+        // Calculate sentiment using AI results
+        let positive = 0;
+        let negative = 0;
+
+        data.articles.forEach(a => {
+          const aiResult = aiSentimentResults.get(a.id);
+          if (aiResult) {
+            if (aiResult.sentiment === 'positive') positive++;
+            else if (aiResult.sentiment === 'negative') negative++;
+          } else {
+            if (a.sentiment === 'positive') positive++;
+            else if (a.sentiment === 'negative') negative++;
+          }
+        });
+
+        const total = data.count;
+        const sentimentPercent = total > 0 ? Math.round(((positive - negative) / total) * 100) : 0;
+        const normalizedSentiment = total > 0 ? (sentimentPercent + 100) / 200 : 0.5;
+
+        // Get related keywords from article titles
+        const relatedWords = new Set<string>();
+        data.articles.slice(0, 5).forEach(a => {
+          const words = a.title.toLowerCase().split(/\s+/).filter(w =>
+            w.length > 3 && !['the', 'and', 'for', 'with', 'from'].includes(w)
+          );
+          words.slice(0, 3).forEach(w => relatedWords.add(w));
+        });
+
+        return {
+          id: String(index + 1),
+          topic: keyword.charAt(0).toUpperCase() + keyword.slice(1), // Capitalize
+          mentions: total,
+          sentiment: normalizedSentiment,
+          sentimentPercent: sentimentPercent,
+          growth: growth,
+          relatedKeywords: Array.from(relatedWords).slice(0, 4),
+          timeframe: '24h' as const
+        };
+      })
+      .filter(t => t.mentions > 0)
+      .sort((a, b) => b.mentions - a.mentions)
+      .slice(0, 10); // Top 10 trending
+
+    return trendingData;
+  }, [articlesSource, selectedConstituency, aiSentimentResults]);
 
   // Calculate language distribution from constituency-filtered articles
   const languageDistribution = useMemo(() => {
@@ -1955,6 +2008,9 @@ export default function PressMediaMonitoring() {
   const [isSeedingHistory, setIsSeedingHistory] = useState(false);
   const [isFetchingNews, setIsFetchingNews] = useState(false);
   const [fetchNewsResult, setFetchNewsResult] = useState<FetchResult | null>(null);
+
+  // AI Sentiment Analysis - isAnalyzingAI state (other states moved earlier)
+  const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
 
   const [analytics, setAnalytics] = useState({
     totalArticles: 0,
@@ -2092,6 +2148,75 @@ export default function PressMediaMonitoring() {
       });
     }
   }, [searchQuery, selectedRegion, selectedLanguage, selectedConstituency, articlesSource, selectedTimeframe]);
+
+  // AI Sentiment Analysis - Analyze articles with Hugging Face
+  useEffect(() => {
+    const analyzeWithAI = async () => {
+      if (filteredArticles.length === 0 || isAnalyzingAI) return;
+
+      // Only analyze if we have new articles and HF is configured
+      if (!hfNewsAnalysisService.isConfigured()) {
+        console.log('[AI Sentiment] Hugging Face API not configured, using keyword-based');
+        return;
+      }
+
+      setIsAnalyzingAI(true);
+      console.log(`[AI Sentiment] Starting AI analysis for ${filteredArticles.length} articles...`);
+
+      const newResults = new Map<string, HFSentimentResult>();
+
+      // Analyze BJP articles with AI (limit to first 20 for performance)
+      const bjpArticles = filteredArticles.filter(a => isBJPArticle(a)).slice(0, 20);
+
+      for (const article of bjpArticles) {
+        try {
+          // Detect language (Bengali or English)
+          const hasBengali = /[\u0980-\u09FF]/.test(article.title);
+          const language = hasBengali ? 'bn' : 'en';
+
+          const result = await hfNewsAnalysisService.analyzeSentiment(
+            `${article.title}. ${article.summary}`,
+            language as 'en' | 'bn'
+          );
+
+          newResults.set(article.id, result);
+
+          // Small delay between API calls for rate limiting
+          await new Promise(r => setTimeout(r, 100));
+        } catch (error) {
+          console.error(`[AI Sentiment] Error analyzing article ${article.id}:`, error);
+        }
+      }
+
+      setAiSentimentResults(newResults);
+      setAiAnalysisComplete(true);
+      setIsAnalyzingAI(false);
+
+      // Update analytics with AI results
+      if (newResults.size > 0) {
+        let aiPositive = 0, aiNegative = 0, aiNeutral = 0;
+
+        newResults.forEach((result) => {
+          if (result.sentiment === 'positive') aiPositive++;
+          else if (result.sentiment === 'negative') aiNegative++;
+          else aiNeutral++;
+        });
+
+        const total = newResults.size;
+        console.log(`[AI Sentiment] Analysis complete: ${aiPositive} positive, ${aiNegative} negative, ${aiNeutral} neutral`);
+
+        // Update analytics with AI sentiment percentages
+        setAnalytics(prev => ({
+          ...prev,
+          bjpPositive: total > 0 ? Math.round((aiPositive / total) * 100) : prev.bjpPositive,
+          bjpNegative: total > 0 ? Math.round((aiNegative / total) * 100) : prev.bjpNegative,
+          bjpNeutral: total > 0 ? Math.round((aiNeutral / total) * 100) : prev.bjpNeutral,
+        }));
+      }
+    };
+
+    analyzeWithAI();
+  }, [filteredArticles]);
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -2395,6 +2520,17 @@ export default function PressMediaMonitoring() {
     }
   };
 
+  // Auto-fetch real news on component mount
+  useEffect(() => {
+    const autoFetchNews = async () => {
+      if (!isFetchingNews && dbArticles.length === 0) {
+        console.log('[AutoFetch] Starting automatic news fetch...');
+        await handleFetchRealNews();
+      }
+    };
+    autoFetchNews();
+  }, []); // Only on mount
+
   // Handle seeding historical 7 days of articles (CLEAR AND RESEED)
   const handleSeedHistorical = async () => {
     if (isSeedingHistory) return;
@@ -2603,6 +2739,16 @@ export default function PressMediaMonitoring() {
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-responsive">
+            {/* Loading Indicator when fetching real news */}
+            {isFetchingNews && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex items-center gap-3">
+                <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+                <div>
+                  <div className="font-medium text-blue-800">Fetching Real News...</div>
+                  <div className="text-sm text-blue-600">Loading articles from ABP Ananda, Ei Samay, NewsAPI, Google News</div>
+                </div>
+              </div>
+            )}
             {/* BJP Key Metrics */}
             <ResponsiveGrid cols={{ sm: 2, lg: 4 }}>
               <MobileCard padding="default" className="text-center border-orange-200 bg-orange-50">
@@ -2670,14 +2816,26 @@ export default function PressMediaMonitoring() {
               </MobileCard>
             )}
 
-            {/* BJP Sentiment Distribution */}
+            {/* BJP Sentiment Distribution - AI Powered */}
             <MobileCard padding="default" className="border-orange-100">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-responsive-lg font-semibold text-gray-900">
                   BJP Sentiment Distribution
+                  {isAnalyzingAI && (
+                    <span className="ml-2 text-xs text-blue-600 animate-pulse">
+                      (AI Analyzing...)
+                    </span>
+                  )}
+                  {aiAnalysisComplete && (
+                    <span className="ml-2 text-xs text-green-600">
+                      (AI Powered)
+                    </span>
+                  )}
                 </h3>
                 <div className="flex space-x-2">
-                  <span className="text-responsive-xs text-orange-600 font-medium">BJP News Only</span>
+                  <span className="text-responsive-xs text-orange-600 font-medium">
+                    {aiAnalysisComplete ? 'Hugging Face AI' : 'BJP News Only'}
+                  </span>
                 </div>
               </div>
 
@@ -2738,13 +2896,18 @@ export default function PressMediaMonitoring() {
               </div>
             </MobileCard>
 
-            {/* BJP Work Categories - Trending Topics */}
+            {/* BJP Work Categories - Trending Topics (Real Data) */}
             <MobileCard padding="default" className="border-orange-100">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-responsive-lg font-semibold text-gray-900">
                   BJP Work Categories
+                  {aiAnalysisComplete && (
+                    <span className="ml-2 text-xs text-green-600">(AI Powered)</span>
+                  )}
                 </h3>
-                <span className="text-xs text-orange-600 font-medium">Sentiment Analysis</span>
+                <span className="text-xs text-orange-600 font-medium">
+                  {aiAnalysisComplete ? 'Real-time AI Analysis' : 'Real-time Data'}
+                </span>
               </div>
               <div className="space-y-3">
                 {trendingTopics.slice(0, 5).map(topic => {
@@ -3022,9 +3185,17 @@ export default function PressMediaMonitoring() {
         {activeTab === 'trends' && (
           <div className="space-responsive">
             <MobileCard padding="default">
-              <h3 className="text-responsive-lg font-semibold text-gray-900 mb-4">
-                BJP Trending Analysis
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-responsive-lg font-semibold text-gray-900">
+                  Real-time Trending Topics
+                  {aiAnalysisComplete && (
+                    <span className="ml-2 text-xs text-green-600">(AI Powered)</span>
+                  )}
+                </h3>
+                <span className="text-xs text-blue-600 font-medium">
+                  From {articlesSource.length} articles
+                </span>
+              </div>
 
               {trendingTopics.length === 0 ? (
                 <div className="text-center py-12">
