@@ -232,7 +232,6 @@ export default function BoothsList() {
   // Re-load when sort changes
   useEffect(() => {
     loadBooths();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortField, sortDirection]);
 
   const handleExport = () => {

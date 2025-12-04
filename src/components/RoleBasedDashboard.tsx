@@ -37,8 +37,8 @@ export default function RoleBasedDashboard() {
     return <Navigate to="/login" replace />;
   }
 
-  // All users now go to Main Dashboard (legacy) by default
-  // This is the Pulse of People Dashboard with the map view
+  // All users now go to POP Dashboard (legacy) by default
+  // This is the Pulse of People Dashboard with West Bengal map view
   const dashboardRoute = '/dashboard/legacy';
 
   console.log('Redirecting to:', dashboardRoute);

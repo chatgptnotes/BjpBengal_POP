@@ -272,7 +272,6 @@ export const useNewsSentiment = (options: {
     if (autoFetch) {
       refreshData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFetch]);
 
   /**
@@ -287,7 +286,6 @@ export const useNewsSentiment = (options: {
     }, autoFetchInterval);
 
     return () => clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFetch, autoFetchInterval]);
 
   /**

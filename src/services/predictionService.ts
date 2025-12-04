@@ -48,24 +48,22 @@ export interface PredictionStats {
 
 // Prediction weights - WITH 2025 by-election data (highest priority)
 const WEIGHTS_WITH_2025 = {
-  BYELECTION_2025: 0.40,   // Most recent actual result (highest weight)
-  LOK_SABHA_2024: 0.25,    // Second most recent
-  ASSEMBLY_2021: 0.20,     // Historical baseline
+  BYELECTION_2025: 0.50,   // Most recent actual result (highest weight)
+  ASSEMBLY_2021: 0.35,     // Historical baseline
   NEWS_SENTIMENT: 0.10,    // Current media mood
   GROUND_REPORT: 0.05      // Manual inputs
 };
 
 // Prediction weights - WITHOUT 2025 by-election data (fallback)
 const WEIGHTS_WITHOUT_2025 = {
-  LOK_SABHA_2024: 0.45,    // Increased weight when no 2025 data
-  ASSEMBLY_2021: 0.35,     // Increased weight when no 2025 data
-  NEWS_SENTIMENT: 0.15,    // Slightly higher
-  GROUND_REPORT: 0.05      // Same
+  ASSEMBLY_2021: 0.80,     // Primary historical data
+  NEWS_SENTIMENT: 0.15,    // Current media mood
+  GROUND_REPORT: 0.05      // Manual inputs
 };
 
 /**
  * Calculate win probability based on vote shares and trends
- * Uses 2025 by-election data if available (40% weight), otherwise falls back to 2024+2021 data
+ * Uses 2025 by-election data if available (50% weight) + 2021 Assembly (35% weight)
  */
 function calculateWinProbability(
   bjpShare2024: number,
@@ -89,12 +87,11 @@ function calculateWinProbability(
   const has2025Data = bjpShare2025 !== undefined && bjpShare2025 > 0;
 
   if (has2025Data) {
-    // USE 2025 WEIGHTS - by-election data gets highest priority (40%)
+    // USE 2025 WEIGHTS - by-election data gets highest priority (50%)
     const W = WEIGHTS_WITH_2025;
 
     bjpScore = (
       bjpShare2025! * W.BYELECTION_2025 +
-      bjpShare2024 * W.LOK_SABHA_2024 +
       bjpShare2021 * W.ASSEMBLY_2021 +
       sentimentAdjustment * W.NEWS_SENTIMENT * 100 +
       groundAdjustment * W.GROUND_REPORT * 100
@@ -105,17 +102,15 @@ function calculateWinProbability(
 
     tmcScore = (
       (tmcShare2025 || (100 - bjpShare2025!)) * W.BYELECTION_2025 +
-      (100 - bjpShare2024) * W.LOK_SABHA_2024 +
       tmcShare2021 * W.ASSEMBLY_2021 +
       tmcSentimentAdjustment * W.NEWS_SENTIMENT * 100 +
       tmcGroundAdjustment * W.GROUND_REPORT * 100
     );
   } else {
-    // USE FALLBACK WEIGHTS - no 2025 data, rely on 2024 + 2021
+    // USE FALLBACK WEIGHTS - no 2025 data, rely on 2021 Assembly only
     const W = WEIGHTS_WITHOUT_2025;
 
     bjpScore = (
-      bjpShare2024 * W.LOK_SABHA_2024 +
       bjpShare2021 * W.ASSEMBLY_2021 +
       sentimentAdjustment * W.NEWS_SENTIMENT * 100 +
       groundAdjustment * W.GROUND_REPORT * 100
@@ -125,7 +120,6 @@ function calculateWinProbability(
     const tmcGroundAdjustment = (50 - groundReportBjp) * 0.3;
 
     tmcScore = (
-      (100 - bjpShare2024) * W.LOK_SABHA_2024 +
       tmcShare2021 * W.ASSEMBLY_2021 +
       tmcSentimentAdjustment * W.NEWS_SENTIMENT * 100 +
       tmcGroundAdjustment * W.GROUND_REPORT * 100
