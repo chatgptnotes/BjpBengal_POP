@@ -111,10 +111,14 @@ export default function AIInsightsEngineUltimate() {
     setLoading(true);
 
     try {
+      console.log('Fetching insights for constituency:', constituencyId);
       const insights = await aiService.generateConstituencyInsights(constituencyId);
+      console.log('Received insights:', insights);
       setConstituencyInsights(insights);
     } catch (error) {
       console.error('Error generating insights:', error);
+      // Set fallback insights on error
+      setConstituencyInsights([]);
     } finally {
       setLoading(false);
     }
@@ -823,7 +827,7 @@ export default function AIInsightsEngineUltimate() {
           <div className="max-w-6xl w-full max-h-[90vh] overflow-hidden">
             <ImplementationStrategy
               insight={selectedInsight}
-              constituency={selectedConstituency || 'West Bengal'}
+              constituency={WEST_BENGAL_CONSTITUENCIES.find(c => c.id === selectedConstituency)?.name || selectedConstituency || 'West Bengal'}
               onClose={() => setShowStrategy(false)}
             />
           </div>

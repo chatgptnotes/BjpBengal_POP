@@ -110,18 +110,18 @@ export default function ImplementationStrategy({ insight, constituency, onClose 
             Implementation Timeline (30 Days)
           </h3>
           <div className="space-y-3">
-            {[
-              { week: 'Week 1', task: 'Ground research, booth mapping, volunteer recruitment', status: 'pending' },
-              { week: 'Week 2', task: 'Campaign material preparation, social media activation', status: 'pending' },
-              { week: 'Week 3', task: 'Door-to-door outreach, community meetings, influencer engagement', status: 'pending' },
-              { week: 'Week 4', task: 'Mega rallies, final push, feedback collection', status: 'pending' }
-            ].map((phase, idx) => (
+            {(insight.actionPlan?.groundActivities || [
+              { activity: 'Ground research and booth mapping', timeline: 'Week 1' },
+              { activity: 'Campaign material preparation', timeline: 'Week 2' },
+              { activity: 'Door-to-door outreach', timeline: 'Week 3' },
+              { activity: 'Mega rallies and final push', timeline: 'Week 4' }
+            ]).map((phase, idx) => (
               <div key={idx} className="flex items-start bg-gray-50 rounded-lg p-4">
                 <div className="w-20 flex-shrink-0">
-                  <div className="font-medium text-orange-600">{phase.week}</div>
+                  <div className="font-medium text-orange-600">{phase.timeline || `Week ${idx + 1}`}</div>
                 </div>
                 <div className="flex-1">
-                  <p className="text-gray-700">{phase.task}</p>
+                  <p className="text-gray-700">{phase.activity || phase.task}</p>
                 </div>
                 <div>
                   <Clock className="w-5 h-5 text-gray-400" />
@@ -142,17 +142,17 @@ export default function ImplementationStrategy({ insight, constituency, onClose 
               <Users className="w-6 h-6 text-purple-600 mb-2" />
               <div className="font-semibold text-gray-900">Team Size</div>
               <div className="text-sm text-gray-600 mt-1">
-                {insight.resources?.volunteersNeeded || '50'} volunteers
+                {insight.resources?.volunteersNeeded || 50} volunteers
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {insight.resources?.fieldWorkers || '10'} field coordinators
+                {Math.ceil((insight.resources?.volunteersNeeded || 50) / 10)} field coordinators
               </div>
             </div>
             <div className="bg-green-50 rounded-lg p-4 border border-green-200">
               <DollarSign className="w-6 h-6 text-green-600 mb-2" />
               <div className="font-semibold text-gray-900">Budget</div>
               <div className="text-sm text-gray-600 mt-1">
-                ₹{insight.resources?.estimatedBudget?.toLocaleString() || '2,50,000'}
+                {insight.resources?.budgetRequired || '₹2,50,000'}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 Campaign materials, events, transport
@@ -178,18 +178,17 @@ export default function ImplementationStrategy({ insight, constituency, onClose 
             Detailed Action Items
           </h3>
           <div className="space-y-2">
-            {[
-              'Identify and map all polling booths with BJP weakness',
-              'Recruit and train booth-level volunteers (minimum 5 per booth)',
-              'Create WhatsApp groups for rapid communication',
-              'Organize daily morning meetings with ground teams',
-              'Conduct door-to-door surveys to identify swing voters',
-              'Address local issues through community meetings',
-              'Deploy social media campaign with local influencers',
-              'Organize sector-wise rallies and street corner meetings',
-              'Set up complaint redressal mechanism for grievances',
-              'Track daily progress and adjust strategy as needed'
-            ].map((action, idx) => (
+            {(insight.recommendations?.immediate?.concat(
+              insight.recommendations?.shortTerm || [],
+              insight.recommendations?.mediumTerm || []
+            ) || [
+              'Identify polling booths needing attention',
+              'Recruit booth volunteers',
+              'Create WhatsApp groups',
+              'Organize community meetings',
+              'Deploy social media campaign',
+              'Track daily progress'
+            ]).slice(0, 10).map((action, idx) => (
               <div key={idx} className="flex items-start bg-gray-50 rounded-lg p-3">
                 <CheckCircle className="w-5 h-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-700">{action}</span>

@@ -16,7 +16,8 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(node -e \"const data = require(''/Users/murali/BjpBengal_POP/src/data/westBengalConstituencies.ts''); console.log(''Total constituencies:'', data.WEST_BENGAL_CONSTITUENCIES?.length || ''undefined'');\")",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []

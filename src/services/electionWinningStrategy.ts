@@ -466,7 +466,7 @@ export class ElectionWinningStrategyService {
         Math.floor(avgVotersPerBooth * bjpVoteShare / 100 * 1.1);
 
       plans.push({
-        boothNumber: `${constituency.name}-${i}`,
+        boothNumber: `${intelligence.basic.name}-${i}`,
         voterCount: avgVotersPerBooth,
         bjpVotes2021: currentVotes,
         targetVotes2026: Math.floor(avgVotersPerBooth * 0.52), // Target 52% in each booth

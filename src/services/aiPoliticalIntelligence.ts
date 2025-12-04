@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { WEST_BENGAL_CONSTITUENCIES } from '../data/westBengalConstituencies';
 import { constituencyIntelligenceService } from './constituencyIntelligenceService';
 import { electionWinningStrategy } from './electionWinningStrategy';
+import { getConstituencyLocalKnowledge } from '../data/constituencyLocalKnowledge';
 
 // Types
 export interface ConstituencyContext {
@@ -131,7 +132,10 @@ export interface AIInsight {
 
 export class PoliticalIntelligenceAI {
   private geminiApiKey: string;
+  private apiKey: string; // OpenAI API key
   private geminiModel: string = 'gemini-1.5-flash'; // Fast, efficient model for real-time insights
+  private insightsCache: Map<string, { insights: AIInsight[], timestamp: number }> = new Map();
+  private CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
   constructor() {
     // Try multiple env variable names for flexibility
@@ -141,8 +145,14 @@ export class PoliticalIntelligenceAI {
       import.meta.env.VITE_GOOGLE_AI_KEY ||
       '';
 
-    if (!this.geminiApiKey) {
-      console.warn('Gemini API key not configured. AI insights will use fallback mode.');
+    // OpenAI API key
+    this.apiKey =
+      import.meta.env.VITE_OPENAI_API_KEY ||
+      import.meta.env.OPENAI_API_KEY ||
+      '';
+
+    if (!this.geminiApiKey && !this.apiKey) {
+      console.warn('No AI API keys configured. AI insights will use fallback mode.');
     }
   }
 
@@ -150,23 +160,34 @@ export class PoliticalIntelligenceAI {
    * Generate comprehensive insights for a constituency
    */
   async generateConstituencyInsights(constituencyId: string): Promise<AIInsight[]> {
+    // Check cache first
+    const cached = this.insightsCache.get(constituencyId);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      console.log('AIService: Using cached insights for', constituencyId);
+      return cached.insights;
+    }
+
     try {
+      console.log('AIService: Generating fresh insights for', constituencyId);
       // Step 1: Gather all constituency context
       const context = await this.gatherConstituencyContext(constituencyId);
+      console.log('AIService: Context gathered', context);
 
       if (!context) {
         throw new Error('Unable to gather constituency context');
       }
 
-      // Step 2: Generate insights using AI or fallback
-      if (this.geminiApiKey) {
-        return await this.generateAIInsights(context);
-      } else {
-        return await this.generateFallbackInsights(context);
-      }
+      // Step 2: Generate unique insights based on constituency data
+      // Using enhanced fallback that creates unique plans for each constituency
+      console.log('AIService: Generating unique insights for', constituencyId);
+      const insights = await this.generateEnhancedInsights(context);
+
+      // Cache the insights
+      this.insightsCache.set(constituencyId, { insights, timestamp: Date.now() });
+      return insights;
     } catch (error) {
       console.error('Error generating insights:', error);
-      return this.generateErrorFallbackInsights(constituencyId);
+      return await this.generateErrorFallbackInsights(constituencyId);
     }
   }
 
@@ -494,54 +515,86 @@ export class PoliticalIntelligenceAI {
   }
 
   /**
-   * Generate AI insights using Gemini
+   * Generate AI insights using OpenAI
    */
   private async generateAIInsights(context: ConstituencyContext): Promise<AIInsight[]> {
     const prompt = this.buildAIPrompt(context);
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: prompt }]
-            }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 8192,
-              topP: 0.9
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a senior political strategist for BJP West Bengal with deep knowledge of ground-level politics, demographics, and election strategies. Generate specific, actionable, and unique campaign strategies for each constituency.'
+            },
+            {
+              role: 'user',
+              content: prompt
             }
-          })
-        }
-      );
+          ],
+          temperature: 0.8,
+          max_tokens: 2000
+        })
+      });
 
       if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.statusText}`);
+        const error = await response.text();
+        throw new Error(`OpenAI API error: ${response.status} - ${error}`);
       }
 
       const data = await response.json();
-      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const aiResponse = data.choices?.[0]?.message?.content || '';
 
-      return await this.parseAIResponse(aiResponse, context);
+      if (!aiResponse) {
+        console.error('OpenAI returned empty response:', data);
+        throw new Error('Empty AI response');
+      }
+
+      console.log('AI Response received for', context.basic.name, '- Length:', aiResponse.length);
+      const parsedInsights = await this.parseAIResponse(aiResponse, context);
+      console.log('Parsed', parsedInsights.length, 'insights from AI response');
+      return parsedInsights;
     } catch (error) {
-      console.error('Error calling Gemini API:', error);
+      console.error('Error calling OpenAI API:', error);
+      console.error('Falling back to local intelligence');
       return await this.generateFallbackInsights(context);
     }
   }
 
   /**
-   * Build comprehensive AI prompt
+   * Build comprehensive AI prompt with enhanced local knowledge
    */
   private buildAIPrompt(context: ConstituencyContext): string {
-    return `You are a senior political strategist for BJP West Bengal. Analyze the following constituency data and provide actionable campaign insights.
+    // Get real constituency intelligence and LOCAL KNOWLEDGE
+    const constituencyId = context.basic.id;
+    const localKnowledge = getConstituencyLocalKnowledge(constituencyId);
+
+    return `You are a senior political strategist for BJP West Bengal with DEEP LOCAL KNOWLEDGE. Generate HYPER-SPECIFIC campaign strategies for ${context.basic.name}.
+
+🚨 CRITICAL: This is NOT a generic plan. Every recommendation MUST reference ACTUAL LOCAL PLACES, REAL ISSUES, and SPECIFIC DEMOGRAPHICS.
 
 CONSTITUENCY: ${context.basic.name} (${context.basic.district})
 Type: ${context.basic.type} | Total Voters: ${context.basic.totalVoters}
 
-CURRENT POLITICAL SITUATION:
+📍 HYPERLOCAL CONTEXT:
+${localKnowledge.localIssues.map(issue =>
+  `• ${issue.title} [SEVERITY: ${issue.severity.toUpperCase()}]
+   Affected: ${issue.affectedAreas.join(', ')} (${issue.votersAffected.toLocaleString()} voters)
+   Details: ${issue.description}`
+).join('\n')}
+
+🏛️ KEY LANDMARKS & VENUES:
+${localKnowledge.landmarks.map(l => `• ${l.name} (${l.type}): ${l.significance}`).join('\n')}
+Rally Venues: ${localKnowledge.rallyVenues.map(v => `${v.name} (Capacity: ${v.capacity.toLocaleString()})`).join(', ')}
+
+🎯 CURRENT POLITICAL SITUATION:
 - Current MLA: ${context.political.currentMLA} (${context.political.currentParty})
 - BJP Vote Share: ${context.political.bjpVoteShare}% (Position: #${context.political.bjpPosition})
 - Last Election Margin: ${context.political.lastElectionMargin} votes
@@ -553,12 +606,21 @@ DEMOGRAPHICS:
 - Literacy: ${context.demographics.literacyRate}% | Urban: ${context.demographics.urbanPercentage}%
 - Youth (18-35): ${context.demographics.youthPercentage}% | Women Voters: ${context.demographics.womenVoters}
 
+🎭 CULTURAL EVENTS & GATHERINGS:
+${localKnowledge.culturalEvents.map(e => `• ${e.name} (${e.timing}): ${e.participation.toLocaleString()} participants`).join('\n')}
+
+💼 ECONOMIC ACTIVITIES:
+${localKnowledge.economicActivities.join(', ')}
+
+🗣️ CAMPAIGN MOTTOS:
+${localKnowledge.campaignMottos.map(m => `• "${m.slogan}" (Target: ${m.target})`).join('\n')}
+
 CURRENT SENTIMENT:
 - Overall: ${context.sentiment.overall}% | BJP Specific: ${context.sentiment.bjpSentiment}%
 - Anti-incumbency: ${context.sentiment.antiIncumbency}%
 - Trend: ${context.sentiment.trendDirection} (${context.sentiment.lastWeekChange > 0 ? '+' : ''}${context.sentiment.lastWeekChange}% last week)
 
-TOP ISSUES:
+⚡ TOP VOTER CONCERNS:
 ${context.issues.slice(0, 5).map(i => `- ${i.title}: ${i.severity} severity, ${i.voterConcern}% voter concern`).join('\n')}
 
 COMPETITION ANALYSIS:
@@ -573,22 +635,72 @@ SOCIAL MEDIA PULSE:
 - Mentions: ${context.socialMedia.totalMentions} | Positive: ${context.socialMedia.positiveSentiment}% | Negative: ${context.socialMedia.negativeSentiment}%
 - Trending: ${context.socialMedia.viralTopics.join(', ')}
 
-TASK: Generate 5 specific, actionable insights for BJP to improve its position in this constituency. For each insight provide:
-1. A clear title describing the opportunity or threat
-2. Detailed analysis of the situation
-3. Specific recommendations for immediate action (24 hours), short-term (7 days), and medium-term (30 days)
-4. Resource requirements (budget, volunteers, materials)
-5. Expected impact on voter sentiment and vote share
+🎯 YOUR MISSION - GENERATE 3 HYPERLOCAL CAMPAIGN STRATEGIES:
 
-Focus on:
-- How to convert anti-incumbency into BJP votes
-- Specific rallies/events to organize (with locations and speakers)
-- Digital campaigns targeting key demographics
-- Ground-level booth strengthening activities
-- Counter-narratives to TMC's welfare schemes
-- Local issue resolution strategies
+For EACH strategy, you MUST:
+1. Reference SPECIFIC local areas from: ${localKnowledge.localIssues.flatMap(i => i.affectedAreas).slice(0, 5).join(', ')}
+2. Address ACTUAL issues affecting voters: ${localKnowledge.localIssues.map(i => i.title).slice(0, 3).join(', ')}
+3. Use LOCAL venues for rallies: ${localKnowledge.rallyVenues.map(v => v.name).join(', ')}
+4. Incorporate cultural context: ${localKnowledge.culturalEvents.map(e => e.name).slice(0, 2).join(', ')}
+5. Target economic groups: ${localKnowledge.economicActivities.slice(0, 3).join(', ')}
 
-Format your response as JSON array with the structure matching AIInsight interface.`;
+For EACH insight, provide this JSON structure:
+{
+  "title": "Specific opportunity based on local data",
+  "description": "Detailed explanation mentioning local areas/issues",
+  "category": "opportunity|threat|strategy|campaign",
+  "priority": "urgent|high|medium",
+  "analysis": {
+    "situation": "Current ground reality in ${context.basic.name}",
+    "impact": "Specific vote numbers and demographics affected",
+    "urgency": "Why action is needed now",
+    "confidence": 60-95
+  },
+  "recommendations": {
+    "immediate": ["3 things to do in next 24 hours - BE SPECIFIC"],
+    "shortTerm": ["3 things for next week - mention exact locations"],
+    "mediumTerm": ["3 things for next month - name specific events"]
+  },
+  "actionPlan": {
+    "groundActivities": [
+      {
+        "activity": "Specific activity for ${context.basic.name}",
+        "areas": ["Actual ward/area names"],
+        "volunteers": <number>,
+        "timeline": "specific dates"
+      }
+    ]
+  },
+  "resources": {
+    "budgetRequired": "₹<specific amount based on activity>",
+    "volunteersNeeded": <calculated number>,
+    "materials": ["Specific materials needed"],
+    "keyPersonnel": ["Specific roles needed"]
+  },
+  "expectedOutcome": {
+    "sentimentImprovement": <percentage>,
+    "voterReachIncrease": <specific number>,
+    "issueResolution": "Specific local issue addressed",
+    "timeToImpact": "realistic timeline"
+  }
+}
+
+IMPORTANT - BE HYPERLOCAL:
+- Each strategy MUST mention SPECIFIC local areas like: ${localKnowledge.localIssues[0]?.affectedAreas[0] || 'local area'}
+- MUST address REAL issues like: ${localKnowledge.localIssues[0]?.title || 'local issue'}
+- Rallies MUST be at REAL venues like: ${localKnowledge.rallyVenues[0]?.name || 'local venue'}
+- Use ACTUAL campaign slogans like: "${localKnowledge.campaignMottos[0]?.slogan || 'local slogan'}"
+- Reference actual TMC/Congress/CPM failures in ${context.basic.name}
+- Budget should reflect actual costs in West Bengal
+- Timeline should account for ${localKnowledge.culturalEvents[0]?.name || 'local events'}
+
+Example format:
+"${localKnowledge.localIssues[0]?.title || 'Tea Garden Worker Crisis'} Campaign at ${localKnowledge.localIssues[0]?.affectedAreas[0] || 'Madarihat'}"
+NOT: "Address labor issues in constituency"
+
+Remember: This is ${context.basic.name} with its UNIQUE issues. Do NOT give advice that could apply to any constituency!
+
+Return ONLY a JSON array with 3 such insight objects. No other text.`;
   }
 
   /**
@@ -598,9 +710,20 @@ Format your response as JSON array with the structure matching AIInsight interfa
     try {
       // Try to parse JSON response
       const insights = JSON.parse(aiResponse);
-      return Array.isArray(insights) ? insights : [insights];
-    } catch {
-      // If not JSON, parse text response
+
+      // Ensure each insight has required fields
+      const validatedInsights = Array.isArray(insights) ? insights : [insights];
+
+      // Add IDs if missing and ensure all fields are present
+      return validatedInsights.map((insight, index) => ({
+        id: insight.id || `ai-${context.basic.id}-${Date.now()}-${index}`,
+        ...insight,
+        category: insight.category || 'strategy',
+        priority: insight.priority || 'high'
+      }));
+    } catch (error) {
+      console.error('Failed to parse AI response as JSON:', error);
+      // If not JSON, try to extract insights from text
       return await this.parseTextResponse(aiResponse, context);
     }
   }
@@ -615,6 +738,558 @@ Format your response as JSON array with the structure matching AIInsight interfa
   }
 
   /**
+   * Generate enhanced insights with unique plans for each constituency
+   */
+  private async generateEnhancedInsights(context: ConstituencyContext): Promise<AIInsight[]> {
+    const insights: AIInsight[] = [];
+
+    // Get real constituency intelligence
+    const constituencyId = context.basic.id;
+    const intelligence = await constituencyIntelligenceService.getConstituencyIntelligence(constituencyId);
+    const strategy = await electionWinningStrategy.generateWinningStrategy(constituencyId);
+
+    // Get LOCAL KNOWLEDGE for real, unique issues
+    const localKnowledge = getConstituencyLocalKnowledge(constituencyId);
+
+    // Helper function to determine priority based on various factors
+    const getPriority = (urgencyScore: number): 'urgent' | 'high' | 'medium' | 'low' => {
+      if (urgencyScore > 80) return 'urgent';
+      if (urgencyScore > 60) return 'high';
+      if (urgencyScore > 40) return 'medium';
+      return 'low';
+    };
+
+    // Generate unique timeline based on constituency characteristics
+    const generateUniqueTimeline = () => {
+      const { district, name, type } = context.basic;
+      const isUrban = type === 'urban';
+      const isRural = type === 'rural';
+
+      return [
+        {
+          activity: `${isUrban ? 'Ward-level' : 'Village-level'} mapping in ${name}`,
+          timeline: 'Week 1',
+          areas: [`${name} ${isUrban ? 'wards' : 'panchayats'}`],
+          volunteers: Math.floor(intelligence.basic.totalVoters / 1000)
+        },
+        {
+          activity: `${intelligence.demographics.hinduPercentage > 70 ? 'Temple committee' : 'Community leader'} engagement in ${district}`,
+          timeline: 'Week 2',
+          areas: [`${name} religious centers`],
+          volunteers: Math.floor(intelligence.basic.totalVoters / 2000)
+        },
+        {
+          activity: `${intelligence.demographics.youthPercentage > 40 ? 'College campus' : 'Market area'} outreach in ${name}`,
+          timeline: 'Week 3',
+          areas: [`${name} ${intelligence.demographics.youthPercentage > 40 ? 'colleges' : 'bazaars'}`],
+          volunteers: Math.floor(intelligence.basic.totalVoters / 1500)
+        },
+        {
+          activity: `Victory rally at ${name} ${isUrban ? 'stadium' : 'maidan'}`,
+          timeline: 'Week 4',
+          areas: [`Central ${name}`],
+          volunteers: Math.floor(intelligence.basic.totalVoters / 800)
+        }
+      ];
+    };
+
+    // Generate unique action items based on demographics
+    const generateUniqueActions = () => {
+      const actions = [];
+
+      // Based on vote share
+      if (intelligence.political.bjpVoteShare2021 < 20) {
+        actions.push(`Establish BJP presence in all ${Math.floor(intelligence.basic.totalVoters / 1000)} booths of ${context.basic.name}`);
+        actions.push(`Recruit 500 new members from ${context.basic.name} within 7 days`);
+      } else if (intelligence.political.bjpVoteShare2021 < 40) {
+        actions.push(`Strengthen weak booths in ${context.basic.name} - target ${Math.floor(intelligence.basic.totalVoters / 2000)} booths`);
+        actions.push(`Convert ${strategy.voteBank.swing.dissatisfiedTMC} TMC supporters identified`);
+      } else {
+        actions.push(`Consolidate ${strategy.voteBank.committed.hinduTraditional} Hindu votes in ${context.basic.name}`);
+        actions.push(`Protect vote bank from TMC poaching in ${context.basic.name}`);
+      }
+
+      // Based on demographics
+      if (intelligence.demographics.muslimPercentage > 30) {
+        actions.push(`Pasmanda Muslim outreach in ${context.basic.name} - target ${Math.floor(intelligence.demographics.muslimPercentage * intelligence.basic.totalVoters / 100 * 0.15)} votes`);
+      }
+      if (intelligence.demographics.scPercentage > 25) {
+        actions.push(`SC community mobilization through ${context.basic.name} Matua leaders`);
+      }
+      if (intelligence.demographics.youthPercentage > 40) {
+        actions.push(`Youth employment mela at ${context.basic.name} - target 5000 attendees`);
+      }
+
+      // Local issues
+      actions.push(`Address "${context.issues[0]?.title || 'water shortage'}" affecting ${context.issues[0]?.voterConcern || 60}% voters`);
+      actions.push(`Counter TMC welfare with development agenda in ${context.basic.name}`);
+      actions.push(`WhatsApp campaign reaching ${Math.floor(intelligence.basic.totalVoters * 0.3)} voters`);
+
+      return actions;
+    };
+
+    // 1. ANTI-INCUMBENCY CAMPAIGN (if applicable)
+    if (intelligence.swingFactors.antiIncumbency > 40) {
+      insights.push({
+        id: `anti-incumbency-${constituencyId}-${Date.now()}`,
+        category: 'opportunity',
+        priority: getPriority(intelligence.swingFactors.antiIncumbency + 20),
+        title: `${intelligence.swingFactors.antiIncumbency}% Anti-Incumbency: Convert ${strategy.voteBank.swing.dissatisfiedTMC.toLocaleString()} Dissatisfied TMC Voters`,
+        description: `${intelligence.political.currentMLA} (${intelligence.political.currentParty}) facing voter anger. ${context.issues[0]?.title || 'Governance failure'} affecting ${context.issues[0]?.voterConcern || 60}% voters. Strike now!`,
+
+      analysis: {
+        situation: `${context.basic.name} specific: ${intelligence.political.bjpVoteShare2021}% BJP share, ${intelligence.swingFactors.antiIncumbency}% anti-incumbency`,
+        impact: `Can win ${strategy.voteBank.convertible.conversionPotential.toLocaleString()} votes from ${strategy.voteBank.convertible.targetGroups.map(g => g.name).join(', ')}`,
+        urgency: intelligence.swingFactors.antiIncumbency > 60 ? 'Strike now while anti-incumbency is high!' : 'Build steady momentum',
+        confidence: strategy.winningFormula.confidence
+      },
+
+      recommendations: {
+        immediate: generateUniqueActions().slice(0, 3),
+        shortTerm: generateUniqueActions().slice(3, 6),
+        mediumTerm: generateUniqueActions().slice(6, 9)
+      },
+
+      actionPlan: {
+        groundActivities: generateUniqueTimeline()
+      },
+
+      resources: {
+        budgetRequired: `₹${(Math.floor(intelligence.basic.totalVoters / 100) * 100).toLocaleString()}`,
+        volunteersNeeded: Math.floor(intelligence.basic.totalVoters / 500),
+        materials: [
+          `${context.basic.name} specific pamphlets`,
+          `${intelligence.demographics.hinduPercentage > 70 ? 'Religious' : 'Development'} campaign material`,
+          `${context.basic.district} dialect content`
+        ],
+        keyPersonnel: [
+          `${context.basic.name} BJP president`,
+          `${Math.ceil(intelligence.basic.totalVoters / 5000)} ward presidents`,
+          `${strategy.voteBank.convertible.targetGroups[0]?.name || 'Community'} coordinators`
+        ]
+      },
+
+      expectedOutcome: {
+        sentimentImprovement: Math.min(Math.floor(intelligence.swingFactors.antiIncumbency / 5), 20),
+        voterReachIncrease: Math.floor(intelligence.basic.totalVoters * 0.25),
+        issueResolution: context.issues[0]?.title || 'Local development',
+        timeToImpact: intelligence.swingFactors.antiIncumbency > 60 ? '2 weeks' : '4 weeks'
+      },
+
+      riskAssessment: {
+        potentialBacklash: `TMC may target ${context.basic.name} with increased welfare`,
+        oppositionResponse: strategy.oppositionWeakness.tmcVulnerabilities[0] || 'TMC counter-campaign',
+        mitigationStrategy: `Silent voter strategy in ${context.basic.name}`
+      }
+    });
+    }
+
+    // 2. DEMOGRAPHIC-SPECIFIC CAMPAIGN (always generate)
+    const targetDemo = strategy.voteBank.convertible.targetGroups[0];
+    if (targetDemo) {
+      insights.push({
+        id: `demographic-${constituencyId}-${Date.now()}-1`,
+        category: 'campaign',
+        priority: getPriority(70),
+        title: `Target ${targetDemo.name}: ${targetDemo.size.toLocaleString()} Convertible Votes`,
+        description: `${targetDemo.name} forming ${Math.round(targetDemo.size / intelligence.basic.totalVoters * 100)}% of voters. Current dissatisfaction with ${intelligence.political.currentParty}. Specific outreach needed.`,
+
+        analysis: {
+          situation: `${targetDemo.name} concentrated in ${context.basic.name}`,
+          impact: `Direct impact on ${targetDemo.size.toLocaleString()} votes`,
+          urgency: 'Systematic engagement needed',
+          confidence: 75
+        },
+
+        recommendations: {
+          immediate: [
+            `Map all ${targetDemo.name} households in ${context.basic.name}`,
+            `Identify 50 community influencers from ${targetDemo.name}`,
+            `Create WhatsApp groups for ${targetDemo.name} voters`
+          ],
+          shortTerm: [
+            `${targetDemo.name}-specific rally in ${context.basic.name}`,
+            `Door-to-door by ${targetDemo.name} volunteers`,
+            `Address specific grievances of ${targetDemo.name}`
+          ],
+          mediumTerm: [
+            `Establish permanent ${targetDemo.name} cell`,
+            `Monthly ${targetDemo.name} engagement programs`,
+            `Build ${targetDemo.name} vote bank for 2026`
+          ]
+        },
+
+        actionPlan: {
+          groundActivities: [{
+            activity: `${targetDemo.name} mobilization drive`,
+            areas: [`${context.basic.name} ${targetDemo.name} areas`],
+            volunteers: Math.ceil(targetDemo.size / 200),
+            timeline: '15 days'
+          }]
+        },
+
+        resources: {
+          budgetRequired: `₹${Math.floor(targetDemo.size * 10).toLocaleString()}`,
+          volunteersNeeded: Math.ceil(targetDemo.size / 200),
+          materials: [`${targetDemo.name} specific literature`],
+          keyPersonnel: [`${targetDemo.name} coordinator`]
+        },
+
+        expectedOutcome: {
+          sentimentImprovement: 15,
+          voterReachIncrease: targetDemo.size,
+          issueResolution: `${targetDemo.name} grievances`,
+          timeToImpact: '3 weeks'
+        }
+      });
+    }
+
+    // 3. BOOTH STRENGTHENING CAMPAIGN
+    const weakBooths = Math.floor(intelligence.basic.totalVoters / 1000 * 0.4); // 40% weak booths
+    insights.push({
+      id: `booth-${constituencyId}-${Date.now()}`,
+      category: 'strategy',
+      priority: getPriority(65),
+      title: `Booth Strengthening: Fix ${weakBooths} Weak Booths in ${context.basic.name}`,
+      description: `BJP weak or absent in ${weakBooths} booths. Each booth has ~${Math.floor(intelligence.basic.totalVoters / (intelligence.basic.totalVoters / 1000))} voters. Critical for ground game.`,
+
+      analysis: {
+        situation: `${weakBooths} booths need immediate attention`,
+        impact: `Control ${weakBooths * 1000} votes directly`,
+        urgency: 'Foundation for 2026 victory',
+        confidence: 80
+      },
+
+      recommendations: {
+        immediate: [
+          `Appoint booth presidents in all ${weakBooths} weak booths`,
+          `Create booth-level WhatsApp groups`,
+          `Start daily booth meetings`
+        ],
+        shortTerm: generateUniqueActions().slice(0, 3),
+        mediumTerm: [
+          `Achieve 100% booth coverage in ${context.basic.name}`,
+          `Regular booth president training`,
+          `Booth-level voter database`
+        ]
+      },
+
+      actionPlan: {
+        groundActivities: generateUniqueTimeline().slice(0, 2)
+      },
+
+      resources: {
+        budgetRequired: `₹${(weakBooths * 5000).toLocaleString()}`,
+        volunteersNeeded: weakBooths * 5,
+        materials: ['Booth kits', 'Voter lists', 'BJP flags'],
+        keyPersonnel: [`${weakBooths} booth presidents`, 'Booth coordinators']
+      },
+
+      expectedOutcome: {
+        sentimentImprovement: 10,
+        voterReachIncrease: weakBooths * 500,
+        issueResolution: 'Organizational weakness',
+        timeToImpact: '6 weeks'
+      }
+    });
+
+    // 4. LOCAL ISSUES CAMPAIGNS - REAL, UNIQUE ISSUES
+    // Generate insights for each real local issue
+    localKnowledge.localIssues.forEach((localIssue, index) => {
+      if (index >= 3) return; // Max 3 issue-based campaigns
+
+      const motto = localKnowledge.campaignMottos.find(m =>
+        m.target.toLowerCase().includes(localIssue.affectedAreas[0]?.toLowerCase()) ||
+        m.theme.toLowerCase().includes(localIssue.title.split(' ')[0].toLowerCase())
+      ) || localKnowledge.campaignMottos[0];
+
+      const rallyVenue = localKnowledge.rallyVenues[0] || {
+        name: `${context.basic.name} Ground`,
+        capacity: 25000,
+        location: 'Central area'
+      };
+
+      insights.push({
+        id: `issue-${constituencyId}-${index}-${Date.now()}`,
+        category: 'campaign',
+        priority: getPriority(localIssue.severity === 'critical' ? 90 - (index * 5) : 65 - (index * 5)),
+        title: `${localIssue.title}: ${localIssue.votersAffected.toLocaleString()} Voters Demand Action`,
+        description: `${localIssue.description}. Affected areas: ${localIssue.affectedAreas.join(', ')}. TMC has failed for 13 years!`,
+
+        analysis: {
+          situation: `GROUND REALITY: ${localIssue.description}`,
+          impact: `Direct impact on ${localIssue.votersAffected.toLocaleString()} voters in ${localIssue.affectedAreas.join(', ')}`,
+          urgency: localIssue.severity === 'critical' ?
+            'CRITICAL - Visible action within 24 hours or lose credibility' :
+            'HIGH - Address within 72 hours',
+          confidence: localIssue.severity === 'critical' ? 85 : 70
+        },
+
+        recommendations: {
+          immediate: [
+            `Emergency meeting at ${localIssue.affectedAreas[0]} TOMORROW 10 AM`,
+            `Deploy 50 volunteers to ${localIssue.affectedAreas.join(', ')} for survey`,
+            `Press conference at ${rallyVenue.name} exposing TMC failure`
+          ],
+          shortTerm: [
+            `"${motto.slogan}" rally at ${rallyVenue.name} (Capacity: ${rallyVenue.capacity.toLocaleString()})`,
+            `Door-to-door in ${localIssue.affectedAreas.join(', ')} with solution pamphlets`,
+            `Petition drive targeting ${Math.floor(localIssue.votersAffected * 0.2)} signatures`
+          ],
+          mediumTerm: [
+            `Monthly review meetings in ${localIssue.affectedAreas[0]}`,
+            `Create "${localIssue.title} Resolution Committee"`,
+            `Make this THE election issue for ${context.basic.name}`
+          ]
+        },
+
+        actionPlan: {
+          groundActivities: [
+            {
+              activity: `${localIssue.title} Awareness March`,
+              areas: localIssue.affectedAreas,
+              volunteers: Math.ceil(localIssue.votersAffected / 500),
+              timeline: '48 hours'
+            },
+            {
+              activity: `"${motto.slogan}" Rally`,
+              areas: [rallyVenue.location],
+              volunteers: Math.ceil(rallyVenue.capacity / 100),
+              timeline: 'This Sunday'
+            }
+          ]
+        },
+
+        resources: {
+          budgetRequired: `₹${(localIssue.votersAffected * 5).toLocaleString()}`,
+          volunteersNeeded: Math.ceil(localIssue.votersAffected / 300),
+          materials: [
+            `${localIssue.title} fact sheets in Bengali`,
+            `"${motto.slogan}" banners and posters`,
+            `Before/After comparison boards`
+          ],
+          keyPersonnel: [
+            `${localIssue.affectedAreas[0]} area coordinator`,
+            'Local media contacts',
+            'Victim family representatives'
+          ]
+        },
+
+        expectedOutcome: {
+          sentimentImprovement: localIssue.severity === 'critical' ? 25 : 15,
+          voterReachIncrease: localIssue.votersAffected,
+          issueResolution: localIssue.title,
+          timeToImpact: localIssue.severity === 'critical' ? '72 hours' : '1 week'
+        },
+
+        riskAssessment: {
+          potentialBacklash: `TMC may announce fake scheme for ${localIssue.title}`,
+          oppositionResponse: `TMC goons may disrupt ${rallyVenue.name} rally`,
+          mitigationStrategy: `Document everything, file police complaint preemptively`
+        }
+      });
+    });
+
+    // 5. WOMEN VOTERS CAMPAIGN
+    const womenVoters = intelligence.demographics.womenVoters;
+    if (womenVoters > 10000) {
+      insights.push({
+        id: `women-${constituencyId}-${Date.now()}`,
+        category: 'campaign',
+        priority: getPriority(55),
+        title: `Women Empowerment Drive: Target ${womenVoters.toLocaleString()} Women Voters`,
+        description: `Women form ${Math.round(womenVoters / intelligence.basic.totalVoters * 100)}% of electorate in ${context.basic.name}. Key to victory.`,
+
+        analysis: {
+          situation: `${womenVoters.toLocaleString()} women voters in constituency`,
+          impact: `Can swing election with women support`,
+          urgency: 'Build women vote bank systematically',
+          confidence: 65
+        },
+
+        recommendations: {
+          immediate: [
+            `Form Mahila Morcha in all ${Math.floor(intelligence.basic.totalVoters / 1000)} booths`,
+            `Women-only meetings in ${context.basic.name}`,
+            `Recruit 500 women volunteers`
+          ],
+          shortTerm: [
+            `Women empowerment rally with 5000 attendance`,
+            `Skill development camp for women`,
+            `Safety and security campaigns`
+          ],
+          mediumTerm: [
+            `Regular women engagement programs`,
+            `Build database of women voters`,
+            `Women-specific manifesto points`
+          ]
+        },
+
+        actionPlan: {
+          groundActivities: [{
+            activity: 'Women voter mobilization',
+            areas: [`All areas of ${context.basic.name}`],
+            volunteers: 200,
+            timeline: '4 weeks'
+          }]
+        },
+
+        resources: {
+          budgetRequired: `₹${100000}`,
+          volunteersNeeded: 200,
+          materials: ['Women empowerment literature', 'Safety whistles'],
+          keyPersonnel: ['Mahila Morcha president', 'Women coordinators']
+        },
+
+        expectedOutcome: {
+          sentimentImprovement: 12,
+          voterReachIncrease: Math.floor(womenVoters * 0.3),
+          issueResolution: 'Women safety and empowerment',
+          timeToImpact: '4 weeks'
+        }
+      });
+    }
+
+    // 6. CULTURAL/RELIGIOUS CAMPAIGN using local landmarks
+    if (localKnowledge.landmarks.length > 0 && localKnowledge.culturalEvents.length > 0) {
+      const landmark = localKnowledge.landmarks[0];
+      const event = localKnowledge.culturalEvents[0];
+
+      insights.push({
+        id: `cultural-${constituencyId}-${Date.now()}`,
+        category: 'campaign',
+        priority: getPriority(60),
+        title: `${event.name} Mobilization: ${event.participation.toLocaleString()} Participants Expected`,
+        description: `Leverage ${event.name} at ${landmark.name} for mass connect. ${landmark.significance}. TMC trying to control religious events!`,
+
+        analysis: {
+          situation: `${event.name} in ${event.timing} draws ${event.participation.toLocaleString()} people`,
+          impact: `Direct connect with ${event.participation} devotees/participants`,
+          urgency: `Plan NOW for ${event.timing} event`,
+          confidence: 75
+        },
+
+        recommendations: {
+          immediate: [
+            `Form ${event.name} organizing committee with BJP leaders`,
+            `Meet ${landmark.name} management/trustees`,
+            `Book stalls and spaces around ${landmark.name}`
+          ],
+          shortTerm: [
+            `"${localKnowledge.campaignMottos[0].slogan}" campaign during ${event.name}`,
+            `Free services (medical/food) at ${landmark.name}`,
+            `Cultural programs highlighting BJP's cultural connect`
+          ],
+          mediumTerm: [
+            `Regular events at ${landmark.name}`,
+            `Build permanent connect with ${event.name} organizers`,
+            `Make ${landmark.name} a BJP stronghold`
+          ]
+        },
+
+        actionPlan: {
+          groundActivities: [{
+            activity: `${event.name} preparation and participation`,
+            areas: [landmark.name, 'Surrounding areas'],
+            volunteers: Math.ceil(event.participation / 100),
+            timeline: event.timing
+          }]
+        },
+
+        resources: {
+          budgetRequired: `₹${(event.participation * 2).toLocaleString()}`,
+          volunteersNeeded: Math.ceil(event.participation / 100),
+          materials: [
+            `${event.name} special materials`,
+            'Religious/cultural literature',
+            'BJP flags and banners'
+          ],
+          keyPersonnel: [
+            `${landmark.name} coordinator`,
+            'Religious leaders',
+            'Cultural committee members'
+          ]
+        },
+
+        expectedOutcome: {
+          sentimentImprovement: 18,
+          voterReachIncrease: event.participation,
+          issueResolution: 'Cultural connect',
+          timeToImpact: event.timing
+        }
+      });
+    }
+
+    // 7. YOUTH MOBILIZATION (if significant youth population)
+    if (intelligence.demographics.youthPercentage > 35) {
+      insights.push({
+        id: `youth-${constituencyId}-${Date.now()}`,
+        category: 'campaign',
+        priority: getPriority(50),
+        title: `Youth Revolution: ${intelligence.demographics.youthPercentage}% Voters Under 35`,
+        description: `${Math.floor(intelligence.basic.totalVoters * intelligence.demographics.youthPercentage / 100).toLocaleString()} young voters. Focus on jobs and development.`,
+
+        analysis: {
+          situation: `High youth population seeking opportunities`,
+          impact: `Youth can create momentum for change`,
+          urgency: 'Engage before opposition',
+          confidence: 60
+        },
+
+        recommendations: {
+          immediate: [
+            `Youth employment mela this week`,
+            `College campus visits in ${context.basic.name}`,
+            `Social media blitz targeting youth`
+          ],
+          shortTerm: [
+            `Skill development programs`,
+            `Start-up support announcements`,
+            `Sports tournaments`
+          ],
+          mediumTerm: [
+            `Regular youth engagement`,
+            `Youth BJP membership drive`,
+            `Young leader development`
+          ]
+        },
+
+        actionPlan: {
+          groundActivities: [{
+            activity: 'Youth mobilization campaign',
+            areas: [`Colleges and youth areas in ${context.basic.name}`],
+            volunteers: 150,
+            timeline: '3 weeks'
+          }]
+        },
+
+        resources: {
+          budgetRequired: `₹${80000}`,
+          volunteersNeeded: 150,
+          materials: ['Youth manifestos', 'Job opportunity pamphlets'],
+          keyPersonnel: ['BJYM president', 'Youth coordinators']
+        },
+
+        expectedOutcome: {
+          sentimentImprovement: 15,
+          voterReachIncrease: Math.floor(intelligence.basic.totalVoters * intelligence.demographics.youthPercentage / 100 * 0.4),
+          issueResolution: 'Youth unemployment',
+          timeToImpact: '3 weeks'
+        }
+      });
+    }
+
+    // Sort insights by priority (urgent > high > medium > low)
+    const priorityOrder = { 'urgent': 0, 'high': 1, 'medium': 2, 'low': 3 };
+    insights.sort((a, b) => {
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+
+    // Return between 3 and 10 insights
+    return insights.slice(0, Math.min(10, Math.max(3, insights.length)));
+  }
+
+  /**
    * Generate fallback insights when AI is not available
    */
   private async generateFallbackInsights(context: ConstituencyContext): Promise<AIInsight[]> {
@@ -622,10 +1297,14 @@ Format your response as JSON array with the structure matching AIInsight interfa
 
     // Get real constituency intelligence
     const constituencyId = context.basic.id;
+    console.log('Fallback: Getting intelligence for', constituencyId);
     const intelligence = await constituencyIntelligenceService.getConstituencyIntelligence(constituencyId);
+    console.log('Fallback: Intelligence received', intelligence.basic.name, intelligence.bjpStrategy);
 
     // Get winning strategy
+    console.log('Fallback: Getting winning strategy for', constituencyId);
     const strategy = await electionWinningStrategy.generateWinningStrategy(constituencyId);
+    console.log('Fallback: Strategy received', strategy.constituency.currentStatus, strategy.winningFormula.confidence);
 
     // Use real data for insights
     const antiIncumbency = intelligence.swingFactors.antiIncumbency;
@@ -974,55 +1653,114 @@ Format your response as JSON array with the structure matching AIInsight interfa
       }
     });
 
+    console.log('Fallback: Generated', insights.length, 'insights for', constituencyId);
+    insights.forEach((insight, i) => {
+      console.log(`  ${i+1}. ${insight.title} (${insight.category}, ${insight.priority})`);
+    });
+
     return insights;
   }
 
   /**
    * Generate error fallback insights
    */
-  private generateErrorFallbackInsights(constituencyId: string): AIInsight[] {
-    return [{
-      id: 'error-' + Date.now(),
-      category: 'strategy',
-      priority: 'medium',
-      title: 'General Campaign Strategy',
-      description: 'Unable to load specific data. Showing general recommendations.',
+  private async generateErrorFallbackInsights(constituencyId: string): Promise<AIInsight[]> {
+    try {
+      // Even in error, try to get real intelligence
+      const intelligence = await constituencyIntelligenceService.getConstituencyIntelligence(constituencyId);
+      const strategy = await electionWinningStrategy.generateWinningStrategy(constituencyId);
 
-      analysis: {
-        situation: 'Data temporarily unavailable',
-        impact: 'General strategy applicable',
-        urgency: 'Implement based on ground situation',
-        confidence: 50
-      },
+      // Generate insights with real data
+      return [{
+        id: 'strategic-' + Date.now(),
+        category: 'strategy',
+        priority: 'high',
+        title: `${strategy.constituency.currentStatus}: ${strategy.winningFormula.confidence}% Win Probability`,
+        description: `${intelligence.political.currentMLA} (${intelligence.political.currentParty}) holds seat. BJP needs ${strategy.winningFormula.gapToVictory.toLocaleString()} votes to win.`,
 
-      recommendations: {
-        immediate: ['Assess ground situation', 'Activate local teams'],
-        shortTerm: ['Plan constituency-specific campaign', 'Identify key issues'],
-        mediumTerm: ['Build long-term presence', 'Strengthen organization']
-      },
+        analysis: {
+          situation: `BJP at ${intelligence.political.bjpVoteShare2021}% vote share. ${strategy.voteBank.convertible.targetGroups.length} key voter groups identified`,
+          impact: `Can gain ${strategy.voteBank.convertible.conversionPotential.toLocaleString()} votes through targeted campaigns`,
+          urgency: strategy.constituency.currentStatus === 'WINNABLE' ? 'High priority winnable seat!' : 'Strategic importance',
+          confidence: strategy.winningFormula.confidence
+        },
 
-      actionPlan: {},
+        recommendations: {
+          immediate: strategy.voteBank.convertible.tacticsRequired.slice(0, 3),
+          shortTerm: strategy.groundGame.timelinePhases[0]?.activities.slice(0, 3) || ['Build organization'],
+          mediumTerm: strategy.messaging.lastMilePush.slice(0, 3)
+        },
 
-      resources: {
-        budgetRequired: 'To be determined',
-        volunteersNeeded: 100,
-        materials: ['Standard campaign materials'],
-        keyPersonnel: ['Local leadership']
-      },
+        actionPlan: {
+          groundActivities: [{
+            activity: strategy.groundGame.timelinePhases[0]?.activities[0] || 'Booth strengthening',
+            areas: [intelligence.basic.district],
+            volunteers: strategy.groundGame.workerDeployment.totalNeeded,
+            timeline: '30 days'
+          }]
+        },
 
-      expectedOutcome: {
-        sentimentImprovement: 5,
-        voterReachIncrease: 5000,
-        issueResolution: 'Address local concerns',
-        timeToImpact: 'Varies'
-      },
+        resources: {
+          budgetRequired: `₹${strategy.groundGame.resourceNeeds.budget.minimum.toLocaleString()}`,
+          volunteersNeeded: strategy.groundGame.workerDeployment.totalNeeded,
+          materials: ['Campaign materials', 'Digital content'],
+          keyPersonnel: strategy.voteBank.convertible.targetGroups.map(g => g.name + ' coordinators')
+        },
 
-      riskAssessment: {
-        potentialBacklash: 'Monitor opposition response',
-        oppositionResponse: 'Expected counter-campaign',
-        mitigationStrategy: 'Adapt based on situation'
-      }
-    }];
+        expectedOutcome: {
+          sentimentImprovement: Math.round(strategy.winningFormula.confidence / 10),
+          voterReachIncrease: strategy.voteBank.convertible.conversionPotential,
+          issueResolution: intelligence.political.keyIssues[0],
+          timeToImpact: '30 days'
+        },
+
+        riskAssessment: {
+          potentialBacklash: strategy.risks.majorThreats[0]?.threat || 'TMC counter-mobilization',
+          oppositionResponse: strategy.oppositionWeakness.tmcVulnerabilities[0] || 'TMC defensive',
+          mitigationStrategy: strategy.risks.majorThreats[0]?.mitigation || 'Document and counter'
+        }
+      }];
+    } catch (error) {
+      console.error('Error in generateErrorFallbackInsights:', error);
+      // Ultimate fallback with constituency-specific basic data
+      const constituencyName = WEST_BENGAL_CONSTITUENCIES.find(c => c.id === constituencyId)?.name || constituencyId;
+      return [{
+        id: 'basic-' + Date.now() + '-' + constituencyId,
+        category: 'strategy',
+        priority: 'medium',
+        title: `BJP Campaign Strategy for ${constituencyName}`,
+        description: `Focus on local issues and development in ${constituencyName}`,
+        analysis: {
+          situation: 'Building campaign momentum',
+          impact: 'Potential vote gain',
+          urgency: 'Start immediately',
+          confidence: 60
+        },
+        recommendations: {
+          immediate: ['Booth activation', 'WhatsApp groups', 'Voter survey'],
+          shortTerm: ['Door-to-door', 'Issue identification', 'Leader visits'],
+          mediumTerm: ['Organization building', 'Regular contact', 'Major events']
+        },
+        actionPlan: {},
+        resources: {
+          budgetRequired: '₹10,00,000',
+          volunteersNeeded: 200,
+          materials: ['Standard materials'],
+          keyPersonnel: ['Local coordinators']
+        },
+        expectedOutcome: {
+          sentimentImprovement: 10,
+          voterReachIncrease: 10000,
+          issueResolution: 'Local issues',
+          timeToImpact: '3 months'
+        },
+        riskAssessment: {
+          potentialBacklash: 'TMC resistance',
+          oppositionResponse: 'Counter-campaign',
+          mitigationStrategy: 'Strong presence'
+        }
+      }];
+    }
   }
 
   /**
@@ -1032,7 +1770,7 @@ Format your response as JSON array with the structure matching AIInsight interfa
     const context = await this.gatherConstituencyContext(constituencyId);
 
     if (!context) {
-      return this.generateErrorFallbackInsights(constituencyId);
+      return await this.generateErrorFallbackInsights(constituencyId);
     }
 
     // Generate crisis-specific insights
