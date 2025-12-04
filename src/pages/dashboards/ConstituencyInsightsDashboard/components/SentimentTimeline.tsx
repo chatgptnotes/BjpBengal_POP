@@ -1,16 +1,19 @@
 /**
  * Sentiment Timeline Component
- * Shows 30-day sentiment trend with event markers
+ * Shows sentiment trend with BJP/TMC party mentions
+ * Supports both mock and real DB data
  */
 
 import React, { useState } from 'react';
-import { TrendingUp, Calendar, Info } from 'lucide-react';
+import { Calendar, Info, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface SentimentDataPoint {
   date: string;
   positive: number;
   negative: number;
   neutral: number;
+  bjpMentions?: number;
+  tmcMentions?: number;
   event?: {
     title: string;
     type: 'rally' | 'announcement' | 'crisis' | 'news';
@@ -21,9 +24,21 @@ interface Props {
   data: SentimentDataPoint[];
   timeRange?: '7d' | '30d' | '90d';
   onTimeRangeChange?: (range: '7d' | '30d' | '90d') => void;
+  loading?: boolean;
+  onRefresh?: () => void;
+  hasRealData?: boolean;
+  lastUpdated?: Date | null;
 }
 
-export default function SentimentTimeline({ data, timeRange = '30d', onTimeRangeChange }: Props) {
+export default function SentimentTimeline({
+  data,
+  timeRange = '30d',
+  onTimeRangeChange,
+  loading = false,
+  onRefresh,
+  hasRealData = false,
+  lastUpdated
+}: Props) {
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
   const maxValue = 100;
@@ -38,20 +53,29 @@ export default function SentimentTimeline({ data, timeRange = '30d', onTimeRange
     }
   };
 
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'rally': return '📣';
-      case 'announcement': return '📢';
-      case 'crisis': return '⚠️';
-      default: return '📰';
-    }
-  };
-
   // Calculate trend
-  const firstWeek = data.slice(0, 7).reduce((sum, d) => sum + d.positive, 0) / 7;
-  const lastWeek = data.slice(-7).reduce((sum, d) => sum + d.positive, 0) / 7;
+  const firstWeek = data.slice(0, 7).reduce((sum, d) => sum + d.positive, 0) / Math.min(data.length, 7);
+  const lastWeek = data.slice(-7).reduce((sum, d) => sum + d.positive, 0) / Math.min(data.length, 7);
   const trend = lastWeek - firstWeek;
-  const trendPercentage = ((trend / firstWeek) * 100).toFixed(1);
+  const trendPercentage = firstWeek > 0 ? ((trend / firstWeek) * 100).toFixed(1) : '0';
+
+  // Calculate BJP vs TMC mentions
+  const totalBjpMentions = data.reduce((sum, d) => sum + (d.bjpMentions || 0), 0);
+  const totalTmcMentions = data.reduce((sum, d) => sum + (d.tmcMentions || 0), 0);
+
+  if (data.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <Calendar size={20} className="text-purple-600" />
+          <h3 className="text-lg font-bold text-slate-800">Sentiment Timeline</h3>
+        </div>
+        <div className="h-48 flex items-center justify-center text-slate-400">
+          <p>No sentiment data available for this constituency</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
@@ -61,41 +85,64 @@ export default function SentimentTimeline({ data, timeRange = '30d', onTimeRange
           <Calendar size={20} className="text-purple-600" />
           <div>
             <h3 className="text-lg font-bold text-slate-800">Sentiment Timeline</h3>
-            <p className="text-xs text-slate-500">Track sentiment changes over time</p>
+            <p className="text-xs text-slate-500">
+              {hasRealData ? 'Real-time data from TV & News' : 'Track sentiment changes over time'}
+            </p>
           </div>
         </div>
 
-        {/* Time Range Selector */}
-        {onTimeRangeChange && (
-          <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
-            {(['7d', '30d', '90d'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => onTimeRangeChange(range)}
-                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                  timeRange === range
-                    ? 'bg-white text-slate-800 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Data source indicator */}
+          {hasRealData && (
+            <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-bold">
+              LIVE DATA
+            </span>
+          )}
+
+          {/* Refresh button */}
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              className={`p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors ${loading ? 'animate-spin' : ''}`}
+              title="Refresh data"
+            >
+              <RefreshCw size={16} />
+            </button>
+          )}
+
+          {/* Time Range Selector */}
+          {onTimeRangeChange && (
+            <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+              {(['7d', '30d', '90d'] as const).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => onTimeRangeChange(range)}
+                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                    timeRange === range
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Trend Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
           <div className="text-xs text-emerald-700 font-medium mb-1">Positive Avg</div>
-          <div className="text-2xl font-bold text-emerald-600">
+          <div className="text-xl font-bold text-emerald-600">
             {(data.reduce((sum, d) => sum + d.positive, 0) / data.length).toFixed(0)}%
           </div>
         </div>
         <div className="bg-rose-50 rounded-lg p-3 border border-rose-200">
           <div className="text-xs text-rose-700 font-medium mb-1">Negative Avg</div>
-          <div className="text-2xl font-bold text-rose-600">
+          <div className="text-xl font-bold text-rose-600">
             {(data.reduce((sum, d) => sum + d.negative, 0) / data.length).toFixed(0)}%
           </div>
         </div>
@@ -103,11 +150,31 @@ export default function SentimentTimeline({ data, timeRange = '30d', onTimeRange
           <div className={`text-xs font-medium mb-1 ${trend >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
             Trend
           </div>
-          <div className={`text-2xl font-bold flex items-center gap-1 ${trend >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-            {trend >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(trendPercentage))}%
+          <div className={`text-xl font-bold flex items-center gap-1 ${trend >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+            {trend >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+            {Math.abs(parseFloat(trendPercentage))}%
+          </div>
+        </div>
+        {/* Party mentions summary */}
+        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+          <div className="text-xs text-slate-600 font-medium mb-1">Party Mentions</div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-orange-600">BJP: {totalBjpMentions}</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-sm font-bold text-green-600">TMC: {totalTmcMentions}</span>
           </div>
         </div>
       </div>
+
+      {/* Loading overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-2xl z-10">
+          <div className="flex items-center gap-2 text-slate-500">
+            <RefreshCw className="animate-spin" size={20} />
+            <span>Loading sentiment data...</span>
+          </div>
+        </div>
+      )}
 
       {/* Chart */}
       <div className="relative h-64 bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -237,7 +304,7 @@ export default function SentimentTimeline({ data, timeRange = '30d', onTimeRange
 
         {/* Hover tooltip */}
         {hoveredPoint !== null && (
-          <div className="absolute bg-slate-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg pointer-events-none"
+          <div className="absolute bg-slate-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg pointer-events-none z-20"
             style={{
               left: `${(hoveredPoint / (data.length - 1)) * 100}%`,
               top: '10%',
@@ -258,11 +325,22 @@ export default function SentimentTimeline({ data, timeRange = '30d', onTimeRange
                 <div className="w-2 h-2 rounded-full bg-slate-400"></div>
                 <span>Neutral: {data[hoveredPoint].neutral}%</span>
               </div>
+              {(data[hoveredPoint].bjpMentions || data[hoveredPoint].tmcMentions) && (
+                <div className="border-t border-slate-600 pt-1 mt-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                    <span>BJP: {data[hoveredPoint].bjpMentions || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span>TMC: {data[hoveredPoint].tmcMentions || 0}</span>
+                  </div>
+                </div>
+              )}
             </div>
             {data[hoveredPoint].event && (
               <div className="mt-2 pt-2 border-t border-slate-600">
                 <div className="flex items-center gap-1">
-                  <span>{getEventIcon(data[hoveredPoint].event!.type)}</span>
                   <span className="text-[10px]">{data[hoveredPoint].event!.title}</span>
                 </div>
               </div>
@@ -290,22 +368,29 @@ export default function SentimentTimeline({ data, timeRange = '30d', onTimeRange
         </div>
       )}
 
-      {/* Legend */}
-      <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-slate-200">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-1 rounded-full bg-emerald-500"></div>
-          <span className="text-xs text-slate-600">Positive Sentiment</span>
+      {/* Legend & Last Updated */}
+      <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-200">
+        <div className="flex gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-1 rounded-full bg-emerald-500"></div>
+            <span className="text-xs text-slate-600">Positive Sentiment</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-1 rounded-full bg-rose-500"></div>
+            <span className="text-xs text-slate-600">Negative Sentiment</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-1 rounded-full bg-rose-500"></div>
-          <span className="text-xs text-slate-600">Negative Sentiment</span>
-        </div>
+        {lastUpdated && (
+          <span className="text-[10px] text-slate-400">
+            Last updated: {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-// Generate mock sentiment timeline data
+// Generate mock sentiment timeline data - now exported for fallback use
 export function generateSentimentTimelineData(days: number = 30): SentimentDataPoint[] {
   const data: SentimentDataPoint[] = [];
   const today = new Date();
@@ -324,6 +409,8 @@ export function generateSentimentTimelineData(days: number = 30): SentimentDataP
       positive: parseFloat(basePositive.toFixed(1)),
       negative: parseFloat(baseNegative.toFixed(1)),
       neutral: parseFloat(neutral.toFixed(1)),
+      bjpMentions: Math.floor(Math.random() * 8),
+      tmcMentions: Math.floor(Math.random() * 10),
     };
 
     // Add some events

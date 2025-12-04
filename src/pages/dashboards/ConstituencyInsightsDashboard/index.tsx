@@ -39,6 +39,10 @@ import { seedConstituencyLeaders } from '@/utils/seedConstituencyData';
 import { seedElectionData, clearAndReseedElectionData } from '@/utils/seedElectionData';
 // Import Constituency Demographics component
 import ConstituencyDemographics from './components/ConstituencyDemographics';
+// Import Party Sentiment Card for BJP vs TMC comparison
+import PartySentimentCard from './components/PartySentimentCard';
+// Import sentiment data hook for real DB data
+import { useSentimentData, generateMockTimelineData } from './hooks/useSentimentData';
 // Import Infographic Generator component
 import InfographicGenerator from './components/InfographicGenerator';
 // Import Constituency Infographic Card (new dynamic tab)
@@ -102,8 +106,19 @@ const TIME_RANGES = [
   { label: "Election 2016", value: "8y", subtitle: "Historical Snapshot" },
 ];
 
+// "All West Bengal" state-level option
+const ALL_WEST_BENGAL_OPTION = {
+  id: 'all_west_bengal',
+  name: 'All West Bengal',
+  district: 'State Level',
+  cluster: 'All Districts',
+  is_urban: false,
+  total_voters: 0,
+  social_media_activity: 'high'
+};
+
 // Transform constituencies data to match our structure
-const MOCK_CONSTITUENCIES = constituenciesDataRaw.map((c: any) => ({
+const CONSTITUENCY_LIST = constituenciesDataRaw.map((c: any) => ({
   id: c.id,
   name: c.name,
   district: c.district,
@@ -112,6 +127,9 @@ const MOCK_CONSTITUENCIES = constituenciesDataRaw.map((c: any) => ({
   total_voters: c.total_voters,
   social_media_activity: c.social_media_activity
 }));
+
+// Combined list with "All West Bengal" as first option
+const MOCK_CONSTITUENCIES = [ALL_WEST_BENGAL_OPTION, ...CONSTITUENCY_LIST];
 
 interface DashboardData {
   constituency_name: string;
@@ -163,23 +181,23 @@ const generateDashboardData = (
   const cName = constituency?.name || "Unknown";
 
   // Use real election history if available, otherwise use mock data
-  const historyData = electionHistory ? {
+  const historyData = electionHistory && electionHistory.year2021 && electionHistory.year2016 ? {
     last: {
       year: 2021,
-      winner: electionHistory.year2021.winner,
-      party: electionHistory.year2021.party,
-      margin: electionHistory.year2021.margin
+      winner: electionHistory.year2021.winner || "Unknown",
+      party: electionHistory.year2021.party || "Unknown",
+      margin: electionHistory.year2021.margin || "N/A"
     },
     prev: {
       year: 2016,
-      winner: electionHistory.year2016.winner,
-      party: electionHistory.year2016.party,
-      margin: electionHistory.year2016.margin
+      winner: electionHistory.year2016.winner || "Unknown",
+      party: electionHistory.year2016.party || "Unknown",
+      margin: electionHistory.year2016.margin || "N/A"
     }
   } : {
-    // Fallback mock data
-    last: { year: 2021, winner: "Unknown", party: "Unknown", margin: "N/A" },
-    prev: { year: 2016, winner: "Unknown", party: "Unknown", margin: "N/A" }
+    // Fallback mock data for state-level or missing data
+    last: { year: 2021, winner: "State Level", party: "Multiple", margin: "N/A" },
+    prev: { year: 2016, winner: "State Level", party: "Multiple", margin: "N/A" }
   };
 
   // Use real party strength if available, otherwise use mock data
@@ -737,6 +755,27 @@ export default function PulseDashboard() {
   // State for all constituency leaders (for real data in sidebars)
   const [allConstituencyLeaders, setAllConstituencyLeaders] = useState<ConstituencyLeader[]>([]);
   const [currentLeader, setCurrentLeader] = useState<ConstituencyLeader | null>(null);
+  // Sentiment timeline time range
+  const [sentimentTimeRange, setSentimentTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+
+  // Get constituency name for sentiment data fetch
+  // Pass null for "All West Bengal" to get state-wide aggregated data
+  const activeConstituencyForSentiment = MOCK_CONSTITUENCIES.find(c => c.id === selectedId);
+  const isStateLevelView = selectedId === 'all_west_bengal';
+  const sentimentConstituencyName = isStateLevelView ? null : activeConstituencyForSentiment?.name;
+
+  // Fetch real sentiment data from DB (null = state-wide data)
+  const {
+    sentimentStats,
+    timeline: sentimentTimeline,
+    topicData: sentimentTopicData,
+    partyComparison,
+    loading: sentimentLoading,
+    hasData: hasSentimentData,
+    lastUpdated: sentimentLastUpdated,
+    isStateLevel,
+    refresh: refreshSentimentData
+  } = useSentimentData(sentimentConstituencyName, sentimentTimeRange);
 
   // Sync URL when constituency selection changes (from dropdown)
   const handleConstituencyChange = (newId: string) => {
@@ -793,14 +832,26 @@ export default function PulseDashboard() {
         const constituency = MOCK_CONSTITUENCIES.find(c => c.id === selectedId);
         if (!constituency) return;
 
-        // Fetch real election data from database
-        const [electionHistory, partyStrength] = await Promise.all([
-          getElectionHistory(selectedId),
-          getPartyStrength(selectedId)
-        ]);
+        // Check if state-level view (All West Bengal)
+        const isStateLevel = selectedId === 'all_west_bengal';
 
-        console.log('[PulseDashboard] Election History:', electionHistory);
-        console.log('[PulseDashboard] Party Strength:', partyStrength);
+        let electionHistory: any[] = [];
+        let partyStrength: any = null;
+
+        // Skip election data fetch for state-level view
+        if (!isStateLevel) {
+          // Fetch real election data from database
+          const [historyData, strengthData] = await Promise.all([
+            getElectionHistory(selectedId),
+            getPartyStrength(selectedId)
+          ]);
+          electionHistory = historyData;
+          partyStrength = strengthData;
+          console.log('[PulseDashboard] Election History:', electionHistory);
+          console.log('[PulseDashboard] Party Strength:', partyStrength);
+        } else {
+          console.log('[PulseDashboard] State-level view - skipping election data fetch');
+        }
 
         // Generate base dashboard data with real election data
         const baseData = generateDashboardData(
@@ -810,8 +861,13 @@ export default function PulseDashboard() {
           partyStrength
         );
 
-        // Fetch real-time news for current time ranges only
-        if (timeRangeIdx <= 2) { // Live, 7D, 30D only
+        // For state-level view, update constituency name
+        if (isStateLevel) {
+          baseData.constituency_name = 'All West Bengal';
+        }
+
+        // Fetch real-time news for current time ranges only (not for state-level view)
+        if (timeRangeIdx <= 2 && !isStateLevel) { // Live, 7D, 30D only, not state-level
           setLoadingNews(true);
           try {
             const newsData = await fetchConstituencyNewsWithCache(
@@ -856,6 +912,10 @@ export default function PulseDashboard() {
           } finally {
             setLoadingNews(false);
           }
+        } else if (isStateLevel) {
+          // State-level view - use state-wide fallback analysis
+          baseData.strategy = generateFallbackAnalysis('All West Bengal');
+          baseData.summary.text = 'State-wide sentiment analysis across all 294 constituencies of West Bengal. View aggregated data from TV transcripts and local news coverage.';
         } else {
           // Use fallback analysis for historical time ranges
           baseData.strategy = generateFallbackAnalysis(constituency.name);
@@ -1023,8 +1083,10 @@ export default function PulseDashboard() {
         </div>
       </div>
 
-      {/* 3. INFOGRAPHIC CARD - Directly below Time Window */}
-      <ConstituencyInfographicCard constituencyId={selectedId} />
+      {/* 3. INFOGRAPHIC CARD - Directly below Time Window (only for specific constituency, not state-level) */}
+      {!isStateLevelView && (
+        <ConstituencyInfographicCard constituencyId={selectedId} />
+      )}
 
       {/* 4. MAIN DASHBOARD CONTENT */}
       {loading || !data ? (
@@ -1038,13 +1100,15 @@ export default function PulseDashboard() {
           {/* AI Strategist Inject */}
           <PulseAIStrategist data={data} />
 
-          {/* Infographic Generator FAB */}
-          <InfographicGenerator
-            constituencyId={selectedId}
-            constituency={activeConstituency}
-            dashboardData={data}
-            currentLeader={currentLeader}
-          />
+          {/* Infographic Generator FAB - only for specific constituency */}
+          {!isStateLevelView && (
+            <InfographicGenerator
+              constituencyId={selectedId}
+              constituency={activeConstituency}
+              dashboardData={data}
+              currentLeader={currentLeader}
+            />
+          )}
 
           {/* THREE COLUMN GRID LAYOUT */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1062,8 +1126,41 @@ export default function PulseDashboard() {
 
             {/* MIDDLE SECTION - Leader Analysis + Strategic Intelligence */}
             <div className="lg:col-span-5 space-y-6">
-              {/* Leader Deep Dive - shown when a leader is clicked */}
-              {selectedLeader && (
+              {/* State-Level View Summary - shown only for "All West Bengal" */}
+              {isStateLevelView && (
+                <div className="bg-gradient-to-br from-orange-50 to-green-50 rounded-2xl p-6 border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-green-500 rounded-xl flex items-center justify-center">
+                      <span className="material-icons text-white text-xl">public</span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-800">All West Bengal</h3>
+                      <p className="text-sm text-slate-500">State-wide Sentiment Analysis</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="bg-white/80 rounded-xl p-4 border border-slate-200">
+                      <div className="text-xs text-slate-500 font-medium">Total Constituencies</div>
+                      <div className="text-2xl font-bold text-slate-800">294</div>
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-4 border border-slate-200">
+                      <div className="text-xs text-slate-500 font-medium">Total Voters</div>
+                      <div className="text-2xl font-bold text-slate-800">7.3 Cr</div>
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-4 border border-slate-200">
+                      <div className="text-xs text-orange-600 font-medium">BJP Mentions</div>
+                      <div className="text-2xl font-bold text-orange-600">{sentimentStats?.bjpMentions || 0}</div>
+                    </div>
+                    <div className="bg-white/80 rounded-xl p-4 border border-slate-200">
+                      <div className="text-xs text-green-600 font-medium">TMC Mentions</div>
+                      <div className="text-2xl font-bold text-green-600">{sentimentStats?.tmcMentions || 0}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Leader Deep Dive - shown when a leader is clicked (only for constituency view) */}
+              {!isStateLevelView && selectedLeader && (
                 <div className="relative">
                   <button
                     onClick={() => setSelectedLeader(null)}
@@ -1079,14 +1176,16 @@ export default function PulseDashboard() {
                 </div>
               )}
 
-              {/* Leader Analysis Section - Basic MLA info with clickable leader */}
-              <LeaderAnalysisSection
-                selectedConstituency={data.constituency_name}
-                onLeaderClick={(leader) => setSelectedLeader(leader)}
-              />
+              {/* Leader Analysis Section - Basic MLA info with clickable leader (only for constituency view) */}
+              {!isStateLevelView && (
+                <LeaderAnalysisSection
+                  selectedConstituency={data.constituency_name}
+                  onLeaderClick={(leader) => setSelectedLeader(leader)}
+                />
+              )}
 
-              {/* Constituency Demographics Panel */}
-              <ConstituencyDemographics constituencyId={selectedId} />
+              {/* Constituency Demographics Panel (only for constituency view) */}
+              {!isStateLevelView && <ConstituencyDemographics constituencyId={selectedId} />}
 
               {/* Strategic Intelligence Unit */}
               {data.strategy && <StrategicDeepDive strategy={data.strategy} lastUpdate={lastNewsUpdate} />}
@@ -1121,9 +1220,26 @@ export default function PulseDashboard() {
             {/* Social Media Feed */}
             <SocialMediaFeed posts={generateMockSocialPosts()} />
 
-            {/* Sentiment Timeline */}
-            <SentimentTimeline data={generateSentimentTimelineData(30)} />
+            {/* Sentiment Timeline - Uses real DB data when available */}
+            <SentimentTimeline
+              data={hasSentimentData ? sentimentTimeline : generateSentimentTimelineData(30)}
+              timeRange={sentimentTimeRange}
+              onTimeRangeChange={setSentimentTimeRange}
+              loading={sentimentLoading}
+              onRefresh={refreshSentimentData}
+              hasRealData={hasSentimentData}
+              lastUpdated={sentimentLastUpdated}
+            />
           </div>
+
+          {/* PARTY SENTIMENT COMPARISON - BJP vs TMC */}
+          <PartySentimentCard
+            partyComparison={partyComparison}
+            topicData={sentimentTopicData}
+            loading={sentimentLoading}
+            onRefresh={refreshSentimentData}
+            hasRealData={hasSentimentData}
+          />
 
           {/* A. SUMMARY & TOP ISSUES */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

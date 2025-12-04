@@ -30,23 +30,54 @@ export interface LocalNewsRecord {
   keywords?: string[];
 }
 
-// BJP keywords for detection
+// BJP keywords for detection - West Bengal focused
 const BJP_KEYWORDS = [
+  // National BJP Leaders
   'BJP', 'Bharatiya Janata Party', 'Modi', 'Narendra Modi', 'PM Modi',
   'Amit Shah', 'JP Nadda', 'NDA', 'Saffron', 'Lotus',
-  'Sukanta Majumdar', 'Dilip Ghosh', 'Suvendu Adhikari'
+  // West Bengal BJP Leaders
+  'Sukanta Majumdar', 'Dilip Ghosh', 'Suvendu Adhikari', 'Suvendu',
+  'Rahul Sinha', 'Locket Chatterjee', 'Agnimitra Paul', 'Samik Bhattacharya',
+  'Jyotirmoy Singh Mahato', 'Nisith Pramanik', 'John Barla', 'Shantanu Thakur',
+  'Arjun Singh', 'Saumitra Khan', 'Mukul Roy',
+  // BJP Bengal Terms
+  'Bengal BJP', 'BJP Bengal', 'BJP West Bengal', 'Parivartan',
+  'Sonar Bangla', 'Jai Shri Ram', 'BJP candidate', 'BJP worker', 'BJP booth',
+  // Bengali BJP terms
+  'বিজেপি', 'পদ্ম', 'মোদি', 'সুকান্ত', 'সুভেন্দু', 'দিলীপ ঘোষ'
 ];
 
-// TMC keywords for detection
+// TMC keywords for detection - West Bengal focused
 const TMC_KEYWORDS = [
+  // TMC Main Leaders
   'TMC', 'Trinamool', 'Mamata Banerjee', 'Abhishek Banerjee',
-  'All India Trinamool Congress', 'Trinamool Congress'
+  'All India Trinamool Congress', 'Trinamool Congress', 'Didi', 'AITC',
+  // TMC Senior Leaders
+  'Partha Chatterjee', 'Subrata Mukherjee', 'Firhad Hakim', 'Aroop Biswas',
+  'Chandrima Bhattacharya', 'Bratya Basu', 'Shashi Panja', 'Sobhandeb Chattopadhyay',
+  'Amit Mitra', 'Moloy Ghatak', 'Jyotipriya Mallick', 'Sujit Bose',
+  // TMC Youth & Others
+  'Derek O Brien', 'Mahua Moitra', 'Nusrat Jahan', 'Mimi Chakraborty',
+  'Sayoni Ghosh', 'Kunal Ghosh', 'Santanu Sen',
+  // TMC Bengal Terms
+  'Khela Hobe', 'Pishi', 'Tolabaji', 'Cut Money', 'Syndicate Raj',
+  'TMC candidate', 'TMC worker', 'TMC booth', 'Jorasanko', 'Kalighat',
+  // Bengali TMC terms
+  'তৃণমূল', 'মমতা', 'দিদি', 'অভিষেক', 'খেলা হবে'
 ];
 
-// Congress keywords for detection
+// Congress keywords for detection - West Bengal focused
 const CONGRESS_KEYWORDS = [
   'Congress', 'INC', 'Rahul Gandhi', 'Sonia Gandhi', 'Adhir Ranjan Chowdhury',
-  'Indian National Congress'
+  'Indian National Congress', 'WBPCC', 'Pradesh Congress', 'Congress candidate',
+  'কংগ্রেস', 'অধীর রঞ্জন'
+];
+
+// Left Front keywords for detection
+const LEFT_KEYWORDS = [
+  'CPIM', 'CPM', 'CPI(M)', 'Communist', 'Left Front', 'Biman Bose',
+  'Surya Kanta Mishra', 'Mohammed Salim', 'Sujan Chakraborty',
+  'Left candidate', 'Red Flag', 'বামফ্রন্ট', 'সিপিএম'
 ];
 
 /**
