@@ -38,7 +38,7 @@ export default function RoleBasedDashboard() {
   }
 
   // All users now go to POP Dashboard (legacy) by default
-  // This is the main dashboard with West Bengal map shown after login
+  // This is the Pulse of People Dashboard with West Bengal map view
   const dashboardRoute = '/dashboard/legacy';
 
   console.log('Redirecting to:', dashboardRoute);
