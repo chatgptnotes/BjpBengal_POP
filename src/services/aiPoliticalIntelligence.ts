@@ -5,6 +5,7 @@
 
 import { supabase } from '../lib/supabase';
 import { WEST_BENGAL_CONSTITUENCIES } from '../data/westBengalConstituencies';
+import { constituencyIntelligenceService } from './constituencyIntelligenceService';
 
 // Types
 export interface ConstituencyContext {
@@ -160,7 +161,7 @@ export class PoliticalIntelligenceAI {
       if (this.geminiApiKey) {
         return await this.generateAIInsights(context);
       } else {
-        return this.generateFallbackInsights(context);
+        return await this.generateFallbackInsights(context);
       }
     } catch (error) {
       console.error('Error generating insights:', error);
@@ -523,10 +524,10 @@ export class PoliticalIntelligenceAI {
       const data = await response.json();
       const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-      return this.parseAIResponse(aiResponse, context);
+      return await this.parseAIResponse(aiResponse, context);
     } catch (error) {
       console.error('Error calling Gemini API:', error);
-      return this.generateFallbackInsights(context);
+      return await this.generateFallbackInsights(context);
     }
   }
 
@@ -592,40 +593,50 @@ Format your response as JSON array with the structure matching AIInsight interfa
   /**
    * Parse AI response into structured insights
    */
-  private parseAIResponse(aiResponse: string, context: ConstituencyContext): AIInsight[] {
+  private async parseAIResponse(aiResponse: string, context: ConstituencyContext): Promise<AIInsight[]> {
     try {
       // Try to parse JSON response
       const insights = JSON.parse(aiResponse);
       return Array.isArray(insights) ? insights : [insights];
     } catch {
       // If not JSON, parse text response
-      return this.parseTextResponse(aiResponse, context);
+      return await this.parseTextResponse(aiResponse, context);
     }
   }
 
   /**
    * Parse text response into insights
    */
-  private parseTextResponse(text: string, context: ConstituencyContext): AIInsight[] {
+  private async parseTextResponse(text: string, context: ConstituencyContext): Promise<AIInsight[]> {
     // For now, return fallback insights
     // In production, implement NLP parsing
-    return this.generateFallbackInsights(context);
+    return await this.generateFallbackInsights(context);
   }
 
   /**
    * Generate fallback insights when AI is not available
    */
-  private generateFallbackInsights(context: ConstituencyContext): AIInsight[] {
+  private async generateFallbackInsights(context: ConstituencyContext): Promise<AIInsight[]> {
     const insights: AIInsight[] = [];
 
-    // Insight 1: Address anti-incumbency
-    if (context.sentiment.antiIncumbency > 50) {
+    // Get real constituency intelligence
+    const constituencyId = context.basic.id;
+    const intelligence = await constituencyIntelligenceService.getConstituencyIntelligence(constituencyId);
+
+    // Use real data for insights
+    const antiIncumbency = intelligence.swingFactors.antiIncumbency;
+    const bjpVoteShare = intelligence.political.bjpVoteShare2021;
+    const swingNeeded = intelligence.bjpStrategy.swingNeeded;
+    const winProbability = intelligence.bjpStrategy.winProbability;
+
+    // Insight 1: Address anti-incumbency with real data
+    if (antiIncumbency > 50) {
       insights.push({
         id: 'anti-incumbency-' + Date.now(),
         category: 'opportunity',
         priority: 'high',
-        title: `Convert ${context.sentiment.antiIncumbency}% Anti-Incumbency into BJP Votes`,
-        description: `High anti-incumbency sentiment detected in ${context.basic.name}. TMC facing backlash on local issues.`,
+        title: `Convert ${antiIncumbency}% Anti-Incumbency into BJP Votes`,
+        description: `${intelligence.political.currentParty} MLA ${intelligence.political.currentMLA} facing backlash. Key issues: ${intelligence.political.keyIssues.join(', ')}.`,
 
         analysis: {
           situation: `${context.sentiment.antiIncumbency}% voters express dissatisfaction with current MLA ${context.political.currentMLA}`,
