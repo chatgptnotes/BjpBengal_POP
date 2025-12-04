@@ -29,7 +29,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { Gauge } from '@/components/ui/Gauge';
 import { useInfographicData } from '../../hooks/useInfographicData';
-import InfographicViewer from '../InfographicViewer';
+import InfographicHero from '../InfographicHero';
 
 // Animation variants
 const containerVariants = {
@@ -177,16 +177,34 @@ export default function ConstituencyInfographicCard({
   const literacyRate = demographics?.literacy_rate || 0;
   const urbanPercentage = demographics?.urban_percentage || (constituency.isUrban ? 100 : 50);
 
-  return (
-    <motion.div
-      className="min-h-screen bg-slate-900 p-2 md:p-6 text-slate-800 font-sans"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
-      <div className="max-w-7xl mx-auto space-y-4">
+  // Scroll to generate infographic section
+  const scrollToGenerateButton = () => {
+    // Scroll to bottom where the FAB button is
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: 'smooth'
+    });
+  };
 
-        {/* --- HEADER --- */}
+  return (
+    <>
+      {/* Fullscreen Infographic Hero */}
+      <InfographicHero
+        constituencyId={constituencyId}
+        constituencyName={constituency.name}
+        onGenerateClick={scrollToGenerateButton}
+      />
+
+      {/* Rest of the dashboard content */}
+      <motion.div
+        className="min-h-screen bg-slate-900 p-2 md:p-6 text-slate-800 font-sans"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <div className="max-w-7xl mx-auto space-y-4">
+
+          {/* --- HEADER --- */}
         <motion.div
           className="relative bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-4 md:p-6 text-white shadow-xl border border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center overflow-hidden"
           variants={itemVariants}
@@ -217,27 +235,19 @@ export default function ConstituencyInfographicCard({
               <span>Cluster: <span className="text-white font-medium">{constituency.cluster}</span></span>
             </motion.div>
           </div>
-          <div className="flex items-center gap-3 mt-4 md:mt-0">
-            {/* Infographic Viewer Button */}
-            <InfographicViewer
-              constituencyId={constituencyId}
-              constituencyName={constituency.name}
-            />
-
-            <motion.div
-              className="bg-slate-700/50 backdrop-blur-sm p-3 rounded-lg border border-slate-600 flex items-center gap-3"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, type: 'spring' }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Building2 className="text-blue-400" size={32} />
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider">Type</p>
-                <p className="font-bold text-lg">{constituency.isUrban ? 'Urban Constituency' : 'Rural Constituency'}</p>
-              </div>
-            </motion.div>
-          </div>
+          <motion.div
+            className="mt-4 md:mt-0 bg-slate-700/50 backdrop-blur-sm p-3 rounded-lg border border-slate-600 flex items-center gap-3"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5, type: 'spring' }}
+            whileHover={{ scale: 1.05 }}
+          >
+            <Building2 className="text-blue-400" size={32} />
+            <div>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">Type</p>
+              <p className="font-bold text-lg">{constituency.isUrban ? 'Urban Constituency' : 'Rural Constituency'}</p>
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* --- STAT CARDS --- */}
@@ -758,5 +768,6 @@ export default function ConstituencyInfographicCard({
 
       </div>
     </motion.div>
+    </>
   );
 }
