@@ -22,12 +22,12 @@ export default function CampaignMetrics({ constituencyId }: Props) {
     // For TMC (inverse), high values are bad for BJP, so colors are reversed
     if (isInverse) {
       if (percentage <= 30) return { stroke: 'rgb(34, 197, 94)', text: 'text-emerald-500', bg: 'bg-emerald-500/20' };
-      if (percentage <= 50) return { stroke: 'rgb(251, 191, 36)', text: 'text-amber-500', bg: 'bg-amber-500/20' };
+      if (percentage <= 50) return { stroke: 'rgb(148, 163, 184)', text: 'text-slate-400', bg: 'bg-slate-500/20' };
       return { stroke: 'rgb(239, 68, 68)', text: 'text-rose-500', bg: 'bg-rose-500/20' };
     }
     // For BJP metrics, high values are good
     if (percentage >= 80) return { stroke: 'rgb(34, 197, 94)', text: 'text-emerald-500', bg: 'bg-emerald-500/20' };
-    if (percentage >= 60) return { stroke: 'rgb(251, 191, 36)', text: 'text-amber-500', bg: 'bg-amber-500/20' };
+    if (percentage >= 60) return { stroke: 'rgb(148, 163, 184)', text: 'text-slate-400', bg: 'bg-slate-500/20' };
     return { stroke: 'rgb(239, 68, 68)', text: 'text-rose-500', bg: 'bg-rose-500/20' };
   };
 
@@ -123,7 +123,7 @@ export default function CampaignMetrics({ constituencyId }: Props) {
           <span className={`ml-auto px-2 py-0.5 rounded text-[10px] font-medium ${
             isFromDatabase
               ? 'bg-emerald-500/20 text-emerald-400'
-              : 'bg-amber-500/20 text-amber-400'
+              : 'bg-slate-500/20 text-slate-400'
           }`}>
             {isFromDatabase ? 'LIVE' : 'NO DATA'}
           </span>

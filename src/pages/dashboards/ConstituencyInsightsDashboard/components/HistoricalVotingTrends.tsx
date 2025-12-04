@@ -168,7 +168,7 @@ export default function HistoricalVotingTrends({ constituencyId }: Props) {
 
       {/* Data source indicator */}
       {!isFromDatabase && (
-        <div className="mt-2 text-[10px] text-amber-400/70 flex items-center gap-1">
+        <div className="mt-2 text-[10px] text-slate-400/70 flex items-center gap-1">
           <AlertCircle size={10} />
           <span>Using estimated values (no DB data for this constituency)</span>
         </div>

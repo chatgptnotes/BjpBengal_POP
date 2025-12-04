@@ -34,7 +34,7 @@ export default function LiveNewsTicker({ news, lastUpdate, onRefresh, isLoading 
   const getImpactColor = (impact: string) => {
     switch (impact) {
       case 'High': return 'bg-rose-500 text-white';
-      case 'Medium': return 'bg-amber-500 text-white';
+      case 'Medium': return 'bg-slate-500 text-white';
       default: return 'bg-blue-500 text-white';
     }
   };
@@ -67,7 +67,7 @@ export default function LiveNewsTicker({ news, lastUpdate, onRefresh, isLoading 
               </span>
             )}
             {breakingNews.length > 0 && (
-              <span className="text-[10px] text-amber-400 font-bold">
+              <span className="text-[10px] text-white font-bold">
                 {breakingNews.length} Breaking
               </span>
             )}

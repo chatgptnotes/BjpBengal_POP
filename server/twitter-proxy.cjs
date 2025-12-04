@@ -4,11 +4,17 @@ const { parseStringPromise } = require('xml2js');
 require('dotenv').config();
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-// CORS configuration
+// CORS configuration - Allow Vercel deployments and local development
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    /\.vercel\.app$/,  // All Vercel preview/production URLs
+    /\.onrender\.com$/  // Render URLs
+  ],
   credentials: true
 }));
 
@@ -783,20 +789,22 @@ app.get('/api/twitter/replies/:tweet_id', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
+  const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
   console.log(`\n========================================`);
   console.log(`Twitter & News Proxy Server - Port ${PORT}`);
   console.log(`========================================`);
-  console.log(`Health: http://localhost:${PORT}/health`);
+  console.log(`Health: ${baseUrl}/health`);
   console.log(`----------------------------------------`);
   console.log(`TWITTER ENDPOINTS:`);
-  console.log(`  BJP Bengal: http://localhost:${PORT}/api/twitter/bjp-bengal`);
-  console.log(`  Search: http://localhost:${PORT}/api/twitter/search?query=BJP`);
+  console.log(`  BJP Bengal: ${baseUrl}/api/twitter/bjp-bengal`);
+  console.log(`  Search: ${baseUrl}/api/twitter/search?query=BJP`);
   console.log(`----------------------------------------`);
   console.log(`NEWS ENDPOINTS (Google News RSS):`);
-  console.log(`  RSS Proxy: http://localhost:${PORT}/api/rss-proxy?keyword=Kolkata`);
-  console.log(`  Constituency: http://localhost:${PORT}/api/news/constituency/wb_kolkata_bhowanipore`);
+  console.log(`  RSS Proxy: ${baseUrl}/api/rss-proxy?keyword=Kolkata`);
+  console.log(`  Constituency: ${baseUrl}/api/news/constituency/wb_kolkata_bhowanipore`);
   console.log(`========================================`);
   console.log(`Bearer Token: ${TWITTER_BEARER_TOKEN ? 'Configured' : 'NOT CONFIGURED!'}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`========================================\n`);
 });
