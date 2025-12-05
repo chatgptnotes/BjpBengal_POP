@@ -7,7 +7,7 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const { setupSocketIO, initOpenAI } = require('./transcription-service.cjs');
+const { setupSocketIO, initOpenAI, getYouTubeLiveStreamUrl } = require('./transcription-service.cjs');
 
 // Use PORT (Render's default) or TRANSCRIPTION_PORT or fallback to 3002
 const PORT = process.env.PORT || process.env.TRANSCRIPTION_PORT || 3002;
@@ -37,6 +37,35 @@ const io = setupSocketIO(server);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'transcription' });
+});
+
+// Test if YouTube channel has live stream
+app.get('/api/test-channel/:channelId', async (req, res) => {
+  const { channelId } = req.params;
+  try {
+    const streamUrl = await getYouTubeLiveStreamUrl(channelId);
+    res.json({
+      live: true,
+      channelId,
+      message: 'Live stream found',
+      streamUrl: streamUrl ? 'Available' : null
+    });
+  } catch (error) {
+    let userMessage = error.message;
+    if (error.message.includes('This live event will begin')) {
+      userMessage = 'Live stream scheduled but not started yet';
+    } else if (error.message.includes('is not currently live')) {
+      userMessage = 'Channel is not currently live';
+    } else if (error.message.includes('Unable to')) {
+      userMessage = 'Channel not found or no live stream available';
+    }
+    res.json({
+      live: false,
+      channelId,
+      message: userMessage,
+      error: error.message
+    });
+  }
 });
 
 // Initialize OpenAI from environment

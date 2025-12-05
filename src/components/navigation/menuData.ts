@@ -95,7 +95,7 @@ export const categoryMenuItems: Record<string, MenuItem[]> = {
       icon: NewspaperIcon
     },
     {
-      name: 'Bengal Local News',
+      name: 'Bengal Local News`',
       href: '/news-api',
       icon: NewspaperIcon,
       badge: 'Live'

@@ -17,7 +17,7 @@ import {
   Database,
   CloudOff
 } from 'lucide-react';
-import transcriptionSocket, { TranscriptLine } from '../services/transcriptionSocket';
+import transcriptionSocket, { TranscriptLine, TranscriptionStatus } from '../services/transcriptionSocket';
 import { saveTranscript, getTranscripts } from '../services/transcriptStorageService';
 
 export type { TranscriptLine };
@@ -48,6 +48,11 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
   const [savedCount, setSavedCount] = useState(0);
   const [isLoadingDb, setIsLoadingDb] = useState(false);
   const [dbCount, setDbCount] = useState(0);
+  const [transcriptionStatusMsg, setTranscriptionStatusMsg] = useState<string>('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Check if running on production (not localhost)
+  const isProduction = typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
 
   // Generate timestamp based on current time minus offset
   const generateTimestamp = (offsetSeconds: number): string => {
@@ -67,6 +72,7 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
     setConnectionStatus('connecting');
     setIsRealMode(true);
     setTranscriptLines([]);
+    setTranscriptionStatusMsg('Connecting to server...');
 
     try {
       await transcriptionSocket.connect();
@@ -89,8 +95,8 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
   const loadFromDatabase = useCallback(async () => {
     setIsLoadingDb(true);
     try {
-      // Fetch all transcripts (no channel filter) to show any available data
-      const result = await getTranscripts(undefined, undefined, undefined, 50);
+      // Fetch all transcripts (no channel filter) to show any available data - 100 records for demo
+      const result = await getTranscripts(undefined, undefined, undefined, 100);
       if (result.data && result.data.length > 0) {
         const lines: TranscriptLine[] = result.data.map((r, index) => ({
           id: r.id || `db_${index}`,
@@ -104,6 +110,7 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
         }));
         setTranscriptLines(lines);
         setDbCount(result.data.length);
+        setLastUpdated(new Date());
         console.log(`[TranscriptPanel] Loaded ${result.data.length} transcripts from DB`);
       } else {
         console.log('[TranscriptPanel] No transcripts found in DB');
@@ -154,6 +161,20 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
       console.error('Transcription error:', error);
       if (isMountedRef.current) {
         setConnectionStatus('error');
+        setTranscriptionStatusMsg(error.error || 'Transcription error');
+      }
+    });
+
+    const unsubTranscriptionStatus = transcriptionSocket.onTranscriptionStatus((status) => {
+      if (isMountedRef.current) {
+        setTranscriptionStatusMsg(status.message);
+        // Auto-clear non-error messages after showing transcript
+        if (status.status === 'error' || status.status === 'stream_lost') {
+          setConnectionStatus('error');
+        } else if (status.status === 'stopped') {
+          setConnectionStatus('disconnected');
+          setIsRealMode(false);
+        }
       }
     });
 
@@ -161,6 +182,7 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
       unsubTranscript();
       unsubStatus();
       unsubError();
+      unsubTranscriptionStatus();
     };
   }, [autoSaveToSupabase, channelName, channelId]);
 
@@ -172,10 +194,18 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
     };
   }, [channelId]);
 
-  // Auto-load from database on mount
+  // Auto-load from database on mount and auto-refresh on production
   useEffect(() => {
     loadFromDatabase();
-  }, [loadFromDatabase]);
+
+    // Auto-refresh every 30 seconds on production (for demo)
+    if (isProduction) {
+      const interval = setInterval(() => {
+        loadFromDatabase();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [loadFromDatabase, isProduction]);
 
   // Auto-scroll to bottom when new lines are added
   useEffect(() => {
@@ -318,8 +348,8 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
               <span>{autoSaveToSupabase ? 'Save On' : 'Save Off'}</span>
             </button>
 
-            {/* Real Transcription Toggle */}
-            {channelId && (
+            {/* Real Transcription Toggle - Hidden on production since Render server is down */}
+            {channelId && !isProduction && (
               isRealMode ? (
                 <button
                   onClick={stopRealTranscription}
@@ -390,7 +420,17 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
         {filteredLines.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
             <FileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-            <p className="text-sm">Waiting for transcript...</p>
+            {transcriptionStatusMsg ? (
+              <div className={`text-sm px-4 py-2 rounded mx-4 ${
+                connectionStatus === 'error'
+                  ? 'bg-red-50 text-red-600 border border-red-200'
+                  : 'bg-blue-50 text-blue-600 border border-blue-200'
+              }`}>
+                {transcriptionStatusMsg}
+              </div>
+            ) : (
+              <p className="text-sm">Waiting for transcript...</p>
+            )}
           </div>
         ) : (
           filteredLines.map((line) => (
@@ -439,9 +479,17 @@ export default function TranscriptPanel({ channelName, channelId, isLive = true,
       <div className="bg-gray-50 px-4 py-2 border-t border-gray-200">
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>{transcriptLines.length} lines</span>
-          <span>
-            {transcriptLines.filter(l => l.bjpMention).length} BJP | {transcriptLines.filter(l => l.tmcMention).length} TMC mentions
-          </span>
+          <div className="flex items-center space-x-3">
+            {lastUpdated && (
+              <span className="text-gray-400">
+                Updated: {lastUpdated.toLocaleTimeString('en-IN', { hour12: false })}
+                {isProduction && ' (auto-refresh 30s)'}
+              </span>
+            )}
+            <span>
+              {transcriptLines.filter(l => l.bjpMention).length} BJP | {transcriptLines.filter(l => l.tmcMention).length} TMC mentions
+            </span>
+          </div>
         </div>
       </div>
     </div>

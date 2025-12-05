@@ -15,15 +15,23 @@ export interface TranscriptLine {
   tmcMention?: boolean;
 }
 
+export interface TranscriptionStatus {
+  channelId: string;
+  status: 'getting_stream' | 'stream_found' | 'capturing' | 'transcribing' | 'chunk_error' | 'refreshing_stream' | 'stream_refreshed' | 'stream_lost' | 'error' | 'stopped' | 'already_running';
+  message: string;
+}
+
 type TranscriptCallback = (line: TranscriptLine) => void;
 type ErrorCallback = (error: { channelId: string; error: string }) => void;
 type StatusCallback = (status: 'connected' | 'disconnected' | 'error') => void;
+type TranscriptionStatusCallback = (status: TranscriptionStatus) => void;
 
 class TranscriptionSocketService {
   private socket: Socket | null = null;
   private transcriptCallbacks: Set<TranscriptCallback> = new Set();
   private errorCallbacks: Set<ErrorCallback> = new Set();
   private statusCallbacks: Set<StatusCallback> = new Set();
+  private transcriptionStatusCallbacks: Set<TranscriptionStatusCallback> = new Set();
   private serverUrl: string;
   private currentChannelId: string | null = null;
 
@@ -76,6 +84,11 @@ class TranscriptionSocketService {
       this.socket.on('error', (error: { message: string }) => {
         console.error('Server error:', error.message);
         this.errorCallbacks.forEach(cb => cb({ channelId: 'unknown', error: error.message }));
+      });
+
+      this.socket.on('transcription_status', (status: TranscriptionStatus) => {
+        console.log('Transcription status:', status);
+        this.transcriptionStatusCallbacks.forEach(cb => cb(status));
       });
     });
   }
@@ -140,6 +153,14 @@ class TranscriptionSocketService {
   onStatus(callback: StatusCallback): () => void {
     this.statusCallbacks.add(callback);
     return () => this.statusCallbacks.delete(callback);
+  }
+
+  /**
+   * Subscribe to transcription status updates (getting_stream, capturing, etc.)
+   */
+  onTranscriptionStatus(callback: TranscriptionStatusCallback): () => void {
+    this.transcriptionStatusCallbacks.add(callback);
+    return () => this.transcriptionStatusCallbacks.delete(callback);
   }
 
   /**

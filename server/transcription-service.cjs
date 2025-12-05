@@ -220,9 +220,10 @@ function analyzeContent(text) {
 /**
  * Start continuous transcription for a channel
  */
-async function startTranscription(channelId, io, filterPolitical = false) {
+async function startTranscription(channelId, io, filterPolitical = false, socket = null) {
   if (activeTranscriptions.has(channelId)) {
     console.log(`Transcription already running for ${channelId}`);
+    if (socket) socket.emit('transcription_status', { channelId, status: 'already_running', message: 'Transcription already running for this channel' });
     return;
   }
 
@@ -235,10 +236,14 @@ async function startTranscription(channelId, io, filterPolitical = false) {
   };
   activeTranscriptions.set(channelId, transcriptionState);
 
+  // Emit status: getting stream URL
+  io.emit('transcription_status', { channelId, status: 'getting_stream', message: 'Getting YouTube live stream URL...' });
+
   try {
     // Get live stream URL
     transcriptionState.streamUrl = await getYouTubeLiveStreamUrl(channelId);
     console.log(`Got stream URL for ${channelId}`);
+    io.emit('transcription_status', { channelId, status: 'stream_found', message: 'Live stream found, starting capture...' });
 
     // Continuous transcription loop
     let chunkIndex = 0;
@@ -246,8 +251,14 @@ async function startTranscription(channelId, io, filterPolitical = false) {
       try {
         const audioPath = path.join(TEMP_DIR, `${channelId}_${chunkIndex}.mp3`);
 
+        // Emit status: capturing audio
+        io.emit('transcription_status', { channelId, status: 'capturing', message: `Capturing audio chunk ${chunkIndex + 1}...` });
+
         // Capture audio chunk
         await captureAudioChunk(transcriptionState.streamUrl, audioPath);
+
+        // Emit status: transcribing
+        io.emit('transcription_status', { channelId, status: 'transcribing', message: 'Transcribing audio with Whisper...' });
 
         // Transcribe
         const bengaliText = await transcribeAudio(audioPath);
@@ -294,12 +305,20 @@ async function startTranscription(channelId, io, filterPolitical = false) {
         chunkIndex++;
       } catch (error) {
         console.error(`Chunk ${chunkIndex} error:`, error.message);
+        io.emit('transcription_status', { channelId, status: 'chunk_error', message: `Error on chunk ${chunkIndex + 1}: ${error.message}` });
 
         // Try to refresh stream URL on error
         try {
+          io.emit('transcription_status', { channelId, status: 'refreshing_stream', message: 'Refreshing stream URL...' });
           transcriptionState.streamUrl = await getYouTubeLiveStreamUrl(channelId);
+          io.emit('transcription_status', { channelId, status: 'stream_refreshed', message: 'Stream URL refreshed, continuing...' });
         } catch (e) {
           console.error('Failed to refresh stream URL:', e.message);
+          io.emit('transcription_status', { channelId, status: 'stream_lost', message: `Stream lost: ${e.message}. Channel may be offline.` });
+          // Stop after 3 consecutive failures
+          if (chunkIndex > 0) {
+            transcriptionState.running = false;
+          }
         }
       }
 
@@ -308,9 +327,20 @@ async function startTranscription(channelId, io, filterPolitical = false) {
     }
   } catch (error) {
     console.error(`Transcription error for ${channelId}:`, error);
-    io.emit('transcription_error', { channelId, error: error.message });
+    // Provide user-friendly error messages
+    let userMessage = error.message;
+    if (error.message.includes('Failed to get stream URL')) {
+      userMessage = 'Channel is not live or does not exist. Please check the channel ID.';
+    } else if (error.message.includes('ERROR: This live event will begin')) {
+      userMessage = 'Live stream has not started yet. Please wait for the stream to begin.';
+    } else if (error.message.includes('ERROR: ')) {
+      userMessage = error.message.replace('Failed to get stream URL: ', '').replace('ERROR: ', '');
+    }
+    io.emit('transcription_error', { channelId, error: userMessage });
+    io.emit('transcription_status', { channelId, status: 'error', message: userMessage });
   } finally {
     activeTranscriptions.delete(channelId);
+    io.emit('transcription_status', { channelId, status: 'stopped', message: 'Transcription stopped' });
   }
 }
 
@@ -350,10 +380,11 @@ function setupSocketIO(server) {
 
       if (!openai) {
         socket.emit('error', { message: 'OpenAI API key required' });
+        socket.emit('transcription_status', { channelId, status: 'error', message: 'OpenAI API key not configured on server' });
         return;
       }
 
-      startTranscription(channelId, io, filterPolitical);
+      startTranscription(channelId, io, filterPolitical, socket);
     });
 
     socket.on('stop_transcription', (data) => {
