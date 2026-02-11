@@ -21,27 +21,65 @@ export default function SeedData() {
       addLog('This will populate ALL database tables with sample data');
       addLog('');
 
-      // Sample constituency data for Beleghata
-      const constituencyData = {
-        constituency_id: 'wb_kolkata_beleghata',
-        constituency_name: 'Beleghata',
-        district: 'Kolkata',
-        total_voters: 178234,
-        voter_turnout: 79.9,
-        sentiment_score: 52.3,
-        created_at: new Date().toISOString(),
-      };
+      // Sample constituency data for 5 major Kolkata constituencies
+      const constituenciesData = [
+        {
+          constituency_id: 'wb_kolkata_beleghata',
+          constituency_name: 'Beleghata',
+          district: 'Kolkata',
+          total_voters: 178234,
+          voter_turnout: 79.9,
+          sentiment_score: 52.3,
+          created_at: new Date().toISOString(),
+        },
+        {
+          constituency_id: 'wb_kolkata_jadavpur',
+          constituency_name: 'Jadavpur',
+          district: 'Kolkata',
+          total_voters: 165432,
+          voter_turnout: 76.5,
+          sentiment_score: 48.7,
+          created_at: new Date().toISOString(),
+        },
+        {
+          constituency_id: 'wb_kolkata_bhowanipore',
+          constituency_name: 'Bhowanipore',
+          district: 'Kolkata',
+          total_voters: 165432,
+          voter_turnout: 71.6,
+          sentiment_score: 45.2,
+          created_at: new Date().toISOString(),
+        },
+        {
+          constituency_id: 'wb_kolkata_ballygunge',
+          constituency_name: 'Ballygunge',
+          district: 'Kolkata',
+          total_voters: 172456,
+          voter_turnout: 74.8,
+          sentiment_score: 51.5,
+          created_at: new Date().toISOString(),
+        },
+        {
+          constituency_id: 'wb_kolkata_entally',
+          constituency_name: 'Entally',
+          district: 'Kolkata',
+          total_voters: 156789,
+          voter_turnout: 80.3,
+          sentiment_score: 54.2,
+          created_at: new Date().toISOString(),
+        },
+      ];
 
-      addLog('📊 Creating constituency record...');
+      addLog('📊 Creating 5 constituency records...');
 
       const { error: constError } = await supabase
         .from('constituencies')
-        .upsert([constituencyData]);
+        .upsert(constituenciesData);
 
       if (constError) {
-        addLog(`⚠️ Constituency: ${constError.message} (may already exist)`);
+        addLog(`⚠️ Constituencies: ${constError.message} (may already exist)`);
       } else {
-        addLog('✅ Constituency data created');
+        addLog('✅ 5 Constituency records created');
       }
 
       // Create sample sentiment data
@@ -50,21 +88,25 @@ export default function SeedData() {
       const sentimentData = [];
       const now = new Date();
 
-      for (let i = 0; i < 30; i++) {
-        const daysAgo = Math.floor(i / 1);
-        const timestamp = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      const constituencies = ['wb_kolkata_beleghata', 'wb_kolkata_jadavpur', 'wb_kolkata_bhowanipore', 'wb_kolkata_ballygunge', 'wb_kolkata_entally'];
 
-        sentimentData.push({
-          constituency_id: 'wb_kolkata_beleghata',
-          sentiment_score: 50 + Math.random() * 20,
-          positive_count: Math.floor(Math.random() * 1000) + 500,
-          negative_count: Math.floor(Math.random() * 500) + 100,
-          neutral_count: Math.floor(Math.random() * 700) + 300,
-          total_mentions: Math.floor(Math.random() * 2000) + 1000,
-          source: ['social_media', 'field_report', 'survey'][Math.floor(Math.random() * 3)],
-          timestamp: timestamp.toISOString(),
-          created_at: timestamp.toISOString(),
-        });
+      for (const constId of constituencies) {
+        for (let i = 0; i < 30; i++) {
+          const daysAgo = Math.floor(i / 1);
+          const timestamp = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+
+          sentimentData.push({
+            constituency_id: constId,
+            sentiment_score: 45 + Math.random() * 20,
+            positive_count: Math.floor(Math.random() * 1000) + 500,
+            negative_count: Math.floor(Math.random() * 500) + 100,
+            neutral_count: Math.floor(Math.random() * 700) + 300,
+            total_mentions: Math.floor(Math.random() * 2000) + 1000,
+            source: ['social_media', 'field_report', 'survey'][Math.floor(Math.random() * 3)],
+            timestamp: timestamp.toISOString(),
+            created_at: timestamp.toISOString(),
+          });
+        }
       }
 
       const { error: sentError } = await supabase
@@ -74,54 +116,57 @@ export default function SeedData() {
       if (sentError) {
         addLog(`⚠️ Sentiment data: ${sentError.message}`);
       } else {
-        addLog('✅ Sentiment data created (30 records)');
+        addLog(`✅ Sentiment data created (${sentimentData.length} records for 5 constituencies)`);
       }
 
       // Create demographic data
       addLog('👥 Creating demographic data...');
 
-      const demographics = [
-        {
-          constituency_id: 'wb_kolkata_beleghata',
-          demographic_type: 'age_group',
-          demographic_value: 'Youth (18-35)',
-          voter_count: 52000,
-          sentiment_score: 55.2,
-          support_level: 'moderate',
-        },
-        {
-          constituency_id: 'wb_kolkata_beleghata',
-          demographic_type: 'age_group',
-          demographic_value: 'Middle (36-55)',
-          voter_count: 78000,
-          sentiment_score: 48.5,
-          support_level: 'weak',
-        },
-        {
-          constituency_id: 'wb_kolkata_beleghata',
-          demographic_type: 'age_group',
-          demographic_value: 'Senior (55+)',
-          voter_count: 48234,
-          sentiment_score: 52.8,
-          support_level: 'moderate',
-        },
-        {
-          constituency_id: 'wb_kolkata_beleghata',
-          demographic_type: 'gender',
-          demographic_value: 'Male',
-          voter_count: 92000,
-          sentiment_score: 51.5,
-          support_level: 'moderate',
-        },
-        {
-          constituency_id: 'wb_kolkata_beleghata',
-          demographic_type: 'gender',
-          demographic_value: 'Female',
-          voter_count: 86234,
-          sentiment_score: 53.1,
-          support_level: 'moderate',
-        },
-      ];
+      const demographics = [];
+      for (const constId of constituencies) {
+        demographics.push(
+          {
+            constituency_id: constId,
+            demographic_type: 'age_group',
+            demographic_value: 'Youth (18-35)',
+            voter_count: 48000 + Math.floor(Math.random() * 8000),
+            sentiment_score: 50 + Math.random() * 10,
+            support_level: 'moderate',
+          },
+          {
+            constituency_id: constId,
+            demographic_type: 'age_group',
+            demographic_value: 'Middle (36-55)',
+            voter_count: 72000 + Math.floor(Math.random() * 10000),
+            sentiment_score: 45 + Math.random() * 10,
+            support_level: 'weak',
+          },
+          {
+            constituency_id: constId,
+            demographic_type: 'age_group',
+            demographic_value: 'Senior (55+)',
+            voter_count: 44000 + Math.floor(Math.random() * 8000),
+            sentiment_score: 48 + Math.random() * 10,
+            support_level: 'moderate',
+          },
+          {
+            constituency_id: constId,
+            demographic_type: 'gender',
+            demographic_value: 'Male',
+            voter_count: 88000 + Math.floor(Math.random() * 8000),
+            sentiment_score: 47 + Math.random() * 10,
+            support_level: 'moderate',
+          },
+          {
+            constituency_id: constId,
+            demographic_type: 'gender',
+            demographic_value: 'Female',
+            voter_count: 82000 + Math.floor(Math.random() * 8000),
+            sentiment_score: 49 + Math.random() * 10,
+            support_level: 'moderate',
+          }
+        );
+      }
 
       const { error: demoError } = await supabase
         .from('demographic_sentiment')
@@ -130,7 +175,7 @@ export default function SeedData() {
       if (demoError) {
         addLog(`⚠️ Demographics: ${demoError.message}`);
       } else {
-        addLog('✅ Demographic data created (5 segments)');
+        addLog(`✅ Demographic data created (${demographics.length} segments for 5 constituencies)`);
       }
 
       // Create issue data
@@ -144,14 +189,19 @@ export default function SeedData() {
         { name: 'Law & Order', priority: 68, sentiment: 55 },
       ];
 
-      const issueData = issues.map(issue => ({
-        constituency_id: 'wb_kolkata_beleghata',
-        issue_name: issue.name,
-        priority_score: issue.priority,
-        sentiment_score: issue.sentiment,
-        mention_count: Math.floor(Math.random() * 500) + 200,
-        created_at: new Date().toISOString(),
-      }));
+      const issueData = [];
+      for (const constId of constituencies) {
+        for (const issue of issues) {
+          issueData.push({
+            constituency_id: constId,
+            issue_name: issue.name,
+            priority_score: issue.priority + Math.floor(Math.random() * 10 - 5),
+            sentiment_score: issue.sentiment + Math.floor(Math.random() * 10 - 5),
+            mention_count: Math.floor(Math.random() * 500) + 200,
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
 
       const { error: issueError } = await supabase
         .from('issue_sentiment')
@@ -160,7 +210,7 @@ export default function SeedData() {
       if (issueError) {
         addLog(`⚠️ Issues: ${issueError.message}`);
       } else {
-        addLog('✅ Issue data created (5 issues)');
+        addLog(`✅ Issue data created (${issueData.length} issues for 5 constituencies)`);
       }
 
       // Create sample voters for voter database
@@ -283,21 +333,27 @@ export default function SeedData() {
       addLog('');
       addLog('🎉 COMPREHENSIVE DATA SEEDING COMPLETED!');
       addLog('');
-      addLog('✅ Successfully created:');
-      addLog('   • 1 Constituency (Beleghata)');
-      addLog('   • 30 Sentiment data points');
-      addLog('   • 5 Demographic segments');
-      addLog('   • 5 Top issues');
+      addLog('✅ Successfully created data for 5 Kolkata constituencies:');
+      addLog('   • Beleghata');
+      addLog('   • Jadavpur');
+      addLog('   • Bhowanipore');
+      addLog('   • Ballygunge');
+      addLog('   • Entally');
+      addLog('');
+      addLog('📊 Data created:');
+      addLog(`   • ${sentimentData.length} Sentiment data points`);
+      addLog(`   • ${demographics.length} Demographic segments`);
+      addLog(`   • ${issueData.length} Issue priorities`);
       addLog('   • 50 Sample voters');
       addLog('   • 2 Social media posts');
       addLog('   • 2 News articles');
       addLog('');
       addLog('📍 Next Steps:');
       addLog('1. Go to Constituency Insights Dashboard');
-      addLog('2. Select "Beleghata - Kolkata" from dropdown');
-      addLog('3. Go to Voter Database to see voters');
-      addLog('4. Go to Social Media Channels to see posts');
-      addLog('5. Go to Press Media Monitoring to see news');
+      addLog('2. Select ANY Kolkata constituency from dropdown');
+      addLog('3. Explore sentiment, demographics, and issues');
+      addLog('4. Go to Voter Database to see voters');
+      addLog('5. Go to Social Media Channels to see posts');
       addLog('');
       addLog('🔄 Need to reseed? Just click the button again!');
 
