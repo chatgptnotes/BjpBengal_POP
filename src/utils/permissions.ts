@@ -27,6 +27,7 @@ export type PermissionName =
   | 'create_users'
   | 'edit_users'
   | 'delete_users'
+  | 'manage_users'
   | 'manage_roles'
   // Data management
   | 'view_dashboard'
@@ -62,6 +63,7 @@ export type PermissionName =
   | 'manage_alerts'
   // System (Super Admin only)
   | 'manage_organizations'
+  | 'manage_tenants'
   | 'view_all_data'
   | 'manage_system_settings'
   | 'view_audit_logs';
@@ -136,29 +138,29 @@ export const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, PermissionName[]> = {
   superadmin: [
     // All permissions
-    'view_users', 'create_users', 'edit_users', 'delete_users', 'manage_roles',
+    'view_users', 'create_users', 'edit_users', 'delete_users', 'manage_users', 'manage_roles',
     'view_dashboard', 'view_analytics', 'view_reports', 'export_data', 'import_data',
     'create_surveys', 'view_surveys', 'view_voters', 'edit_voters', 'delete_voters',
     'view_field_workers', 'manage_field_workers', 'view_field_reports', 'submit_field_reports',
     'view_social_media', 'manage_social_channels', 'view_competitor_analysis',
     'view_ai_insights', 'generate_ai_insights', 'view_settings', 'edit_settings',
-    'manage_billing', 'view_alerts', 'manage_alerts', 'manage_organizations',
+    'manage_billing', 'view_alerts', 'manage_alerts', 'manage_organizations', 'manage_tenants',
     'view_all_data', 'manage_system_settings', 'view_audit_logs',
   ],
   super_admin: [
     // All permissions (duplicate for backward compatibility)
-    'view_users', 'create_users', 'edit_users', 'delete_users', 'manage_roles',
+    'view_users', 'create_users', 'edit_users', 'delete_users', 'manage_users', 'manage_roles',
     'view_dashboard', 'view_analytics', 'view_reports', 'export_data', 'import_data',
     'create_surveys', 'view_surveys', 'view_voters', 'edit_voters', 'delete_voters',
     'view_field_workers', 'manage_field_workers', 'view_field_reports', 'submit_field_reports',
     'view_social_media', 'manage_social_channels', 'view_competitor_analysis',
     'view_ai_insights', 'generate_ai_insights', 'view_settings', 'edit_settings',
-    'manage_billing', 'view_alerts', 'manage_alerts', 'manage_organizations',
+    'manage_billing', 'view_alerts', 'manage_alerts', 'manage_organizations', 'manage_tenants',
     'view_all_data', 'manage_system_settings', 'view_audit_logs',
   ],
   admin: [
     // All except system permissions
-    'view_users', 'create_users', 'edit_users', 'delete_users', 'manage_roles',
+    'view_users', 'create_users', 'edit_users', 'delete_users', 'manage_users', 'manage_roles',
     'view_dashboard', 'view_analytics', 'view_reports', 'export_data', 'import_data',
     'create_surveys', 'view_surveys', 'view_voters', 'edit_voters', 'delete_voters',
     'view_field_workers', 'manage_field_workers', 'view_field_reports', 'submit_field_reports',
@@ -498,6 +500,7 @@ export const PERMISSION_LABELS: Record<PermissionName, { label: string; descript
   create_users: { label: 'Create Users', description: 'Invite and create new users' },
   edit_users: { label: 'Edit Users', description: 'Edit user information and roles' },
   delete_users: { label: 'Delete Users', description: 'Remove users from organization' },
+  manage_users: { label: 'Manage Users', description: 'Full user management access' },
   manage_roles: { label: 'Manage Roles', description: 'Create and assign roles' },
 
   // Data management
@@ -542,6 +545,7 @@ export const PERMISSION_LABELS: Record<PermissionName, { label: string; descript
 
   // System
   manage_organizations: { label: 'Manage Organizations', description: 'Create/delete organizations' },
+  manage_tenants: { label: 'Manage Tenants', description: 'Full tenant management access' },
   view_all_data: { label: 'View All Data', description: 'Access data across all organizations' },
   manage_system_settings: { label: 'Manage System Settings', description: 'Configure platform-wide settings' },
   view_audit_logs: { label: 'View Audit Logs', description: 'Access system audit logs' },

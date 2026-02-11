@@ -16,6 +16,7 @@ interface AnimatedCountUpProps {
   decimals?: number;
   separator?: string;
   className?: string;
+  style?: React.CSSProperties;
   onComplete?: () => void;
 }
 
@@ -28,6 +29,7 @@ export default function AnimatedCountUp({
   decimals = 0,
   separator = ',',
   className = '',
+  style,
   onComplete,
 }: AnimatedCountUpProps) {
   const [displayValue, setDisplayValue] = useState(0);
@@ -79,6 +81,7 @@ export default function AnimatedCountUp({
     <motion.span
       ref={ref}
       className={className}
+      style={style}
       initial={{ opacity: 0 }}
       animate={{ opacity: isInView ? 1 : 0 }}
       transition={{ duration: 0.3, delay: delay / 1000 }}

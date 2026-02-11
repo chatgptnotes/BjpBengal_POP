@@ -125,7 +125,7 @@ interface CampaignPhase {
   timeline: string;
   objectives: string[];
   activities: string[];
-  success Metrics: string[];
+  successMetrics: string[];
 }
 
 interface ConversionPath {

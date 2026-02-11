@@ -431,27 +431,27 @@ export default function Login() {
                         <span className="text-orange-200 text-xs">Email:</span>
                         <button
                           type="button"
-                          onClick={() => setCredentials({ email: 'admin@bjp.com', password: 'Admin@123' })}
+                          onClick={() => setCredentials({ email: 'demo@admin.com', password: 'demo123' })}
                           className="text-white font-mono text-sm hover:text-orange-200 transition-colors"
                         >
-                          admin@bjp.com
+                          demo@admin.com
                         </button>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-orange-200 text-xs">Password:</span>
                         <button
                           type="button"
-                          onClick={() => setCredentials({ email: 'admin@bjp.com', password: 'Admin@123' })}
+                          onClick={() => setCredentials({ email: 'demo@admin.com', password: 'demo123' })}
                           className="text-white font-mono text-sm hover:text-orange-200 transition-colors"
                         >
-                          Admin@123
+                          demo123
                         </button>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        setCredentials({ email: 'admin@bjp.com', password: 'Admin@123' });
+                        setCredentials({ email: 'demo@admin.com', password: 'demo123' });
                         setTimeout(() => {
                           const form = document.querySelector('form');
                           if (form) form.requestSubmit();

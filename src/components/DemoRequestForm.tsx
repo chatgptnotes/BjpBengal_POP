@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { useDemoRequests } from '../hooks/useDemoRequests';
 import type { CreateDemoRequest } from '../types/demo';
 
-export const DemoRequestForm: React.FC = () => {
+interface DemoRequestFormProps {
+  onSuccess?: () => void;
+}
+
+export const DemoRequestForm: React.FC<DemoRequestFormProps> = ({ onSuccess }) => {
   const { createDemoRequest, loading, error } = useDemoRequests();
   const [formData, setFormData] = useState<CreateDemoRequest>({
     name: '',
@@ -35,6 +39,9 @@ export const DemoRequestForm: React.FC = () => {
         phone: '',
         message: '',
       });
+      if (onSuccess) {
+        setTimeout(onSuccess, 2000); // Call onSuccess after 2 seconds to show success message
+      }
     } catch (err) {
       console.error('Failed to submit demo request:', err);
     } finally {
