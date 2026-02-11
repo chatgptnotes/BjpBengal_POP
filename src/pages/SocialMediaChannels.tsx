@@ -40,6 +40,7 @@ import {
 import { MobileCard, ResponsiveGrid, MobileButton, MobileTabs } from '../components/MobileResponsive';
 import { socialMediaService, type SocialMediaPost as DBSocialMediaPost } from '../services/supabase/socialMedia.service';
 import { supabase } from '../lib/supabase';
+import SeedDataBanner from '../components/SeedDataBanner';
 import {
   fetchBJPBengalFeed,
   startAutoRefresh,
@@ -1310,9 +1311,9 @@ export default function SocialMediaChannels() {
                   Loading posts...
                 </div>
               ) : socialPosts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No posts available. Run the insert_social_media_posts.sql file to add sample data.
-                </div>
+                <SeedDataBanner
+                  message="No social media posts found in database. Seed the database to create sample posts from Facebook, Twitter, Instagram and other platforms."
+                />
               ) : (
                 socialPosts.map(post => {
                 const MediaIcon = getMediaIcon(post.mediaType);

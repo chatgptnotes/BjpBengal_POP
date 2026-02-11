@@ -31,6 +31,7 @@ import { supabase } from '../lib/supabase';
 import westBengalGeoJSON from '../assets/maps/westbengal-constituencies.json';
 import * as XLSX from 'xlsx';
 import { validateImportBatch, generateImportSummary } from '../utils/importValidation';
+import SeedDataBanner from './SeedDataBanner';
 
 export default function VoterDatabase() {
   const { user } = useAuth();
@@ -1185,6 +1186,13 @@ export default function VoterDatabase() {
           </button>
         </div>
       </div>
+
+      {/* No Data Banner */}
+      {stats.totalVoters === 0 && !loading && (
+        <SeedDataBanner
+          message="No voters found in database. Seed the database to create 50 sample voters with demographics and voting data."
+        />
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
