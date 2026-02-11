@@ -100,6 +100,7 @@ import ConstituenciesList from './pages/ConstituenciesList'
 import ConstituencyInsightsDashboard from './pages/dashboards/ConstituencyInsightsDashboard'
 import LeadersAnalysisDashboard from './pages/dashboards/LeadersAnalysisDashboard'
 import SeedData from './pages/SeedData'
+import DatabaseSetup from './pages/DatabaseSetup'
 
 // Inner component that uses auth context
 function AppRoutes() {
@@ -127,6 +128,9 @@ function AppRoutes() {
 
               {/* Django Backend Test Page (No auth required for testing) */}
               <Route path="/django-test" element={<DjangoTest />} />
+
+              {/* Database Setup Page (No auth required) */}
+              <Route path="/database-setup" element={<DatabaseSetup />} />
 
               {/* Seed Data Page (No auth required for easy database setup) */}
               <Route path="/seed-data" element={<SeedData />} />
